@@ -3,11 +3,16 @@ import { useAuth } from '../context/AuthContext';
 import { apiRequest } from '../api/client';
 import { useNavigate } from 'react-router-dom';
 import { THEME } from '../theme';
-import { KeyRound, Shield, Mail, Trash2, Check } from 'lucide-react';
+import { Button } from '../components/ui/Button';
+import { ToggleSwitch } from '../components/ui/ToggleSwitch';
+import { Modal } from '../components/ui/Modal';
+import { useToast } from '../components/ui/ToastContext';
+import { KeyRound, Shield, Mail, Trash2, Check, Bell, Volume2, Sparkles } from 'lucide-react';
 
 export const Settings: React.FC = () => {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
+  const toast = useToast();
 
   // Password Change
   const [currentPassword, setCurrentPassword] = useState('');
@@ -21,9 +26,15 @@ export const Settings: React.FC = () => {
   const [resendingEmail, setResendingEmail] = useState(false);
   const [emailMsg, setEmailMsg] = useState('');
 
-  // Delete Account
+  // Local Study Preferences
+  const [soundCues, setSoundCues] = useState(true);
+  const [focusReminders, setFocusReminders] = useState(true);
+  const [peerInvites, setPeerInvites] = useState(true);
+
+  // Delete Account Modal
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [deletePassword, setDeletePassword] = useState('');
+  const [deleting, setDeleting] = useState(false);
 
   const handlePasswordChange = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -46,11 +57,13 @@ export const Settings: React.FC = () => {
         }),
       });
       setPasswordMsg('Password successfully updated!');
+      toast.success('Password updated successfully!');
       setCurrentPassword('');
       setNewPassword('');
       setConfirmPassword('');
     } catch (err: any) {
       setPasswordError(err.message);
+      toast.error(err.message);
     } finally {
       setSavingPassword(false);
     }
@@ -62,8 +75,9 @@ export const Settings: React.FC = () => {
     try {
       await apiRequest('/auth/resend-verification', { method: 'POST' });
       setEmailMsg('Verification email sent! Please check your inbox.');
+      toast.success('Verification link dispatched.');
     } catch (err: any) {
-      alert(err.message);
+      toast.error(err.message);
     } finally {
       setResendingEmail(false);
     }
@@ -71,16 +85,19 @@ export const Settings: React.FC = () => {
 
   const handleDeleteAccount = async (e: React.FormEvent) => {
     e.preventDefault();
+    setDeleting(true);
     try {
       await apiRequest('/auth/delete-account', {
         method: 'POST',
         body: JSON.stringify({ password: deletePassword }),
       });
-      alert('Account deactivated. Signing out.');
+      toast.info('Account deactivated. Signing out.');
       await logout();
       navigate('/login');
     } catch (err: any) {
-      alert(err.message);
+      toast.error(err.message);
+    } finally {
+      setDeleting(false);
     }
   };
 
@@ -89,15 +106,80 @@ export const Settings: React.FC = () => {
       {/* Header */}
       <div>
         <h1 style={{ fontSize: '22px', fontWeight: 800, color: THEME.deepForestCharcoal }}>
-          Account & Security Settings
+          Account & Study Preferences
         </h1>
         <p style={{ fontSize: '13px', color: THEME.warmStone }}>
-          Manage your credentials, verification state, and privacy settings.
+          Manage your credentials, study alerts, verification status, and security settings.
         </p>
       </div>
 
+      {/* Study Experience & Sound Preferences */}
+      <div
+        className="card"
+        style={{
+          display: 'flex',
+          flexDirection: 'column',
+          gap: '16px',
+          border: `1.5px solid ${THEME.deepForestCharcoal}`,
+          backgroundColor: THEME.warmIvory,
+          borderRadius: THEME.radius.card,
+        }}
+      >
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <Sparkles size={18} color={THEME.emeraldGreen} />
+          <h2 style={{ fontSize: '16px', fontWeight: 800, color: THEME.deepForestCharcoal }}>
+            Study Experience & Motion Preferences
+          </h2>
+        </div>
+
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+          <ToggleSwitch
+            id="sound-cues-toggle"
+            checked={soundCues}
+            onChange={(val) => {
+              setSoundCues(val);
+              toast.info(val ? 'Timer sound cues enabled' : 'Timer sound cues muted');
+            }}
+            label="Focus Timer Chimes"
+            description="Play subtle audio cues when Pomodoro study blocks and breaks transition."
+          />
+
+          <ToggleSwitch
+            id="focus-reminders-toggle"
+            checked={focusReminders}
+            onChange={(val) => {
+              setFocusReminders(val);
+              toast.info(val ? 'Daily reminders enabled' : 'Daily reminders disabled');
+            }}
+            label="Daily Study Streak Alerts"
+            description="Remind me of scheduled examination milestones and syllabus goals."
+          />
+
+          <ToggleSwitch
+            id="peer-invites-toggle"
+            checked={peerInvites}
+            onChange={(val) => {
+              setPeerInvites(val);
+              toast.info(val ? 'Peer study invitations active' : 'Peer study invitations paused');
+            }}
+            label="Peer Teaching Invitations"
+            description="Allow peers with matching syllabus doubts to send me study room invitations."
+          />
+        </div>
+      </div>
+
       {/* Email Verification Box */}
-      <div className="card" style={{ display: 'flex', flexDirection: 'column', gap: '10px', border: `1.5px solid ${THEME.deepForestCharcoal}`, backgroundColor: THEME.warmIvory }}>
+      <div
+        className="card"
+        style={{
+          display: 'flex',
+          flexDirection: 'column',
+          gap: '12px',
+          border: `1.5px solid ${THEME.deepForestCharcoal}`,
+          backgroundColor: THEME.warmIvory,
+          borderRadius: THEME.radius.card,
+        }}
+      >
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '10px' }}>
           <div>
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
@@ -118,18 +200,23 @@ export const Settings: React.FC = () => {
 
         {user?.is_verified === 0 && (
           <div style={{ marginTop: '8px' }}>
-            <p style={{ fontSize: '12px', marginBottom: '8px', color: THEME.warmStone }}>
+            <p style={{ fontSize: '12px', marginBottom: '10px', color: THEME.warmStone }}>
               Your account is unverified. Verification ensures uninterrupted access to study rooms and file sharing.
             </p>
-            <button
+            <Button
+              variant="primary"
+              size="sm"
+              shape="pill"
               onClick={handleResendVerification}
-              disabled={resendingEmail}
-              className="btn-primary"
-              style={{ padding: '8px 14px', fontSize: '12px' }}
+              loading={resendingEmail}
             >
-              {resendingEmail ? 'Sending...' : 'Resend Verification Email'}
-            </button>
-            {emailMsg && <div style={{ fontSize: '12px', marginTop: '6px', color: THEME.emeraldGreen, fontWeight: 700 }}>{emailMsg}</div>}
+              Resend Verification Email
+            </Button>
+            {emailMsg && (
+              <div style={{ fontSize: '12px', marginTop: '8px', color: THEME.emeraldGreen, fontWeight: 700 }}>
+                {emailMsg}
+              </div>
+            )}
           </div>
         )}
       </div>
@@ -144,6 +231,7 @@ export const Settings: React.FC = () => {
           gap: '14px',
           border: `1.5px solid ${THEME.deepForestCharcoal}`,
           backgroundColor: THEME.warmIvory,
+          borderRadius: THEME.radius.card,
         }}
       >
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
@@ -203,21 +291,27 @@ export const Settings: React.FC = () => {
         </div>
 
         <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '6px' }}>
-          <button type="submit" disabled={savingPassword} className="btn-primary">
-            {savingPassword ? 'Updating...' : 'Update Password'}
-          </button>
+          <Button
+            type="submit"
+            variant="primary"
+            shape="pill"
+            loading={savingPassword}
+          >
+            Update Password
+          </Button>
         </div>
       </form>
 
-      {/* Deactivate Account */}
+      {/* Danger Zone: Deactivate Account */}
       <div
         className="card-secondary"
         style={{
           display: 'flex',
           flexDirection: 'column',
-          gap: '10px',
+          gap: '12px',
           border: `1.5px solid ${THEME.vermilion}`,
           backgroundColor: THEME.warmIvory,
+          borderRadius: THEME.radius.card,
         }}
       >
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
@@ -227,58 +321,55 @@ export const Settings: React.FC = () => {
           </h2>
         </div>
         <p style={{ fontSize: '13px', color: THEME.warmStone }}>
-          Deactivating your account will invalidate your active sessions and hide your profile from peers.
+          Deactivating your account will invalidate your active study sessions and hide your profile from peers.
         </p>
 
         <div>
-          <button
+          <Button
+            variant="vermilion"
+            size="sm"
+            shape="pill"
             onClick={() => setShowDeleteModal(true)}
-            className="btn-vermilion"
-            style={{ padding: '8px 14px', fontSize: '12px' }}
+            leftIcon={<Trash2 size={14} color={THEME.warmIvory} />}
           >
-            <Trash2 size={14} color={THEME.warmIvory} />
-            <span>Deactivate Account</span>
-          </button>
+            Deactivate Account
+          </Button>
         </div>
       </div>
 
-      {/* Deactivate Modal */}
-      {showDeleteModal && (
-        <div className="modal-overlay">
-          <div className="modal-content">
-            <h2 style={{ fontSize: '18px', fontWeight: 800, marginBottom: '14px', color: THEME.deepForestCharcoal }}>
-              Confirm Account Deactivation
-            </h2>
-            <form onSubmit={handleDeleteAccount} style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
-              <p style={{ fontSize: '13px', color: THEME.warmStone }}>
-                Please confirm by entering your current password. This will immediately log you out.
-              </p>
-
-              <div>
-                <label style={{ fontSize: '12px', fontWeight: 700, display: 'block', marginBottom: '4px', color: THEME.deepForestCharcoal }}>
-                  Password *
-                </label>
-                <input
-                  type="password"
-                  placeholder="Enter current password"
-                  value={deletePassword}
-                  onChange={(e) => setDeletePassword(e.target.value)}
-                  required
-                />
-              </div>
-
-              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px' }}>
-                <button type="button" onClick={() => setShowDeleteModal(false)} className="btn-secondary">
-                  Cancel
-                </button>
-                <button type="submit" className="btn-vermilion">
-                  Confirm Deactivate
-                </button>
-              </div>
-            </form>
+      {/* Accessible Deactivate Modal */}
+      <Modal
+        isOpen={showDeleteModal}
+        onClose={() => setShowDeleteModal(false)}
+        title="Confirm Account Deactivation"
+        description="Please confirm by entering your current password. This will immediately log you out."
+      >
+        <form onSubmit={handleDeleteAccount} style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+          <div>
+            <label style={{ fontSize: '12px', fontWeight: 700, display: 'block', marginBottom: '4px', color: THEME.deepForestCharcoal }}>
+              Current Password *
+            </label>
+            <input
+              type="password"
+              placeholder="Enter current password"
+              value={deletePassword}
+              onChange={(e) => setDeletePassword(e.target.value)}
+              required
+            />
           </div>
-        </div>
-      )}
+
+          <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px', marginTop: '8px' }}>
+            <Button variant="secondary" onClick={() => setShowDeleteModal(false)}>
+              Cancel
+            </Button>
+            <Button type="submit" variant="vermilion" loading={deleting}>
+              Confirm Deactivation
+            </Button>
+          </div>
+        </form>
+      </Modal>
     </div>
   );
 };
+
+export default Settings;

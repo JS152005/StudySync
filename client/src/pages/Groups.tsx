@@ -2,9 +2,16 @@ import React, { useState, useEffect } from 'react';
 import { NavLink } from 'react-router-dom';
 import { apiRequest } from '../api/client';
 import { THEME } from '../theme';
-import { UsersRound, Plus, KeyRound, ArrowRight, Globe } from 'lucide-react';
+import { Button } from '../components/ui/Button';
+import { ToggleSwitch } from '../components/ui/ToggleSwitch';
+import { Modal } from '../components/ui/Modal';
+import { Skeleton } from '../components/ui/Skeleton';
+import { EmptyState } from '../components/ui/EmptyState';
+import { useToast } from '../components/ui/ToastContext';
+import { UsersRound, Plus, KeyRound, ArrowRight, Globe, Lock, Shield } from 'lucide-react';
 
 export const Groups: React.FC = () => {
+  const toast = useToast();
   const [myGroups, setMyGroups] = useState<any[]>([]);
   const [publicGroups, setPublicGroups] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -16,10 +23,12 @@ export const Groups: React.FC = () => {
   const [groupSubject, setGroupSubject] = useState('');
   const [groupCourse, setGroupCourse] = useState('');
   const [isPrivate, setIsPrivate] = useState(false);
+  const [creatingGroup, setCreatingGroup] = useState(false);
 
   // Join Code Modal
   const [showJoinModal, setShowJoinModal] = useState(false);
   const [inviteCode, setInviteCode] = useState('');
+  const [joiningCode, setJoiningCode] = useState(false);
 
   const loadGroups = async () => {
     try {
@@ -39,6 +48,7 @@ export const Groups: React.FC = () => {
 
   const handleCreateGroup = async (e: React.FormEvent) => {
     e.preventDefault();
+    setCreatingGroup(true);
     try {
       await apiRequest('/groups', {
         method: 'POST',
@@ -55,14 +65,18 @@ export const Groups: React.FC = () => {
       setGroupDesc('');
       setGroupSubject('');
       setGroupCourse('');
+      toast.success('Study Group formed!');
       loadGroups();
     } catch (err: any) {
-      alert(err.message);
+      toast.error(err.message);
+    } finally {
+      setCreatingGroup(false);
     }
   };
 
   const handleJoinByCode = async (e: React.FormEvent) => {
     e.preventDefault();
+    setJoiningCode(true);
     try {
       await apiRequest('/groups/join', {
         method: 'POST',
@@ -70,9 +84,12 @@ export const Groups: React.FC = () => {
       });
       setShowJoinModal(false);
       setInviteCode('');
+      toast.success('Joined study group successfully!');
       loadGroups();
     } catch (err: any) {
-      alert(err.message);
+      toast.error(err.message);
+    } finally {
+      setJoiningCode(false);
     }
   };
 
@@ -82,9 +99,10 @@ export const Groups: React.FC = () => {
         method: 'POST',
         body: JSON.stringify({ group_id: groupId }),
       });
+      toast.success('Enrolled in study group!');
       loadGroups();
     } catch (err: any) {
-      alert(err.message);
+      toast.error(err.message);
     }
   };
 
@@ -101,74 +119,97 @@ export const Groups: React.FC = () => {
           </p>
         </div>
 
-        <div style={{ display: 'flex', gap: '10px' }}>
-          <button onClick={() => setShowJoinModal(true)} className="btn-secondary">
-            <KeyRound size={15} color={THEME.deepForestCharcoal} />
-            <span>Join with Code</span>
-          </button>
-          <button onClick={() => setShowCreateModal(true)} className="btn-primary">
-            <Plus size={15} color={THEME.warmIvory} />
-            <span>Create Group</span>
-          </button>
+        <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
+          <Button
+            variant="secondary"
+            shape="pill"
+            onClick={() => setShowJoinModal(true)}
+            leftIcon={<KeyRound size={15} color={THEME.deepForestCharcoal} />}
+          >
+            Join with Code
+          </Button>
+          <Button
+            variant="primary"
+            shape="pill"
+            onClick={() => setShowCreateModal(true)}
+            leftIcon={<Plus size={15} color={THEME.warmIvory} />}
+          >
+            Create Group
+          </Button>
         </div>
       </div>
 
       {/* My Groups Section */}
       <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
-        <h2 style={{ fontSize: '16px', fontWeight: 800, color: THEME.deepForestCharcoal }}>
+        <h2 style={{ fontSize: '16.5px', fontWeight: 800, color: THEME.deepForestCharcoal }}>
           My Enrolled Groups ({myGroups.length})
         </h2>
 
-        {myGroups.length === 0 ? (
-          <div className="card-secondary" style={{ textAlign: 'center', padding: '36px' }}>
-            <UsersRound size={36} color={THEME.warmStone} style={{ margin: '0 auto 10px' }} />
-            <div style={{ fontSize: '15px', fontWeight: 800, marginBottom: '6px', color: THEME.deepForestCharcoal }}>
-              You haven't joined any study groups yet.
-            </div>
-            <div style={{ fontSize: '13px', marginBottom: '14px', color: THEME.warmStone }}>
-              Create a group for your course or enter an invitation code to join peers!
-            </div>
-            <button onClick={() => setShowCreateModal(true)} className="btn-primary">
-              <span>Create Your First Group</span>
-            </button>
+        {loading ? (
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))', gap: '16px' }}>
+            <Skeleton height="170px" borderRadius={THEME.radius.card} />
+            <Skeleton height="170px" borderRadius={THEME.radius.card} />
           </div>
+        ) : myGroups.length === 0 ? (
+          <EmptyState
+            icon={<UsersRound size={36} />}
+            title="You haven't joined any study groups yet"
+            description="Create a group for your course or enter an invitation code to join peers!"
+            action={
+              <Button variant="primary" shape="pill" onClick={() => setShowCreateModal(true)}>
+                Create Your First Group
+              </Button>
+            }
+          />
         ) : (
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))', gap: '16px' }}>
             {myGroups.map((g) => (
               <div
                 key={g.id}
-                className="card"
+                className="card card-interactive"
                 style={{
                   display: 'flex',
                   flexDirection: 'column',
                   justifyContent: 'space-between',
-                  gap: '12px',
+                  gap: '14px',
                   border: `1.5px solid ${THEME.deepForestCharcoal}`,
                   backgroundColor: THEME.warmIvory,
+                  borderRadius: THEME.radius.card,
                 }}
               >
                 <div>
-                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '6px' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '8px' }}>
                     <span className="badge">{g.role}</span>
                     <span style={{ fontSize: '12px', color: THEME.warmStone, fontWeight: 600 }}>
                       {g.member_count} member{g.member_count === 1 ? '' : 's'}
                     </span>
                   </div>
 
-                  <h3 style={{ fontSize: '16px', fontWeight: 800, marginBottom: '4px', color: THEME.deepForestCharcoal }}>
+                  <h3
+                    style={{
+                      fontSize: '16.5px',
+                      fontWeight: 800,
+                      marginBottom: '4px',
+                      color: THEME.deepForestCharcoal,
+                    }}
+                  >
                     {g.name}
                   </h3>
-                  <div style={{ fontSize: '12px', marginBottom: '8px', color: THEME.warmStone }}>
+                  <div style={{ fontSize: '12.5px', marginBottom: '8px', color: THEME.warmStone }}>
                     {g.subject ? `${g.subject} • ` : ''}{g.course || 'General'}
                   </div>
                   {g.description && (
-                    <p style={{ fontSize: '13px', lineHeight: 1.4, color: THEME.deepForestCharcoal }}>
+                    <p style={{ fontSize: '13px', lineHeight: 1.45, color: THEME.deepForestCharcoal }}>
                       {g.description}
                     </p>
                   )}
                 </div>
 
-                <NavLink to={`/groups/${g.id}`} className="btn-secondary" style={{ width: '100%' }}>
+                <NavLink
+                  to={`/groups/${g.id}`}
+                  className="btn-secondary btn-pill"
+                  style={{ width: '100%', justifyContent: 'center' }}
+                >
                   <span>Open Group Workspace</span>
                   <ArrowRight size={14} color={THEME.deepForestCharcoal} />
                 </NavLink>
@@ -181,163 +222,226 @@ export const Groups: React.FC = () => {
       {/* Discover Public Groups */}
       {publicGroups.length > 0 && (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '14px', marginTop: '10px' }}>
-          <h2 style={{ fontSize: '16px', fontWeight: 800, color: THEME.deepForestCharcoal }}>
+          <h2 style={{ fontSize: '16.5px', fontWeight: 800, color: THEME.deepForestCharcoal }}>
             Explore Public Study Communities
           </h2>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))', gap: '16px' }}>
             {publicGroups.map((g) => (
               <div
                 key={g.id}
-                className="card-secondary"
+                className="card card-interactive"
                 style={{
                   display: 'flex',
                   flexDirection: 'column',
                   justifyContent: 'space-between',
-                  gap: '12px',
+                  gap: '14px',
                   backgroundColor: THEME.warmIvory,
                   border: `1.5px solid ${THEME.warmStone}`,
+                  borderRadius: THEME.radius.card,
                 }}
               >
                 <div>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '6px' }}>
                     <Globe size={14} color={THEME.emeraldGreen} />
                     <span style={{ fontSize: '11px', textTransform: 'uppercase', fontWeight: 800, color: THEME.emeraldGreen }}>
-                      Public Group
+                      Public Community
                     </span>
                   </div>
-                  <h3 style={{ fontSize: '15px', fontWeight: 800, marginBottom: '4px', color: THEME.deepForestCharcoal }}>
+                  <h3
+                    style={{
+                      fontSize: '15.5px',
+                      fontWeight: 800,
+                      marginBottom: '4px',
+                      color: THEME.deepForestCharcoal,
+                    }}
+                  >
                     {g.name}
                   </h3>
-                  <div style={{ fontSize: '12px', color: THEME.warmStone }}>
+                  <div style={{ fontSize: '12.5px', color: THEME.warmStone }}>
                     {g.subject} • {g.member_count} members
                   </div>
                 </div>
 
-                <button onClick={() => handleJoinPublic(g.id)} className="btn-primary" style={{ width: '100%' }}>
-                  <span>Join Group</span>
-                </button>
+                <Button
+                  variant="primary"
+                  shape="pill"
+                  onClick={() => handleJoinPublic(g.id)}
+                  style={{ width: '100%' }}
+                >
+                  Join Group
+                </Button>
               </div>
             ))}
           </div>
         </div>
       )}
 
-      {/* Create Group Modal */}
-      {showCreateModal && (
-        <div className="modal-overlay">
-          <div className="modal-content">
-            <h2 style={{ fontSize: '18px', fontWeight: 800, marginBottom: '16px', color: THEME.deepForestCharcoal }}>
-              Create New Study Group
-            </h2>
-            <form onSubmit={handleCreateGroup} style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
-              <div>
-                <label style={{ fontSize: '12px', fontWeight: 700, display: 'block', marginBottom: '4px', color: THEME.deepForestCharcoal }}>
-                  Group Name *
-                </label>
-                <input
-                  type="text"
-                  placeholder="e.g. Distributed Systems & Cloud"
-                  value={groupName}
-                  onChange={(e) => setGroupName(e.target.value)}
-                  required
-                />
-              </div>
-
-              <div>
-                <label style={{ fontSize: '12px', fontWeight: 700, display: 'block', marginBottom: '4px', color: THEME.deepForestCharcoal }}>
-                  Subject
-                </label>
-                <input
-                  type="text"
-                  placeholder="e.g. Computer Science"
-                  value={groupSubject}
-                  onChange={(e) => setGroupSubject(e.target.value)}
-                />
-              </div>
-
-              <div>
-                <label style={{ fontSize: '12px', fontWeight: 700, display: 'block', marginBottom: '4px', color: THEME.deepForestCharcoal }}>
-                  Course / Degree
-                </label>
-                <input
-                  type="text"
-                  placeholder="e.g. B.Tech 6th Sem"
-                  value={groupCourse}
-                  onChange={(e) => setGroupCourse(e.target.value)}
-                />
-              </div>
-
-              <div>
-                <label style={{ fontSize: '12px', fontWeight: 700, display: 'block', marginBottom: '4px', color: THEME.deepForestCharcoal }}>
-                  Description
-                </label>
-                <textarea
-                  rows={3}
-                  placeholder="What will this study group focus on? Exam prep, homework, project work..."
-                  value={groupDesc}
-                  onChange={(e) => setGroupDesc(e.target.value)}
-                />
-              </div>
-
-              <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                <input
-                  type="checkbox"
-                  id="isPrivate"
-                  checked={isPrivate}
-                  onChange={(e) => setIsPrivate(e.target.checked)}
-                  style={{ width: '18px', height: '18px', accentColor: THEME.emeraldGreen }}
-                />
-                <label htmlFor="isPrivate" style={{ fontSize: '13px', fontWeight: 700, cursor: 'pointer', color: THEME.deepForestCharcoal }}>
-                  Private Group (Invite code required to join)
-                </label>
-              </div>
-
-              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px', marginTop: '10px' }}>
-                <button type="button" onClick={() => setShowCreateModal(false)} className="btn-secondary">
-                  Cancel
-                </button>
-                <button type="submit" className="btn-primary">
-                  Create Group
-                </button>
-              </div>
-            </form>
+      {/* Accessible Create Group Modal */}
+      <Modal
+        isOpen={showCreateModal}
+        onClose={() => setShowCreateModal(false)}
+        title="Create New Study Group"
+        description="Establish an academic hub for syllabus tracking, focus pacts, and discussion."
+      >
+        <form onSubmit={handleCreateGroup} style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+          <div>
+            <label
+              style={{
+                fontSize: '12px',
+                fontWeight: 700,
+                display: 'block',
+                marginBottom: '4px',
+                color: THEME.deepForestCharcoal,
+              }}
+            >
+              Group Name *
+            </label>
+            <input
+              type="text"
+              placeholder="e.g. Distributed Systems & Cloud Computing"
+              value={groupName}
+              onChange={(e) => setGroupName(e.target.value)}
+              required
+            />
           </div>
-        </div>
-      )}
 
-      {/* Join By Code Modal */}
-      {showJoinModal && (
-        <div className="modal-overlay">
-          <div className="modal-content">
-            <h2 style={{ fontSize: '18px', fontWeight: 800, marginBottom: '16px', color: THEME.deepForestCharcoal }}>
-              Join Group with Invite Code
-            </h2>
-            <form onSubmit={handleJoinByCode} style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
-              <div>
-                <label style={{ fontSize: '12px', fontWeight: 700, display: 'block', marginBottom: '4px', color: THEME.deepForestCharcoal }}>
-                  Enter 8-Character Invite Code
-                </label>
-                <input
-                  type="text"
-                  placeholder="e.g. A1B2C3D4"
-                  value={inviteCode}
-                  onChange={(e) => setInviteCode(e.target.value.toUpperCase())}
-                  required
-                />
-              </div>
-
-              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px' }}>
-                <button type="button" onClick={() => setShowJoinModal(false)} className="btn-secondary">
-                  Cancel
-                </button>
-                <button type="submit" className="btn-primary">
-                  Join Group
-                </button>
-              </div>
-            </form>
+          <div>
+            <label
+              style={{
+                fontSize: '12px',
+                fontWeight: 700,
+                display: 'block',
+                marginBottom: '4px',
+                color: THEME.deepForestCharcoal,
+              }}
+            >
+              Subject / Topic Focus
+            </label>
+            <input
+              type="text"
+              placeholder="e.g. Computer Science CSE-402"
+              value={groupSubject}
+              onChange={(e) => setGroupSubject(e.target.value)}
+            />
           </div>
-        </div>
-      )}
+
+          <div>
+            <label
+              style={{
+                fontSize: '12px',
+                fontWeight: 700,
+                display: 'block',
+                marginBottom: '4px',
+                color: THEME.deepForestCharcoal,
+              }}
+            >
+              Course / Branch
+            </label>
+            <input
+              type="text"
+              placeholder="e.g. B.Tech 3rd Year"
+              value={groupCourse}
+              onChange={(e) => setGroupCourse(e.target.value)}
+            />
+          </div>
+
+          <div>
+            <label
+              style={{
+                fontSize: '12px',
+                fontWeight: 700,
+                display: 'block',
+                marginBottom: '4px',
+                color: THEME.deepForestCharcoal,
+              }}
+            >
+              Description & Objectives
+            </label>
+            <textarea
+              rows={2}
+              placeholder="Collaborate on weekly assignments, syllabus topics, and exam revision..."
+              value={groupDesc}
+              onChange={(e) => setGroupDesc(e.target.value)}
+            />
+          </div>
+
+          {/* Polished Animated ToggleSwitch for Private Group */}
+          <div
+            style={{
+              padding: '12px',
+              borderRadius: THEME.radius.md,
+              border: `1.5px solid ${THEME.deepForestCharcoal}`,
+              backgroundColor: THEME.warmIvory,
+            }}
+          >
+            <ToggleSwitch
+              id="private-group-toggle"
+              checked={isPrivate}
+              onChange={setIsPrivate}
+              label="Private Group (Invite Code Required)"
+              description="When enabled, peers must enter your 6-character invitation code to join."
+            />
+          </div>
+
+          <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px', marginTop: '6px' }}>
+            <Button variant="secondary" onClick={() => setShowCreateModal(false)}>
+              Cancel
+            </Button>
+            <Button type="submit" variant="primary" loading={creatingGroup}>
+              Create Group
+            </Button>
+          </div>
+        </form>
+      </Modal>
+
+      {/* Accessible Join with Code Modal */}
+      <Modal
+        isOpen={showJoinModal}
+        onClose={() => setShowJoinModal(false)}
+        title="Join Study Group with Code"
+        description="Enter the unique 6-character code provided by the group creator."
+      >
+        <form onSubmit={handleJoinByCode} style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+          <div>
+            <label
+              style={{
+                fontSize: '12px',
+                fontWeight: 700,
+                display: 'block',
+                marginBottom: '4px',
+                color: THEME.deepForestCharcoal,
+              }}
+            >
+              Invitation Code *
+            </label>
+            <input
+              type="text"
+              placeholder="e.g. A3F82K"
+              value={inviteCode}
+              onChange={(e) => setInviteCode(e.target.value)}
+              required
+              style={{
+                fontSize: '18px',
+                fontWeight: 800,
+                letterSpacing: '0.15em',
+                textAlign: 'center',
+                textTransform: 'uppercase',
+              }}
+            />
+          </div>
+
+          <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px', marginTop: '6px' }}>
+            <Button variant="secondary" onClick={() => setShowJoinModal(false)}>
+              Cancel
+            </Button>
+            <Button type="submit" variant="primary" loading={joiningCode}>
+              Join Group
+            </Button>
+          </div>
+        </form>
+      </Modal>
     </div>
   );
 };
+
+export default Groups;

@@ -2,7 +2,8 @@ import React, { useState } from 'react';
 import { NavLink } from 'react-router-dom';
 import { apiRequest } from '../../api/client';
 import { THEME } from '../../theme';
-import { Mail, ArrowLeft, Check } from 'lucide-react';
+import { Button } from '../../components/ui/Button';
+import { Mail, ArrowLeft, Check, Send } from 'lucide-react';
 
 export const ForgotPassword: React.FC = () => {
   const [email, setEmail] = useState('');
@@ -38,7 +39,7 @@ export const ForgotPassword: React.FC = () => {
         alignItems: 'center',
         justifyContent: 'center',
         backgroundColor: THEME.warmIvory,
-        padding: '20px',
+        padding: '24px',
       }}
     >
       <div
@@ -52,21 +53,24 @@ export const ForgotPassword: React.FC = () => {
           gap: '20px',
           backgroundColor: THEME.warmIvory,
           border: `1.5px solid ${THEME.deepForestCharcoal}`,
-          borderRadius: '8px',
+          borderRadius: THEME.radius.cardLg,
+          boxShadow: THEME.shadow.lifted,
+          animation: `studysync-scale-in ${THEME.motion.durationNormal} ${THEME.motion.easeSpring}`,
         }}
       >
         <div style={{ textAlign: 'center' }}>
           <div
             style={{
-              width: '46px',
-              height: '46px',
-              borderRadius: '8px',
+              width: '48px',
+              height: '48px',
+              borderRadius: THEME.radius.md,
               backgroundColor: THEME.emeraldGreen,
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
               margin: '0 auto 14px',
               border: `1.5px solid ${THEME.deepForestCharcoal}`,
+              boxShadow: THEME.shadow.subtle,
             }}
           >
             <Mail size={22} color={THEME.warmIvory} />
@@ -88,7 +92,7 @@ export const ForgotPassword: React.FC = () => {
             <p style={{ fontSize: '12px', lineHeight: 1.5, color: THEME.warmStone }}>
               Please check your spam folder if you do not see the message within a few minutes.
             </p>
-            <NavLink to="/login" className="btn-secondary" style={{ width: '100%', textAlign: 'center' }}>
+            <NavLink to="/login" className="btn-secondary btn-pill" style={{ width: '100%', textAlign: 'center', justifyContent: 'center' }}>
               Back to Sign In
             </NavLink>
           </div>
@@ -107,11 +111,20 @@ export const ForgotPassword: React.FC = () => {
               />
             </div>
 
-            <button type="submit" disabled={loading || !email} className="btn-primary" style={{ width: '100%', padding: '11px' }}>
-              <span>{loading ? 'Sending Request...' : 'Send Reset Link'}</span>
-            </button>
+            <Button
+              type="submit"
+              variant="primary"
+              shape="pill"
+              size="lg"
+              disabled={!email}
+              loading={loading}
+              leftIcon={<Send size={15} color={THEME.warmIvory} />}
+              style={{ width: '100%' }}
+            >
+              Send Reset Link
+            </Button>
 
-            <div style={{ textAlign: 'center', marginTop: '8px' }}>
+            <div style={{ textAlign: 'center', marginTop: '6px' }}>
               <NavLink to="/login" style={{ fontSize: '13px', display: 'inline-flex', alignItems: 'center', gap: '6px', color: THEME.emeraldGreen, fontWeight: 600 }}>
                 <ArrowLeft size={14} color={THEME.emeraldGreen} />
                 <span>Return to Sign In</span>
@@ -123,3 +136,5 @@ export const ForgotPassword: React.FC = () => {
     </div>
   );
 };
+
+export default ForgotPassword;

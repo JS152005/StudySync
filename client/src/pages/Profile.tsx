@@ -2,10 +2,14 @@ import React, { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { apiRequest } from '../api/client';
 import { THEME } from '../theme';
-import { Save, GraduationCap, BookOpen, Check } from 'lucide-react';
+import { Button } from '../components/ui/Button';
+import { SegmentedControl, SegmentOption } from '../components/ui/SegmentedControl';
+import { useToast } from '../components/ui/ToastContext';
+import { Save, GraduationCap, BookOpen, Check, User, Sparkles } from 'lucide-react';
 
 export const Profile: React.FC = () => {
   const { user, refreshUser } = useAuth();
+  const toast = useToast();
 
   const [fullName, setFullName] = useState(user?.full_name || '');
   const [course, setCourse] = useState(user?.course || '');
@@ -55,13 +59,32 @@ export const Profile: React.FC = () => {
       });
       await refreshUser();
       setSuccessMsg('Profile saved successfully!');
+      toast.success('Student profile updated!');
       setTimeout(() => setSuccessMsg(''), 3000);
     } catch (err: any) {
-      alert(err.message);
+      toast.error(err.message);
     } finally {
       setSaving(false);
     }
   };
+
+  const availabilityOptions: SegmentOption<string>[] = [
+    {
+      value: 'available',
+      label: 'Available for Study',
+      icon: <span className="live-pulse-dot" style={{ width: '6px', height: '6px' }} />,
+    },
+    {
+      value: 'studying',
+      label: 'Deep Studying',
+      icon: <span style={{ width: '6px', height: '6px', borderRadius: '50%', backgroundColor: THEME.vermilion }} />,
+    },
+    {
+      value: 'busy',
+      label: 'Busy / In Class',
+      icon: <span style={{ width: '6px', height: '6px', borderRadius: '50%', backgroundColor: THEME.warmStone }} />,
+    },
+  ];
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '24px', maxWidth: '800px' }}>
@@ -92,6 +115,8 @@ export const Profile: React.FC = () => {
           gap: '18px',
           border: `1.5px solid ${THEME.deepForestCharcoal}`,
           backgroundColor: THEME.warmIvory,
+          borderRadius: THEME.radius.card,
+          boxShadow: THEME.shadow.card,
         }}
       >
         <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
@@ -99,7 +124,7 @@ export const Profile: React.FC = () => {
             style={{
               width: '64px',
               height: '64px',
-              borderRadius: '50%',
+              borderRadius: THEME.radius.full,
               backgroundColor: THEME.emeraldGreen,
               display: 'flex',
               alignItems: 'center',
@@ -109,13 +134,16 @@ export const Profile: React.FC = () => {
               fontWeight: 800,
               border: `2px solid ${THEME.deepForestCharcoal}`,
               flexShrink: 0,
+              boxShadow: THEME.shadow.subtle,
             }}
           >
             {user?.full_name ? user.full_name[0].toUpperCase() : 'S'}
           </div>
 
           <div>
-            <div style={{ fontSize: '18px', fontWeight: 800, color: THEME.deepForestCharcoal }}>{user?.full_name}</div>
+            <div style={{ fontSize: '18px', fontWeight: 800, color: THEME.deepForestCharcoal }}>
+              {user?.full_name}
+            </div>
             <div style={{ fontSize: '13px', color: THEME.warmStone }}>@{user?.username} (Student ID)</div>
             <div style={{ fontSize: '12px', color: THEME.warmStone }}>{user?.email}</div>
           </div>
@@ -123,7 +151,15 @@ export const Profile: React.FC = () => {
 
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))', gap: '14px' }}>
           <div>
-            <label style={{ fontSize: '12px', fontWeight: 700, display: 'block', marginBottom: '4px', color: THEME.deepForestCharcoal }}>
+            <label
+              style={{
+                fontSize: '12px',
+                fontWeight: 700,
+                display: 'block',
+                marginBottom: '4px',
+                color: THEME.deepForestCharcoal,
+              }}
+            >
               Full Name *
             </label>
             <input
@@ -135,7 +171,15 @@ export const Profile: React.FC = () => {
           </div>
 
           <div>
-            <label style={{ fontSize: '12px', fontWeight: 700, display: 'block', marginBottom: '4px', color: THEME.deepForestCharcoal }}>
+            <label
+              style={{
+                fontSize: '12px',
+                fontWeight: 700,
+                display: 'block',
+                marginBottom: '4px',
+                color: THEME.deepForestCharcoal,
+              }}
+            >
               Course / Degree
             </label>
             <input
@@ -147,7 +191,15 @@ export const Profile: React.FC = () => {
           </div>
 
           <div>
-            <label style={{ fontSize: '12px', fontWeight: 700, display: 'block', marginBottom: '4px', color: THEME.deepForestCharcoal }}>
+            <label
+              style={{
+                fontSize: '12px',
+                fontWeight: 700,
+                display: 'block',
+                marginBottom: '4px',
+                color: THEME.deepForestCharcoal,
+              }}
+            >
               College / University
             </label>
             <input
@@ -159,7 +211,15 @@ export const Profile: React.FC = () => {
           </div>
 
           <div>
-            <label style={{ fontSize: '12px', fontWeight: 700, display: 'block', marginBottom: '4px', color: THEME.deepForestCharcoal }}>
+            <label
+              style={{
+                fontSize: '12px',
+                fontWeight: 700,
+                display: 'block',
+                marginBottom: '4px',
+                color: THEME.deepForestCharcoal,
+              }}
+            >
               Academic Year
             </label>
             <input
@@ -171,19 +231,38 @@ export const Profile: React.FC = () => {
           </div>
         </div>
 
+        {/* Study Availability Segmented Control */}
         <div>
-          <label style={{ fontSize: '12px', fontWeight: 700, display: 'block', marginBottom: '4px', color: THEME.deepForestCharcoal }}>
-            Study Status / Availability
+          <label
+            style={{
+              fontSize: '12px',
+              fontWeight: 700,
+              display: 'block',
+              marginBottom: '6px',
+              color: THEME.deepForestCharcoal,
+            }}
+          >
+            Study Status & Peer Availability
           </label>
-          <select value={availability} onChange={(e) => setAvailability(e.target.value)}>
-            <option value="available">Available for Peer Study</option>
-            <option value="studying">Currently Deep Studying</option>
-            <option value="busy">Busy / In Class</option>
-          </select>
+          <SegmentedControl
+            options={availabilityOptions}
+            value={availability}
+            onChange={(val) => setAvailability(val)}
+            variant="pill"
+            size="md"
+          />
         </div>
 
         <div>
-          <label style={{ fontSize: '12px', fontWeight: 700, display: 'block', marginBottom: '4px', color: THEME.deepForestCharcoal }}>
+          <label
+            style={{
+              fontSize: '12px',
+              fontWeight: 700,
+              display: 'block',
+              marginBottom: '4px',
+              color: THEME.deepForestCharcoal,
+            }}
+          >
             Introduction & Study Goals
           </label>
           <textarea
@@ -195,15 +274,30 @@ export const Profile: React.FC = () => {
         </div>
 
         <div style={{ display: 'flex', justifyContent: 'flex-end', paddingTop: '10px', borderTop: `1px solid ${THEME.warmStone}` }}>
-          <button type="submit" disabled={saving} className="btn-primary">
-            <Save size={15} color={THEME.warmIvory} />
-            <span>{saving ? 'Saving...' : 'Save Profile'}</span>
-          </button>
+          <Button
+            type="submit"
+            variant="primary"
+            shape="pill"
+            loading={saving}
+            leftIcon={<Save size={15} color={THEME.warmIvory} />}
+          >
+            Save Profile
+          </Button>
         </div>
       </form>
 
-      {/* Topics Summary */}
-      <div className="card-secondary" style={{ display: 'flex', flexDirection: 'column', gap: '14px', backgroundColor: THEME.warmIvory, border: `1.5px solid ${THEME.warmStone}` }}>
+      {/* Academic Specialties Summary */}
+      <div
+        className="card-secondary"
+        style={{
+          display: 'flex',
+          flexDirection: 'column',
+          gap: '14px',
+          backgroundColor: THEME.warmIvory,
+          border: `1.5px solid ${THEME.warmStone}`,
+          borderRadius: THEME.radius.card,
+        }}
+      >
         <h2 style={{ fontSize: '16px', fontWeight: 800, color: THEME.deepForestCharcoal }}>
           Academic Specialties (Teach & Learn)
         </h2>
@@ -220,7 +314,9 @@ export const Profile: React.FC = () => {
             ) : (
               <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
                 {teachTopics.map((t) => (
-                  <span key={t.id} className="badge">{t.subject}: {t.topic}</span>
+                  <span key={t.id} className="badge">
+                    {t.subject}: {t.topic}
+                  </span>
                 ))}
               </div>
             )}
@@ -228,7 +324,7 @@ export const Profile: React.FC = () => {
 
           <div>
             <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '8px' }}>
-              <BookOpen size={16} color={THEME.deepForestCharcoal} />
+              <BookOpen size={16} color={THEME.emeraldGreen} />
               <span style={{ fontSize: '13px', fontWeight: 700, color: THEME.deepForestCharcoal }}>
                 Topics You Need Help With ({learnTopics.length})
               </span>
@@ -238,7 +334,9 @@ export const Profile: React.FC = () => {
             ) : (
               <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
                 {learnTopics.map((t) => (
-                  <span key={t.id} className="badge-outline">{t.subject}: {t.topic}</span>
+                  <span key={t.id} className="badge-outline" style={{ fontSize: '11px' }}>
+                    {t.subject}: {t.topic}
+                  </span>
                 ))}
               </div>
             )}
@@ -248,3 +346,5 @@ export const Profile: React.FC = () => {
     </div>
   );
 };
+
+export default Profile;

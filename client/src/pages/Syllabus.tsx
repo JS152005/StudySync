@@ -2,12 +2,20 @@ import React, { useState, useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { apiRequest } from '../api/client';
 import { THEME } from '../theme';
-import { ListTodo, Plus, CheckCircle, Clock, Circle, Filter, Calendar } from 'lucide-react';
+import { Button } from '../components/ui/Button';
+import { SegmentedControl, SegmentOption } from '../components/ui/SegmentedControl';
+import { Modal } from '../components/ui/Modal';
+import { Skeleton } from '../components/ui/Skeleton';
+import { EmptyState } from '../components/ui/EmptyState';
+import { useToast } from '../components/ui/ToastContext';
+import { ListTodo, Plus, CheckCircle, Clock, Circle, Filter, Calendar, Sparkles } from 'lucide-react';
 
 export const Syllabus: React.FC = () => {
-  const [searchParams] = useSearchParams();
+  const [searchParams, setSearchParams] = useSearchParams();
   const defaultGroupId = searchParams.get('group_id') || '';
+  const autoCreate = searchParams.get('action') === 'create';
 
+  const toast = useToast();
   const [boards, setBoards] = useState<any[]>([]);
   const [selectedBoardId, setSelectedBoardId] = useState<string>('');
   const [boardDetails, setBoardDetails] = useState<any>(null);
@@ -18,9 +26,10 @@ export const Syllabus: React.FC = () => {
   const [subjectFilter, setSubjectFilter] = useState<string>('all');
 
   // Create Board Modal
-  const [showBoardModal, setShowBoardModal] = useState(false);
+  const [showBoardModal, setShowBoardModal] = useState(autoCreate);
   const [examName, setExamName] = useState('');
   const [examDate, setExamDate] = useState('');
+  const [creatingBoard, setCreatingBoard] = useState(false);
 
   // Add Topic Modal
   const [showTopicModal, setShowTopicModal] = useState(false);
@@ -28,6 +37,7 @@ export const Syllabus: React.FC = () => {
   const [topicUnit, setTopicUnit] = useState('');
   const [topicTitle, setTopicTitle] = useState('');
   const [topicNotes, setTopicNotes] = useState('');
+  const [addingTopic, setAddingTopic] = useState(false);
 
   const loadBoards = async () => {
     try {
@@ -59,11 +69,20 @@ export const Syllabus: React.FC = () => {
   }, [defaultGroupId]);
 
   useEffect(() => {
+    if (autoCreate) {
+      setShowBoardModal(true);
+      searchParams.delete('action');
+      setSearchParams(searchParams, { replace: true });
+    }
+  }, [autoCreate]);
+
+  useEffect(() => {
     loadBoardDetails();
   }, [selectedBoardId]);
 
   const handleCreateBoard = async (e: React.FormEvent) => {
     e.preventDefault();
+    setCreatingBoard(true);
     try {
       const res = await apiRequest<{ board: any }>('/syllabus/boards', {
         method: 'POST',
@@ -77,15 +96,19 @@ export const Syllabus: React.FC = () => {
       setExamName('');
       setExamDate('');
       setSelectedBoardId(res.board.id);
+      toast.success('Syllabus board established!');
       loadBoards();
     } catch (err: any) {
-      alert(err.message);
+      toast.error(err.message);
+    } finally {
+      setCreatingBoard(false);
     }
   };
 
   const handleAddTopic = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!selectedBoardId) return;
+    setAddingTopic(true);
     try {
       await apiRequest(`/syllabus/boards/${selectedBoardId}/topics`, {
         method: 'POST',
@@ -101,10 +124,13 @@ export const Syllabus: React.FC = () => {
       setTopicUnit('');
       setTopicTitle('');
       setTopicNotes('');
+      toast.success('Topic added to syllabus!');
       loadBoardDetails();
       loadBoards();
     } catch (err: any) {
-      alert(err.message);
+      toast.error(err.message);
+    } finally {
+      setAddingTopic(false);
     }
   };
 
@@ -114,10 +140,13 @@ export const Syllabus: React.FC = () => {
         method: 'PUT',
         body: JSON.stringify({ status: newStatus }),
       });
+      if (newStatus === 'completed') {
+        toast.success('Topic conquered! Progress updated.');
+      }
       loadBoardDetails();
       loadBoards();
     } catch (err: any) {
-      alert(err.message);
+      toast.error(err.message);
     }
   };
 
@@ -129,6 +158,13 @@ export const Syllabus: React.FC = () => {
     if (subjectFilter !== 'all' && t.subject !== subjectFilter) return false;
     return true;
   });
+
+  const filterStatusOptions: SegmentOption<string>[] = [
+    { value: 'all', label: 'All' },
+    { value: 'not_started', label: 'Not Started' },
+    { value: 'in_progress', label: 'In Progress' },
+    { value: 'completed', label: 'Completed' },
+  ];
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
@@ -143,13 +179,17 @@ export const Syllabus: React.FC = () => {
           </p>
         </div>
 
-        <button onClick={() => setShowBoardModal(true)} className="btn-primary">
-          <Plus size={15} color={THEME.warmIvory} />
-          <span>New Syllabus Board</span>
-        </button>
+        <Button
+          variant="primary"
+          shape="pill"
+          onClick={() => setShowBoardModal(true)}
+          leftIcon={<Plus size={15} color={THEME.warmIvory} />}
+        >
+          New Syllabus Board
+        </Button>
       </div>
 
-      {/* Boards Selector & Summary Bar */}
+      {/* Boards Selector & Summary Progress Card */}
       {boards.length > 0 && (
         <div
           className="card"
@@ -160,15 +200,19 @@ export const Syllabus: React.FC = () => {
             padding: '20px',
             border: `1.5px solid ${THEME.deepForestCharcoal}`,
             backgroundColor: THEME.warmIvory,
+            borderRadius: THEME.radius.card,
+            boxShadow: THEME.shadow.card,
           }}
         >
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '12px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '14px' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-              <span style={{ fontSize: '13px', fontWeight: 800, color: THEME.deepForestCharcoal }}>Active Board:</span>
+              <span style={{ fontSize: '13px', fontWeight: 800, color: THEME.deepForestCharcoal }}>
+                Active Board:
+              </span>
               <select
                 value={selectedBoardId}
                 onChange={(e) => setSelectedBoardId(e.target.value)}
-                style={{ width: 'auto', minWidth: '240px' }}
+                style={{ width: 'auto', minWidth: '260px' }}
               >
                 {boards.map((b) => (
                   <option key={b.id} value={b.id}>
@@ -179,29 +223,44 @@ export const Syllabus: React.FC = () => {
             </div>
 
             {boardDetails?.board?.exam_date && (
-              <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '13px', fontWeight: 700, color: THEME.deepForestCharcoal }}>
+              <div
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '6px',
+                  fontSize: '13px',
+                  fontWeight: 700,
+                  color: THEME.deepForestCharcoal,
+                }}
+              >
                 <Calendar size={16} color={THEME.emeraldGreen} />
                 <span>Exam Date: {new Date(boardDetails.board.exam_date).toLocaleDateString()}</span>
               </div>
             )}
           </div>
 
-          {/* Progress Bar & Stats */}
+          {/* Progress Bar & Numerical Stats */}
           {boardDetails?.stats && (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13px', fontWeight: 800, color: THEME.deepForestCharcoal }}>
-                <span>Overall Syllabus Completion</span>
-                <span>{boardDetails.stats.percentage}% Completed ({boardDetails.stats.completed}/{boardDetails.stats.total} topics)</span>
+                <span style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                  <Sparkles size={14} color={THEME.emeraldGreen} />
+                  <span>Overall Syllabus Mastery</span>
+                </span>
+                <span>
+                  {boardDetails.stats.percentage}% Completed ({boardDetails.stats.completed}/{boardDetails.stats.total} topics)
+                </span>
               </div>
 
-              {/* Progress Bar in Five-Color Palette */}
+              {/* Polished Editorial Progress Bar */}
               <div
                 style={{
                   height: '14px',
                   backgroundColor: THEME.warmIvory,
-                  borderRadius: '7px',
+                  borderRadius: THEME.radius.pill,
                   border: `1.5px solid ${THEME.deepForestCharcoal}`,
                   overflow: 'hidden',
+                  padding: '1.5px',
                 }}
               >
                 <div
@@ -209,12 +268,13 @@ export const Syllabus: React.FC = () => {
                     height: '100%',
                     width: `${boardDetails.stats.percentage}%`,
                     backgroundColor: THEME.emeraldGreen,
-                    transition: 'width 0.3s ease',
+                    borderRadius: THEME.radius.pill,
+                    transition: `width ${THEME.motion.durationSlow} ${THEME.motion.easeOut}`,
                   }}
                 />
               </div>
 
-              <div style={{ display: 'flex', gap: '16px', fontSize: '12px', marginTop: '4px', color: THEME.warmStone, fontWeight: 600 }}>
+              <div style={{ display: 'flex', gap: '16px', fontSize: '12px', marginTop: '2px', color: THEME.warmStone, fontWeight: 600 }}>
                 <span>Completed: {boardDetails.stats.completed}</span>
                 <span>In Progress: {boardDetails.stats.inProgress}</span>
                 <span>Remaining: {boardDetails.stats.remaining}</span>
@@ -225,19 +285,23 @@ export const Syllabus: React.FC = () => {
       )}
 
       {/* Board Topics Container */}
-      {boards.length === 0 ? (
-        <div className="card" style={{ textAlign: 'center', padding: '48px', border: `1.5px solid ${THEME.deepForestCharcoal}` }}>
-          <ListTodo size={40} color={THEME.warmStone} style={{ margin: '0 auto 12px' }} />
-          <div style={{ fontSize: '16px', fontWeight: 800, marginBottom: '6px', color: THEME.deepForestCharcoal }}>
-            No syllabus boards created yet
-          </div>
-          <p style={{ fontSize: '13px', marginBottom: '16px', color: THEME.warmStone }}>
-            Create an exam board to systematically break down units and conquer your exam schedule!
-          </p>
-          <button onClick={() => setShowBoardModal(true)} className="btn-primary">
-            <span>Create Exam Board</span>
-          </button>
+      {loading ? (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+          <Skeleton height="60px" borderRadius={THEME.radius.card} />
+          <Skeleton height="70px" borderRadius={THEME.radius.card} />
+          <Skeleton height="70px" borderRadius={THEME.radius.card} />
         </div>
+      ) : boards.length === 0 ? (
+        <EmptyState
+          icon={<ListTodo size={36} />}
+          title="No syllabus boards created yet"
+          description="Create an exam board to systematically break down course units and conquer your exam schedule!"
+          action={
+            <Button variant="primary" shape="pill" onClick={() => setShowBoardModal(true)}>
+              Create Exam Board
+            </Button>
+          }
+        />
       ) : (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
           {/* Filters & Actions Bar */}
@@ -252,22 +316,17 @@ export const Syllabus: React.FC = () => {
               padding: '12px 18px',
               border: `1.5px solid ${THEME.deepForestCharcoal}`,
               backgroundColor: THEME.warmIvory,
+              borderRadius: THEME.radius.card,
             }}
           >
-            <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
-              <Filter size={16} color={THEME.deepForestCharcoal} />
-
-              {/* Status Filter */}
-              <select
+            <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flexWrap: 'wrap' }}>
+              <SegmentedControl
+                options={filterStatusOptions}
                 value={statusFilter}
-                onChange={(e) => setStatusFilter(e.target.value)}
-                style={{ width: 'auto', fontSize: '12px', padding: '6px 10px' }}
-              >
-                <option value="all">All Statuses</option>
-                <option value="not_started">Not Started</option>
-                <option value="in_progress">In Progress</option>
-                <option value="completed">Completed</option>
-              </select>
+                onChange={(val) => setStatusFilter(val)}
+                size="sm"
+                variant="pill"
+              />
 
               {/* Subject Filter */}
               {subjectsList.length > 0 && (
@@ -278,224 +337,324 @@ export const Syllabus: React.FC = () => {
                 >
                   <option value="all">All Subjects</option>
                   {subjectsList.map((s: any) => (
-                    <option key={s} value={s}>{s}</option>
+                    <option key={s} value={s}>
+                      {s}
+                    </option>
                   ))}
                 </select>
               )}
             </div>
 
-            <button onClick={() => setShowTopicModal(true)} className="btn-primary" style={{ padding: '7px 14px', fontSize: '12.5px' }}>
-              <Plus size={14} color={THEME.warmIvory} />
-              <span>Add Topic</span>
-            </button>
+            <Button
+              variant="primary"
+              size="sm"
+              shape="pill"
+              onClick={() => setShowTopicModal(true)}
+              leftIcon={<Plus size={14} color={THEME.warmIvory} />}
+            >
+              Add Topic
+            </Button>
           </div>
 
-          {/* Topics List */}
+          {/* Topics List with Expressive Interactive Controls */}
           {filteredTopics.length === 0 ? (
-            <div className="card-secondary" style={{ textAlign: 'center', padding: '36px' }}>
-              <div style={{ fontSize: '14px', fontWeight: 800, color: THEME.deepForestCharcoal }}>
-                No topics match current filters.
-              </div>
-            </div>
+            <EmptyState
+              icon={<ListTodo size={28} />}
+              title="No topics match current filters"
+              description="Adjust your filters or add a new topic to this syllabus board."
+            />
           ) : (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-              {filteredTopics.map((t: any) => (
-                <div
-                  key={t.id}
-                  className="card"
-                  style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'space-between',
-                    padding: '14px 18px',
-                    backgroundColor: THEME.warmIvory,
-                    border: `1.5px solid ${t.status === 'completed' ? THEME.emeraldGreen : THEME.deepForestCharcoal}`,
-                  }}
-                >
-                  <div style={{ flex: 1, minWidth: 0, marginRight: '16px' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
-                      <span className="badge">{t.subject}</span>
-                      <span className="badge-outline" style={{ fontSize: '11px' }}>{t.unit}</span>
-                      {t.assigned_to_name && (
-                        <span style={{ fontSize: '12px', color: THEME.warmStone }}>Assigned: {t.assigned_to_name}</span>
+              {filteredTopics.map((t: any) => {
+                const isCompleted = t.status === 'completed';
+                const isInProgress = t.status === 'in_progress';
+
+                return (
+                  <div
+                    key={t.id}
+                    className="card"
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'space-between',
+                      padding: '14px 18px',
+                      backgroundColor: THEME.warmIvory,
+                      border: `1.5px solid ${isCompleted ? THEME.emeraldGreen : isInProgress ? THEME.vermilion : THEME.deepForestCharcoal}`,
+                      borderRadius: THEME.radius.card,
+                      boxShadow: isCompleted ? 'none' : THEME.shadow.subtle,
+                      transition: `border-color ${THEME.motion.durationFast} ${THEME.motion.easeOut}`,
+                    }}
+                  >
+                    <div style={{ flex: 1, minWidth: 0, marginRight: '16px' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
+                        <span className="badge">{t.subject}</span>
+                        <span className="badge-outline" style={{ fontSize: '11px' }}>
+                          {t.unit}
+                        </span>
+                        {t.assigned_to_name && (
+                          <span style={{ fontSize: '12px', color: THEME.warmStone }}>
+                            Assigned: {t.assigned_to_name}
+                          </span>
+                        )}
+                      </div>
+                      <div
+                        style={{
+                          fontSize: '15px',
+                          fontWeight: 800,
+                          marginBottom: '2px',
+                          color: THEME.deepForestCharcoal,
+                          textDecoration: isCompleted ? 'line-through' : 'none',
+                          opacity: isCompleted ? 0.85 : 1,
+                        }}
+                      >
+                        {t.title}
+                      </div>
+                      {t.notes && (
+                        <div style={{ fontSize: '12px', fontStyle: 'italic', color: THEME.warmStone }}>
+                          {t.notes}
+                        </div>
                       )}
                     </div>
-                    <div style={{ fontSize: '15px', fontWeight: 800, marginBottom: '2px', color: THEME.deepForestCharcoal }}>
-                      {t.title}
+
+                    {/* Tactile Status Action Buttons */}
+                    <div style={{ display: 'flex', gap: '6px', flexShrink: 0 }}>
+                      <button
+                        type="button"
+                        onClick={() => handleStatusChange(t.id, 'not_started')}
+                        style={{
+                          padding: '6px 10px',
+                          fontSize: '11.5px',
+                          borderRadius: THEME.radius.pill,
+                          backgroundColor: t.status === 'not_started' ? THEME.deepForestCharcoal : THEME.warmIvory,
+                          color: t.status === 'not_started' ? THEME.warmIvory : THEME.deepForestCharcoal,
+                          border: `1.5px solid ${THEME.deepForestCharcoal}`,
+                          cursor: 'pointer',
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '4px',
+                          fontWeight: 700,
+                          transition: `transform ${THEME.motion.durationFast} ${THEME.motion.easeSpring}`,
+                        }}
+                      >
+                        <Circle size={11} color={t.status === 'not_started' ? THEME.warmIvory : THEME.deepForestCharcoal} />
+                        <span>Not Started</span>
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={() => handleStatusChange(t.id, 'in_progress')}
+                        style={{
+                          padding: '6px 10px',
+                          fontSize: '11.5px',
+                          borderRadius: THEME.radius.pill,
+                          backgroundColor: t.status === 'in_progress' ? THEME.vermilion : THEME.warmIvory,
+                          color: t.status === 'in_progress' ? THEME.warmIvory : THEME.deepForestCharcoal,
+                          border: `1.5px solid ${t.status === 'in_progress' ? THEME.vermilion : THEME.deepForestCharcoal}`,
+                          cursor: 'pointer',
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '4px',
+                          fontWeight: 700,
+                          transition: `transform ${THEME.motion.durationFast} ${THEME.motion.easeSpring}`,
+                        }}
+                      >
+                        <Clock size={11} color={t.status === 'in_progress' ? THEME.warmIvory : THEME.deepForestCharcoal} />
+                        <span>In Progress</span>
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={() => handleStatusChange(t.id, 'completed')}
+                        style={{
+                          padding: '6px 12px',
+                          fontSize: '11.5px',
+                          borderRadius: THEME.radius.pill,
+                          backgroundColor: t.status === 'completed' ? THEME.emeraldGreen : THEME.warmIvory,
+                          color: t.status === 'completed' ? THEME.warmIvory : THEME.deepForestCharcoal,
+                          border: `1.5px solid ${t.status === 'completed' ? THEME.emeraldGreen : THEME.deepForestCharcoal}`,
+                          cursor: 'pointer',
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '4px',
+                          fontWeight: 700,
+                          transform: isCompleted ? 'scale(1.02)' : 'scale(1)',
+                          transition: `transform ${THEME.motion.durationFast} ${THEME.motion.easeSpring}`,
+                        }}
+                      >
+                        <CheckCircle size={12} color={t.status === 'completed' ? THEME.warmIvory : THEME.emeraldGreen} />
+                        <span>Done</span>
+                      </button>
                     </div>
-                    {t.notes && <div style={{ fontSize: '12px', fontStyle: 'italic', color: THEME.warmStone }}>{t.notes}</div>}
                   </div>
-
-                  {/* Status Toggle Buttons */}
-                  <div style={{ display: 'flex', gap: '6px', flexShrink: 0 }}>
-                    <button
-                      type="button"
-                      onClick={() => handleStatusChange(t.id, 'not_started')}
-                      style={{
-                        padding: '6px 10px',
-                        fontSize: '11px',
-                        backgroundColor: t.status === 'not_started' ? THEME.deepForestCharcoal : THEME.warmIvory,
-                        color: t.status === 'not_started' ? THEME.warmIvory : THEME.deepForestCharcoal,
-                        borderColor: THEME.deepForestCharcoal,
-                      }}
-                    >
-                      <Circle size={12} color={t.status === 'not_started' ? THEME.warmIvory : THEME.deepForestCharcoal} />
-                      <span>Not Started</span>
-                    </button>
-
-                    <button
-                      type="button"
-                      onClick={() => handleStatusChange(t.id, 'in_progress')}
-                      style={{
-                        padding: '6px 10px',
-                        fontSize: '11px',
-                        backgroundColor: t.status === 'in_progress' ? THEME.vermilion : THEME.warmIvory,
-                        color: t.status === 'in_progress' ? THEME.warmIvory : THEME.deepForestCharcoal,
-                        borderColor: t.status === 'in_progress' ? THEME.vermilion : THEME.deepForestCharcoal,
-                      }}
-                    >
-                      <Clock size={12} color={t.status === 'in_progress' ? THEME.warmIvory : THEME.deepForestCharcoal} />
-                      <span>In Progress</span>
-                    </button>
-
-                    <button
-                      type="button"
-                      onClick={() => handleStatusChange(t.id, 'completed')}
-                      style={{
-                        padding: '6px 10px',
-                        fontSize: '11px',
-                        backgroundColor: t.status === 'completed' ? THEME.emeraldGreen : THEME.warmIvory,
-                        color: t.status === 'completed' ? THEME.warmIvory : THEME.deepForestCharcoal,
-                        borderColor: t.status === 'completed' ? THEME.emeraldGreen : THEME.deepForestCharcoal,
-                      }}
-                    >
-                      <CheckCircle size={12} color={t.status === 'completed' ? THEME.warmIvory : THEME.deepForestCharcoal} />
-                      <span>Completed</span>
-                    </button>
-                  </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
           )}
         </div>
       )}
 
-      {/* Create Board Modal */}
-      {showBoardModal && (
-        <div className="modal-overlay">
-          <div className="modal-content">
-            <h2 style={{ fontSize: '18px', fontWeight: 800, marginBottom: '16px', color: THEME.deepForestCharcoal }}>
-              New Exam Syllabus Board
-            </h2>
-            <form onSubmit={handleCreateBoard} style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
-              <div>
-                <label style={{ fontSize: '12px', fontWeight: 700, display: 'block', marginBottom: '4px', color: THEME.deepForestCharcoal }}>
-                  Exam Name *
-                </label>
-                <input
-                  type="text"
-                  placeholder="e.g. End Semester Theory Examination 2026"
-                  value={examName}
-                  onChange={(e) => setExamName(e.target.value)}
-                  required
-                />
-              </div>
-
-              <div>
-                <label style={{ fontSize: '12px', fontWeight: 700, display: 'block', marginBottom: '4px', color: THEME.deepForestCharcoal }}>
-                  Exam Date (Optional)
-                </label>
-                <input
-                  type="date"
-                  value={examDate}
-                  onChange={(e) => setExamDate(e.target.value)}
-                />
-              </div>
-
-              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px' }}>
-                <button type="button" onClick={() => setShowBoardModal(false)} className="btn-secondary">
-                  Cancel
-                </button>
-                <button type="submit" className="btn-primary">
-                  Create Board
-                </button>
-              </div>
-            </form>
+      {/* Accessible Create Exam Board Modal */}
+      <Modal
+        isOpen={showBoardModal}
+        onClose={() => setShowBoardModal(false)}
+        title="Create Exam Syllabus Board"
+        description="Set up an examination milestone to map topics and measure mastery."
+      >
+        <form onSubmit={handleCreateBoard} style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+          <div>
+            <label
+              style={{
+                fontSize: '12px',
+                fontWeight: 700,
+                display: 'block',
+                marginBottom: '4px',
+                color: THEME.deepForestCharcoal,
+              }}
+            >
+              Exam / Milestone Name *
+            </label>
+            <input
+              type="text"
+              placeholder="e.g. End Semester Exam — Computer Networks"
+              value={examName}
+              onChange={(e) => setExamName(e.target.value)}
+              required
+            />
           </div>
-        </div>
-      )}
 
-      {/* Add Topic Modal */}
-      {showTopicModal && (
-        <div className="modal-overlay">
-          <div className="modal-content">
-            <h2 style={{ fontSize: '18px', fontWeight: 800, marginBottom: '16px', color: THEME.deepForestCharcoal }}>
-              Add Syllabus Topic
-            </h2>
-            <form onSubmit={handleAddTopic} style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
-              <div>
-                <label style={{ fontSize: '12px', fontWeight: 700, display: 'block', marginBottom: '4px', color: THEME.deepForestCharcoal }}>
-                  Subject *
-                </label>
-                <input
-                  type="text"
-                  placeholder="e.g. Computer Networks"
-                  value={topicSubject}
-                  onChange={(e) => setTopicSubject(e.target.value)}
-                  required
-                />
-              </div>
-
-              <div>
-                <label style={{ fontSize: '12px', fontWeight: 700, display: 'block', marginBottom: '4px', color: THEME.deepForestCharcoal }}>
-                  Unit / Chapter *
-                </label>
-                <input
-                  type="text"
-                  placeholder="e.g. Unit 3: Transport Layer Protocols"
-                  value={topicUnit}
-                  onChange={(e) => setTopicUnit(e.target.value)}
-                  required
-                />
-              </div>
-
-              <div>
-                <label style={{ fontSize: '12px', fontWeight: 700, display: 'block', marginBottom: '4px', color: THEME.deepForestCharcoal }}>
-                  Topic Title *
-                </label>
-                <input
-                  type="text"
-                  placeholder="e.g. TCP 3-Way Handshake & Congestion Control"
-                  value={topicTitle}
-                  onChange={(e) => setTopicTitle(e.target.value)}
-                  required
-                />
-              </div>
-
-              <div>
-                <label style={{ fontSize: '12px', fontWeight: 700, display: 'block', marginBottom: '4px', color: THEME.deepForestCharcoal }}>
-                  Notes
-                </label>
-                <textarea
-                  rows={2}
-                  placeholder="Key theorems, textbook chapter references..."
-                  value={topicNotes}
-                  onChange={(e) => setTopicNotes(e.target.value)}
-                />
-              </div>
-
-              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px' }}>
-                <button type="button" onClick={() => setShowTopicModal(false)} className="btn-secondary">
-                  Cancel
-                </button>
-                <button type="submit" className="btn-primary">
-                  Save Topic
-                </button>
-              </div>
-            </form>
+          <div>
+            <label
+              style={{
+                fontSize: '12px',
+                fontWeight: 700,
+                display: 'block',
+                marginBottom: '4px',
+                color: THEME.deepForestCharcoal,
+              }}
+            >
+              Target Exam Date
+            </label>
+            <input
+              type="date"
+              value={examDate}
+              onChange={(e) => setExamDate(e.target.value)}
+            />
           </div>
-        </div>
-      )}
+
+          <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px', marginTop: '6px' }}>
+            <Button variant="secondary" onClick={() => setShowBoardModal(false)}>
+              Cancel
+            </Button>
+            <Button type="submit" variant="primary" loading={creatingBoard}>
+              Create Board
+            </Button>
+          </div>
+        </form>
+      </Modal>
+
+      {/* Accessible Add Topic Modal */}
+      <Modal
+        isOpen={showTopicModal}
+        onClose={() => setShowTopicModal(false)}
+        title="Add Topic to Board"
+        description="Define a specific unit and concept to track."
+      >
+        <form onSubmit={handleAddTopic} style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+          <div>
+            <label
+              style={{
+                fontSize: '12px',
+                fontWeight: 700,
+                display: 'block',
+                marginBottom: '4px',
+                color: THEME.deepForestCharcoal,
+              }}
+            >
+              Subject *
+            </label>
+            <input
+              type="text"
+              placeholder="e.g. Operating Systems"
+              value={topicSubject}
+              onChange={(e) => setTopicSubject(e.target.value)}
+              required
+            />
+          </div>
+
+          <div>
+            <label
+              style={{
+                fontSize: '12px',
+                fontWeight: 700,
+                display: 'block',
+                marginBottom: '4px',
+                color: THEME.deepForestCharcoal,
+              }}
+            >
+              Unit / Module *
+            </label>
+            <input
+              type="text"
+              placeholder="e.g. Unit 3: Process Synchronization"
+              value={topicUnit}
+              onChange={(e) => setTopicUnit(e.target.value)}
+              required
+            />
+          </div>
+
+          <div>
+            <label
+              style={{
+                fontSize: '12px',
+                fontWeight: 700,
+                display: 'block',
+                marginBottom: '4px',
+                color: THEME.deepForestCharcoal,
+              }}
+            >
+              Topic Title *
+            </label>
+            <input
+              type="text"
+              placeholder="e.g. Dining Philosophers & Semaphores"
+              value={topicTitle}
+              onChange={(e) => setTopicTitle(e.target.value)}
+              required
+            />
+          </div>
+
+          <div>
+            <label
+              style={{
+                fontSize: '12px',
+                fontWeight: 700,
+                display: 'block',
+                marginBottom: '4px',
+                color: THEME.deepForestCharcoal,
+              }}
+            >
+              Notes / References
+            </label>
+            <textarea
+              rows={2}
+              placeholder="Textbook pages, key formulas, previous exam questions..."
+              value={topicNotes}
+              onChange={(e) => setTopicNotes(e.target.value)}
+            />
+          </div>
+
+          <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px', marginTop: '6px' }}>
+            <Button variant="secondary" onClick={() => setShowTopicModal(false)}>
+              Cancel
+            </Button>
+            <Button type="submit" variant="primary" loading={addingTopic}>
+              Add Topic
+            </Button>
+          </div>
+        </form>
+      </Modal>
     </div>
   );
 };
+
+export default Syllabus;

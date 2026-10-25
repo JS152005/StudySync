@@ -2,7 +2,10 @@ import React, { useState, useEffect, useRef } from 'react';
 import { apiRequest } from '../api/client';
 import { useAuth } from '../context/AuthContext';
 import { THEME } from '../theme';
-import { Send, Users, User, MessageSquare } from 'lucide-react';
+import { Button } from '../components/ui/Button';
+import { EmptyState } from '../components/ui/EmptyState';
+import { useToast } from '../components/ui/ToastContext';
+import { Send, Users, User, MessageSquare, ArrowLeft, Clock } from 'lucide-react';
 
 interface DirectChat {
   user_id: string;
@@ -26,12 +29,14 @@ interface GroupChat {
 
 export const Messages: React.FC = () => {
   const { user } = useAuth();
+  const toast = useToast();
   const [directChats, setDirectChats] = useState<DirectChat[]>([]);
   const [groupChats, setGroupChats] = useState<GroupChat[]>([]);
   const [activeChat, setActiveChat] = useState<{ type: 'direct' | 'group'; id: string; name: string } | null>(null);
   const [messages, setMessages] = useState<any[]>([]);
   const [text, setText] = useState('');
   const [sending, setSending] = useState(false);
+  const [mobileConversationOpen, setMobileConversationOpen] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement | null>(null);
 
   const loadConversations = async () => {
@@ -103,7 +108,7 @@ export const Messages: React.FC = () => {
       setText('');
       loadConversations();
     } catch (err: any) {
-      alert(err.message);
+      toast.error(err.message || 'Failed to send message');
     } finally {
       setSending(false);
     }
@@ -115,28 +120,42 @@ export const Messages: React.FC = () => {
         display: 'flex',
         height: 'calc(100vh - 140px)',
         border: `1.5px solid ${THEME.deepForestCharcoal}`,
-        borderRadius: '8px',
+        borderRadius: THEME.radius.card,
         overflow: 'hidden',
         backgroundColor: THEME.warmIvory,
+        boxShadow: THEME.shadow.card,
       }}
     >
       {/* Conversations Sidebar */}
       <div
+        className={`chat-sidebar ${mobileConversationOpen ? 'chat-sidebar-hidden-mobile' : ''}`}
         style={{
           width: '320px',
           borderRight: `1.5px solid ${THEME.deepForestCharcoal}`,
           backgroundColor: THEME.warmIvory,
           display: 'flex',
           flexDirection: 'column',
+          flexShrink: 0,
         }}
       >
-        <div style={{ padding: '16px', borderBottom: `1.5px solid ${THEME.deepForestCharcoal}` }}>
-          <h2 style={{ fontSize: '16px', fontWeight: 800, color: THEME.deepForestCharcoal }}>Messages</h2>
+        <div style={{ padding: '16px 20px', borderBottom: `1.5px solid ${THEME.deepForestCharcoal}` }}>
+          <h2 style={{ fontSize: '16px', fontWeight: 800, color: THEME.deepForestCharcoal }}>
+            Messages & Channels
+          </h2>
         </div>
 
         <div style={{ flex: 1, overflowY: 'auto', padding: '10px', display: 'flex', flexDirection: 'column', gap: '6px' }}>
           {/* Groups Section */}
-          <div style={{ fontSize: '11px', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.05em', color: THEME.warmStone, padding: '6px 8px' }}>
+          <div
+            style={{
+              fontSize: '11px',
+              fontWeight: 800,
+              textTransform: 'uppercase',
+              letterSpacing: '0.05em',
+              color: THEME.warmStone,
+              padding: '6px 8px',
+            }}
+          >
             Study Groups
           </div>
           {groupChats.map((g) => {
@@ -144,26 +163,45 @@ export const Messages: React.FC = () => {
             return (
               <div
                 key={g.group_id}
-                onClick={() => setActiveChat({ type: 'group', id: g.group_id, name: g.name })}
+                onClick={() => {
+                  setActiveChat({ type: 'group', id: g.group_id, name: g.name });
+                  setMobileConversationOpen(true);
+                }}
                 style={{
                   padding: '10px 12px',
-                  borderRadius: '6px',
+                  borderRadius: THEME.radius.md,
                   cursor: 'pointer',
                   backgroundColor: active ? THEME.emeraldGreen : THEME.warmIvory,
                   color: active ? THEME.warmIvory : THEME.deepForestCharcoal,
-                  border: `1px solid ${active ? THEME.emeraldGreen : THEME.deepForestCharcoal}`,
-                  transition: 'background-color 0.15s ease',
+                  border: `1.5px solid ${active ? THEME.emeraldGreen : 'transparent'}`,
+                  transition: `background-color ${THEME.motion.durationFast} ${THEME.motion.easeOut}`,
                 }}
+                className="chat-list-item"
               >
                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                   <Users size={16} color={active ? THEME.warmIvory : THEME.deepForestCharcoal} />
-                  <span style={{ fontSize: '13px', fontWeight: 800, color: active ? THEME.warmIvory : THEME.deepForestCharcoal }}>
+                  <span
+                    style={{
+                      fontSize: '13.5px',
+                      fontWeight: 800,
+                      color: active ? THEME.warmIvory : THEME.deepForestCharcoal,
+                    }}
+                  >
                     {g.name}
                   </span>
                 </div>
                 {g.last_message && (
-                  <div style={{ fontSize: '11.5px', marginTop: '4px', color: active ? THEME.warmIvory : THEME.warmStone }}>
-                    {g.last_sender_name}: {g.last_message.slice(0, 30)}...
+                  <div
+                    style={{
+                      fontSize: '11.5px',
+                      marginTop: '4px',
+                      color: active ? THEME.warmIvory : THEME.warmStone,
+                      overflow: 'hidden',
+                      textOverflow: 'ellipsis',
+                      whiteSpace: 'nowrap',
+                    }}
+                  >
+                    {g.last_sender_name}: {g.last_message}
                   </div>
                 )}
               </div>
@@ -171,37 +209,65 @@ export const Messages: React.FC = () => {
           })}
 
           {/* Direct Messages Section */}
-          <div style={{ fontSize: '11px', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.05em', color: THEME.warmStone, padding: '10px 8px 6px' }}>
-            Direct Chats
+          <div
+            style={{
+              fontSize: '11px',
+              fontWeight: 800,
+              textTransform: 'uppercase',
+              letterSpacing: '0.05em',
+              color: THEME.warmStone,
+              padding: '12px 8px 6px',
+            }}
+          >
+            Direct Peers
           </div>
           {directChats.map((d) => {
             const active = activeChat?.type === 'direct' && activeChat.id === d.user_id;
             return (
               <div
                 key={d.user_id}
-                onClick={() => setActiveChat({ type: 'direct', id: d.user_id, name: d.full_name })}
+                onClick={() => {
+                  setActiveChat({ type: 'direct', id: d.user_id, name: d.full_name });
+                  setMobileConversationOpen(true);
+                }}
                 style={{
                   padding: '10px 12px',
-                  borderRadius: '6px',
+                  borderRadius: THEME.radius.md,
                   cursor: 'pointer',
                   backgroundColor: active ? THEME.emeraldGreen : THEME.warmIvory,
                   color: active ? THEME.warmIvory : THEME.deepForestCharcoal,
-                  border: `1px solid ${active ? THEME.emeraldGreen : THEME.deepForestCharcoal}`,
-                  transition: 'background-color 0.15s ease',
+                  border: `1.5px solid ${active ? THEME.emeraldGreen : 'transparent'}`,
+                  transition: `background-color ${THEME.motion.durationFast} ${THEME.motion.easeOut}`,
                 }}
+                className="chat-list-item"
               >
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                     <User size={16} color={active ? THEME.warmIvory : THEME.deepForestCharcoal} />
-                    <span style={{ fontSize: '13px', fontWeight: 800, color: active ? THEME.warmIvory : THEME.deepForestCharcoal }}>
+                    <span
+                      style={{
+                        fontSize: '13.5px',
+                        fontWeight: 800,
+                        color: active ? THEME.warmIvory : THEME.deepForestCharcoal,
+                      }}
+                    >
                       {d.full_name}
                     </span>
                   </div>
                   {d.unread_count > 0 && <span className="badge badge-urgent">{d.unread_count}</span>}
                 </div>
                 {d.last_message && (
-                  <div style={{ fontSize: '11.5px', marginTop: '4px', color: active ? THEME.warmIvory : THEME.warmStone }}>
-                    {d.last_message.slice(0, 30)}...
+                  <div
+                    style={{
+                      fontSize: '11.5px',
+                      marginTop: '4px',
+                      color: active ? THEME.warmIvory : THEME.warmStone,
+                      overflow: 'hidden',
+                      textOverflow: 'ellipsis',
+                      whiteSpace: 'nowrap',
+                    }}
+                  >
+                    {d.last_message}
                   </div>
                 )}
               </div>
@@ -209,21 +275,24 @@ export const Messages: React.FC = () => {
           })}
 
           {directChats.length === 0 && groupChats.length === 0 && (
-            <div style={{ fontSize: '12px', textAlign: 'center', padding: '20px', color: THEME.warmStone }}>
-              No conversations yet. Join a study group or connect with a friend!
+            <div style={{ fontSize: '12px', textAlign: 'center', padding: '24px 12px', color: THEME.warmStone }}>
+              No conversations yet. Join a study group or connect with a classmate!
             </div>
           )}
         </div>
       </div>
 
       {/* Main Chat Area */}
-      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', backgroundColor: THEME.warmIvory }}>
+      <div
+        className={`chat-content-area ${!mobileConversationOpen ? 'chat-content-hidden-mobile' : ''}`}
+        style={{ flex: 1, display: 'flex', flexDirection: 'column', backgroundColor: THEME.warmIvory }}
+      >
         {activeChat ? (
           <>
             {/* Chat Header */}
             <div
               style={{
-                padding: '14px 20px',
+                padding: '12px 20px',
                 borderBottom: `1.5px solid ${THEME.deepForestCharcoal}`,
                 display: 'flex',
                 alignItems: 'center',
@@ -231,22 +300,46 @@ export const Messages: React.FC = () => {
                 backgroundColor: THEME.warmIvory,
               }}
             >
-              <div>
-                <h3 style={{ fontSize: '15px', fontWeight: 800, color: THEME.deepForestCharcoal }}>{activeChat.name}</h3>
-                <span style={{ fontSize: '12px', color: THEME.warmStone }}>
-                  {activeChat.type === 'direct' ? 'Direct Student Chat' : 'Study Group Discussion'}
-                </span>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                {/* Mobile Back Button */}
+                <button
+                  type="button"
+                  onClick={() => setMobileConversationOpen(false)}
+                  className="btn-ghost mobile-only-btn"
+                  style={{ padding: '6px' }}
+                  aria-label="Back to conversations"
+                >
+                  <ArrowLeft size={18} color={THEME.deepForestCharcoal} />
+                </button>
+
+                <div>
+                  <h3 style={{ fontSize: '15px', fontWeight: 800, color: THEME.deepForestCharcoal }}>
+                    {activeChat.name}
+                  </h3>
+                  <span style={{ fontSize: '11.5px', color: THEME.warmStone }}>
+                    {activeChat.type === 'direct' ? 'Direct Student Conversation' : 'Study Group Channel'}
+                  </span>
+                </div>
               </div>
             </div>
 
             {/* Messages Feed */}
-            <div style={{ flex: 1, overflowY: 'auto', padding: '20px', display: 'flex', flexDirection: 'column', gap: '12px' }}>
+            <div
+              style={{
+                flex: 1,
+                overflowY: 'auto',
+                padding: '20px',
+                display: 'flex',
+                flexDirection: 'column',
+                gap: '12px',
+              }}
+            >
               {messages.length === 0 ? (
-                <div style={{ textAlign: 'center', margin: 'auto' }}>
-                  <MessageSquare size={32} color={THEME.warmStone} style={{ margin: '0 auto 8px' }} />
-                  <div style={{ fontSize: '14px', fontWeight: 800, color: THEME.deepForestCharcoal }}>Start the conversation!</div>
-                  <div style={{ fontSize: '12px', color: THEME.warmStone }}>Send study notes, questions, or ideas.</div>
-                </div>
+                <EmptyState
+                  icon={<MessageSquare size={32} />}
+                  title="Start the conversation!"
+                  description="Send lecture notes, questions, or invite peers to a live study sprint."
+                />
               ) : (
                 messages.map((m) => {
                   const isMine = m.sender_id === user?.id;
@@ -255,10 +348,11 @@ export const Messages: React.FC = () => {
                       key={m.id}
                       style={{
                         alignSelf: isMine ? 'flex-end' : 'flex-start',
-                        maxWidth: '75%',
+                        maxWidth: '78%',
                         display: 'flex',
                         flexDirection: 'column',
                         alignItems: isMine ? 'flex-end' : 'flex-start',
+                        animation: `studysync-slide-up ${THEME.motion.durationFast} ${THEME.motion.easeOut}`,
                       }}
                     >
                       {!isMine && (
@@ -269,16 +363,19 @@ export const Messages: React.FC = () => {
                       <div
                         style={{
                           padding: '9px 14px',
-                          borderRadius: '8px',
+                          borderRadius: THEME.radius.md,
                           backgroundColor: isMine ? THEME.emeraldGreen : THEME.warmIvory,
                           color: isMine ? THEME.warmIvory : THEME.deepForestCharcoal,
                           border: `1.5px solid ${isMine ? THEME.emeraldGreen : THEME.deepForestCharcoal}`,
                           fontSize: '13.5px',
                           fontWeight: 500,
                           wordBreak: 'break-word',
+                          boxShadow: THEME.shadow.subtle,
                         }}
                       >
-                        <span style={{ color: isMine ? THEME.warmIvory : THEME.deepForestCharcoal }}>{m.content}</span>
+                        <span style={{ color: isMine ? THEME.warmIvory : THEME.deepForestCharcoal }}>
+                          {m.content}
+                        </span>
                       </div>
                       <span style={{ fontSize: '10.5px', marginTop: '2px', color: THEME.warmStone, fontWeight: 500 }}>
                         {new Date(m.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
@@ -303,26 +400,50 @@ export const Messages: React.FC = () => {
             >
               <input
                 type="text"
-                placeholder="Type a message..."
+                placeholder="Type a message or note..."
                 value={text}
                 onChange={(e) => setText(e.target.value)}
                 style={{ flex: 1 }}
               />
-              <button type="submit" disabled={sending || !text.trim()} className="btn-primary" style={{ padding: '0 18px' }}>
-                <Send size={15} color={THEME.warmIvory} />
-                <span>Send</span>
-              </button>
+              <Button
+                type="submit"
+                variant="primary"
+                shape="pill"
+                disabled={!text.trim()}
+                loading={sending}
+                leftIcon={<Send size={15} color={THEME.warmIvory} />}
+              >
+                Send
+              </Button>
             </form>
           </>
         ) : (
-          <div style={{ margin: 'auto', textAlign: 'center' }}>
-            <MessageSquare size={48} color={THEME.warmStone} style={{ margin: '0 auto 12px' }} />
-            <div style={{ fontSize: '16px', fontWeight: 800, color: THEME.deepForestCharcoal }}>
-              Select a conversation to begin chatting
-            </div>
-          </div>
+          <EmptyState
+            icon={<MessageSquare size={36} />}
+            title="Select a conversation"
+            description="Choose a study group channel or direct peer from the sidebar to start collaborating."
+          />
         )}
       </div>
+
+      <style>{`
+        .chat-list-item:hover {
+          background-color: rgba(38, 53, 47, 0.05);
+        }
+        @media (max-width: 768px) {
+          .chat-sidebar {
+            width: 100% !important;
+          }
+          .chat-sidebar-hidden-mobile {
+            display: none !important;
+          }
+          .chat-content-hidden-mobile {
+            display: none !important;
+          }
+        }
+      `}</style>
     </div>
   );
 };
+
+export default Messages;

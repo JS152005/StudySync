@@ -29,9 +29,13 @@ export const THEME = {
   // Geometry Radius Scale
   radius: {
     sharp: '4px',
+    sm: '4px',
     control: '8px',
+    md: '8px',
     card: '12px',
+    lg: '12px',
     cardLg: '16px',
+    xl: '16px',
     pill: '9999px',
     full: '50%',
   },
@@ -39,9 +43,13 @@ export const THEME = {
   // Shadows adhering to editorial paper-craft aesthetic
   shadow: {
     subtle: '0 1px 3px rgba(38, 53, 47, 0.08)',
+    sm: '0 1px 3px rgba(38, 53, 47, 0.08)',
     card: '0 2px 6px rgba(38, 53, 47, 0.06)',
+    md: '0 2px 6px rgba(38, 53, 47, 0.06)',
     lifted: '0 4px 14px rgba(38, 53, 47, 0.12)',
+    lg: '0 4px 14px rgba(38, 53, 47, 0.12)',
     dropdown: '0 8px 24px rgba(38, 53, 47, 0.18)',
+    modal: '0 12px 32px rgba(38, 53, 47, 0.22)',
     focus: '0 0 0 3px rgba(0, 107, 79, 0.35)',
     focusVermilion: '0 0 0 3px rgba(231, 71, 39, 0.35)',
   },

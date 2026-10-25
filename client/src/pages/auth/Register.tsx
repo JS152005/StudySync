@@ -2,6 +2,8 @@ import React, { useState } from 'react';
 import { NavLink, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import { THEME } from '../../theme';
+import { Button } from '../../components/ui/Button';
+import { ToggleSwitch } from '../../components/ui/ToggleSwitch';
 import { Sparkles, UserPlus } from 'lucide-react';
 
 export const Register: React.FC = () => {
@@ -83,21 +85,24 @@ export const Register: React.FC = () => {
           gap: '20px',
           backgroundColor: THEME.warmIvory,
           border: `1.5px solid ${THEME.deepForestCharcoal}`,
-          borderRadius: '8px',
+          borderRadius: THEME.radius.cardLg,
+          boxShadow: THEME.shadow.lifted,
+          animation: `studysync-scale-in ${THEME.motion.durationNormal} ${THEME.motion.easeSpring}`,
         }}
       >
         <div style={{ textAlign: 'center' }}>
           <div
             style={{
-              width: '46px',
-              height: '46px',
-              borderRadius: '8px',
+              width: '48px',
+              height: '48px',
+              borderRadius: THEME.radius.md,
               backgroundColor: THEME.emeraldGreen,
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
               margin: '0 auto 14px',
               border: `1.5px solid ${THEME.deepForestCharcoal}`,
+              boxShadow: THEME.shadow.subtle,
             }}
           >
             <Sparkles size={24} color={THEME.warmIvory} strokeWidth={2.5} />
@@ -225,29 +230,37 @@ export const Register: React.FC = () => {
             </select>
           </div>
 
-          <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginTop: '6px' }}>
-            <input
-              type="checkbox"
-              id="terms"
+          {/* Polished Accessible Toggle for Terms */}
+          <div
+            style={{
+              padding: '12px',
+              borderRadius: THEME.radius.md,
+              border: `1.5px solid ${termsAccepted ? THEME.emeraldGreen : THEME.deepForestCharcoal}`,
+              backgroundColor: THEME.warmIvory,
+              transition: `border-color ${THEME.motion.durationFast} ${THEME.motion.easeOut}`,
+            }}
+          >
+            <ToggleSwitch
+              id="terms-toggle"
               checked={termsAccepted}
-              onChange={(e) => setTermsAccepted(e.target.checked)}
-              style={{ width: '18px', height: '18px', cursor: 'pointer', accentColor: THEME.emeraldGreen }}
-              required
+              onChange={setTermsAccepted}
+              label="I accept the Terms of Service & Privacy Policy"
+              description="Required for academic identity verification, study rooms, and collaboration."
             />
-            <label htmlFor="terms" style={{ fontSize: '12.5px', fontWeight: 600, cursor: 'pointer', color: THEME.deepForestCharcoal }}>
-              I agree to the StudySync Terms of Service and Privacy Policy.
-            </label>
           </div>
 
-          <button
+          <Button
             type="submit"
-            disabled={loading || !termsAccepted}
-            className="btn-primary"
-            style={{ width: '100%', padding: '11px', marginTop: '10px' }}
+            variant="primary"
+            shape="pill"
+            size="lg"
+            disabled={!termsAccepted}
+            loading={loading}
+            leftIcon={<UserPlus size={16} color={THEME.warmIvory} />}
+            style={{ width: '100%', marginTop: '8px' }}
           >
-            <UserPlus size={16} color={THEME.warmIvory} />
-            <span>{loading ? 'Creating Account...' : 'Complete Registration'}</span>
-          </button>
+            Complete Registration
+          </Button>
         </form>
 
         <div
@@ -268,3 +281,5 @@ export const Register: React.FC = () => {
     </div>
   );
 };
+
+export default Register;

@@ -3,7 +3,8 @@ import { useSearchParams, NavLink } from 'react-router-dom';
 import { apiRequest } from '../../api/client';
 import { useAuth } from '../../context/AuthContext';
 import { THEME } from '../../theme';
-import { CheckCircle, Mail, ArrowRight } from 'lucide-react';
+import { Button } from '../../components/ui/Button';
+import { CheckCircle, Mail, ArrowRight, RefreshCw } from 'lucide-react';
 
 export const VerifyEmail: React.FC = () => {
   const [searchParams] = useSearchParams();
@@ -54,7 +55,7 @@ export const VerifyEmail: React.FC = () => {
         alignItems: 'center',
         justifyContent: 'center',
         backgroundColor: THEME.warmIvory,
-        padding: '20px',
+        padding: '24px',
       }}
     >
       <div
@@ -70,19 +71,22 @@ export const VerifyEmail: React.FC = () => {
           gap: '18px',
           backgroundColor: THEME.warmIvory,
           border: `1.5px solid ${THEME.deepForestCharcoal}`,
-          borderRadius: '8px',
+          borderRadius: THEME.radius.cardLg,
+          boxShadow: THEME.shadow.lifted,
+          animation: `studysync-scale-in ${THEME.motion.durationNormal} ${THEME.motion.easeSpring}`,
         }}
       >
         <div
           style={{
             width: '54px',
             height: '54px',
-            borderRadius: '8px',
+            borderRadius: THEME.radius.md,
             backgroundColor: THEME.emeraldGreen,
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
             border: `1.5px solid ${THEME.deepForestCharcoal}`,
+            boxShadow: THEME.shadow.subtle,
           }}
         >
           <Mail size={26} color={THEME.warmIvory} />
@@ -102,7 +106,7 @@ export const VerifyEmail: React.FC = () => {
               <CheckCircle size={18} color={THEME.emeraldGreen} />
               <span style={{ color: THEME.deepForestCharcoal }}>{message}</span>
             </div>
-            <NavLink to="/dashboard" className="btn-primary" style={{ width: '100%' }}>
+            <NavLink to="/dashboard" className="btn-primary btn-pill" style={{ width: '100%', justifyContent: 'center' }}>
               <span>Enter StudySync Workspace</span>
               <ArrowRight size={14} color={THEME.warmIvory} />
             </NavLink>
@@ -115,11 +119,17 @@ export const VerifyEmail: React.FC = () => {
               <span style={{ color: THEME.vermilion, fontWeight: 700 }}>[STATUS]</span> {message}
             </div>
             {user ? (
-              <button onClick={handleResend} disabled={resending} className="btn-primary" style={{ width: '100%' }}>
-                {resending ? 'Sending...' : 'Request New Verification Link'}
-              </button>
+              <Button
+                variant="primary"
+                shape="pill"
+                onClick={handleResend}
+                loading={resending}
+                style={{ width: '100%' }}
+              >
+                Request New Verification Link
+              </Button>
             ) : (
-              <NavLink to="/login" className="btn-secondary" style={{ width: '100%' }}>
+              <NavLink to="/login" className="btn-secondary btn-pill" style={{ width: '100%', justifyContent: 'center' }}>
                 Return to Login
               </NavLink>
             )}
@@ -132,12 +142,19 @@ export const VerifyEmail: React.FC = () => {
               We sent a verification link to your registered email address. Click the link in your email to verify your student account.
             </p>
             {user && (
-              <button onClick={handleResend} disabled={resending} className="btn-secondary" style={{ width: '100%' }}>
-                {resending ? 'Sending...' : 'Resend Verification Email'}
-              </button>
+              <Button
+                variant="secondary"
+                shape="pill"
+                onClick={handleResend}
+                loading={resending}
+                leftIcon={<RefreshCw size={14} color={THEME.deepForestCharcoal} />}
+                style={{ width: '100%' }}
+              >
+                Resend Verification Email
+              </Button>
             )}
             {resendStatus && <div className="alert-box" style={{ fontSize: '12px' }}>{resendStatus}</div>}
-            <NavLink to="/dashboard" className="btn-primary" style={{ width: '100%' }}>
+            <NavLink to="/dashboard" className="btn-primary btn-pill" style={{ width: '100%', justifyContent: 'center' }}>
               Back to Dashboard
             </NavLink>
           </div>
@@ -146,3 +163,5 @@ export const VerifyEmail: React.FC = () => {
     </div>
   );
 };
+
+export default VerifyEmail;

@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { useSearchParams, NavLink, useNavigate } from 'react-router-dom';
 import { apiRequest } from '../../api/client';
 import { THEME } from '../../theme';
+import { Button } from '../../components/ui/Button';
 import { KeyRound, Check } from 'lucide-react';
 
 export const ResetPassword: React.FC = () => {
@@ -60,7 +61,7 @@ export const ResetPassword: React.FC = () => {
         alignItems: 'center',
         justifyContent: 'center',
         backgroundColor: THEME.warmIvory,
-        padding: '20px',
+        padding: '24px',
       }}
     >
       <div
@@ -74,21 +75,24 @@ export const ResetPassword: React.FC = () => {
           gap: '20px',
           backgroundColor: THEME.warmIvory,
           border: `1.5px solid ${THEME.deepForestCharcoal}`,
-          borderRadius: '8px',
+          borderRadius: THEME.radius.cardLg,
+          boxShadow: THEME.shadow.lifted,
+          animation: `studysync-scale-in ${THEME.motion.durationNormal} ${THEME.motion.easeSpring}`,
         }}
       >
         <div style={{ textAlign: 'center' }}>
           <div
             style={{
-              width: '46px',
-              height: '46px',
-              borderRadius: '8px',
+              width: '48px',
+              height: '48px',
+              borderRadius: THEME.radius.md,
               backgroundColor: THEME.emeraldGreen,
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
               margin: '0 auto 14px',
               border: `1.5px solid ${THEME.deepForestCharcoal}`,
+              boxShadow: THEME.shadow.subtle,
             }}
           >
             <KeyRound size={22} color={THEME.warmIvory} />
@@ -113,9 +117,15 @@ export const ResetPassword: React.FC = () => {
               <Check size={18} color={THEME.emeraldGreen} />
               <span style={{ color: THEME.deepForestCharcoal }}>Password successfully reset! You can now sign in.</span>
             </div>
-            <button onClick={() => navigate('/login')} className="btn-primary" style={{ width: '100%' }}>
+            <Button
+              variant="primary"
+              shape="pill"
+              size="lg"
+              onClick={() => navigate('/login')}
+              style={{ width: '100%' }}
+            >
               Proceed to Sign In
-            </button>
+            </Button>
           </div>
         ) : (
           <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
@@ -145,11 +155,19 @@ export const ResetPassword: React.FC = () => {
               />
             </div>
 
-            <button type="submit" disabled={loading} className="btn-primary" style={{ width: '100%', padding: '11px' }}>
-              <span>{loading ? 'Updating Password...' : 'Reset Password'}</span>
-            </button>
+            <Button
+              type="submit"
+              variant="primary"
+              shape="pill"
+              size="lg"
+              disabled={loading || !newPassword || !confirmPassword}
+              loading={loading}
+              style={{ width: '100%' }}
+            >
+              Reset Password
+            </Button>
 
-            <div style={{ textAlign: 'center' }}>
+            <div style={{ textAlign: 'center', marginTop: '6px' }}>
               <NavLink to="/login" style={{ fontSize: '13px', color: THEME.emeraldGreen }}>
                 Cancel and Return to Sign In
               </NavLink>
@@ -160,3 +178,5 @@ export const ResetPassword: React.FC = () => {
     </div>
   );
 };
+
+export default ResetPassword;

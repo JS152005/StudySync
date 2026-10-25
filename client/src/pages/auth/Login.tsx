@@ -2,7 +2,8 @@ import React, { useState } from 'react';
 import { NavLink, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import { THEME } from '../../theme';
-import { Eye, EyeOff, Sparkles, LogIn } from 'lucide-react';
+import { Button } from '../../components/ui/Button';
+import { Eye, EyeOff, Sparkles, LogIn, ArrowRight } from 'lucide-react';
 
 export const Login: React.FC = () => {
   const { login } = useAuth();
@@ -37,7 +38,7 @@ export const Login: React.FC = () => {
         alignItems: 'center',
         justifyContent: 'center',
         backgroundColor: THEME.warmIvory,
-        padding: '20px',
+        padding: '24px',
       }}
     >
       <div
@@ -51,22 +52,25 @@ export const Login: React.FC = () => {
           gap: '20px',
           backgroundColor: THEME.warmIvory,
           border: `1.5px solid ${THEME.deepForestCharcoal}`,
-          borderRadius: '8px',
+          borderRadius: THEME.radius.cardLg,
+          boxShadow: THEME.shadow.lifted,
+          animation: `studysync-scale-in ${THEME.motion.durationNormal} ${THEME.motion.easeSpring}`,
         }}
       >
         {/* Brand Header */}
         <div style={{ textAlign: 'center' }}>
           <div
             style={{
-              width: '46px',
-              height: '46px',
-              borderRadius: '8px',
+              width: '48px',
+              height: '48px',
+              borderRadius: THEME.radius.md,
               backgroundColor: THEME.emeraldGreen,
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
               margin: '0 auto 14px',
               border: `1.5px solid ${THEME.deepForestCharcoal}`,
+              boxShadow: THEME.shadow.subtle,
             }}
           >
             <Sparkles size={24} color={THEME.warmIvory} strokeWidth={2.5} />
@@ -101,7 +105,9 @@ export const Login: React.FC = () => {
 
           <div>
             <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '6px' }}>
-              <label style={{ fontSize: '12px', fontWeight: 700, color: THEME.deepForestCharcoal }}>Password *</label>
+              <label style={{ fontSize: '12px', fontWeight: 700, color: THEME.deepForestCharcoal }}>
+                Password *
+              </label>
               <NavLink to="/forgot-password" style={{ fontSize: '12px', color: THEME.emeraldGreen }}>
                 Forgot Password?
               </NavLink>
@@ -113,7 +119,7 @@ export const Login: React.FC = () => {
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 required
-                style={{ paddingRight: '40px' }}
+                style={{ paddingRight: '42px' }}
               />
               <button
                 type="button"
@@ -125,8 +131,10 @@ export const Login: React.FC = () => {
                   transform: 'translateY(-50%)',
                   background: 'none',
                   border: 'none',
-                  padding: '4px',
+                  padding: '6px',
                   cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
                 }}
                 aria-label="Toggle password visibility"
               >
@@ -135,15 +143,18 @@ export const Login: React.FC = () => {
             </div>
           </div>
 
-          <button
+          <Button
             type="submit"
-            disabled={loading || !identifier || !password}
-            className="btn-primary"
-            style={{ width: '100%', padding: '11px', marginTop: '6px' }}
+            variant="primary"
+            shape="pill"
+            size="lg"
+            disabled={!identifier || !password}
+            loading={loading}
+            leftIcon={<LogIn size={16} color={THEME.warmIvory} />}
+            style={{ width: '100%', marginTop: '6px' }}
           >
-            <LogIn size={16} color={THEME.warmIvory} />
-            <span>{loading ? 'Authenticating...' : 'Sign In'}</span>
-          </button>
+            Sign In
+          </Button>
         </form>
 
         <div
@@ -164,3 +175,5 @@ export const Login: React.FC = () => {
     </div>
   );
 };
+
+export default Login;
