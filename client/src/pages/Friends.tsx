@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { apiRequest } from '../api/client';
-import { Search, UserPlus, Check, X, Users, UserCheck } from 'lucide-react';
+import { THEME } from '../theme';
+import { Search, UserPlus, Check, X, Users } from 'lucide-react';
 
 export const Friends: React.FC = () => {
   const [activeTab, setActiveTab] = useState<'friends' | 'requests' | 'search'>('friends');
@@ -82,46 +83,58 @@ export const Friends: React.FC = () => {
       {/* Header & Tabs */}
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '12px' }}>
         <div>
-          <h1 style={{ fontSize: '22px', fontWeight: 900 }}>Student Network & Friends</h1>
-          <p style={{ fontSize: '13px' }}>Discover classmates, send study connections, and build your peer learning circle.</p>
+          <h1 style={{ fontSize: '22px', fontWeight: 800, color: THEME.deepForestCharcoal }}>
+            Student Network & Friends
+          </h1>
+          <p style={{ fontSize: '13px', color: THEME.warmStone }}>
+            Discover classmates, send study connections, and build your peer learning circle.
+          </p>
         </div>
 
         <div style={{ display: 'flex', gap: '8px' }}>
           <button
             onClick={() => setActiveTab('friends')}
             style={{
-              backgroundColor: activeTab === 'friends' ? '#E6E6FA' : '#FFFFFF',
-              color: activeTab === 'friends' ? '#FFFFFF' : '#E6E6FA',
+              backgroundColor: activeTab === 'friends' ? THEME.emeraldGreen : THEME.warmIvory,
+              color: activeTab === 'friends' ? THEME.warmIvory : THEME.deepForestCharcoal,
+              borderColor: activeTab === 'friends' ? THEME.emeraldGreen : THEME.deepForestCharcoal,
               fontSize: '13px',
-              padding: '8px 14px',
+              padding: '7px 14px',
             }}
           >
-            <Users size={16} color={activeTab === 'friends' ? '#FFFFFF' : '#E6E6FA'} />
+            <Users size={15} color={activeTab === 'friends' ? THEME.warmIvory : THEME.deepForestCharcoal} />
             <span>Friends ({friends.length})</span>
           </button>
 
           <button
             onClick={() => setActiveTab('requests')}
             style={{
-              backgroundColor: activeTab === 'requests' ? '#E6E6FA' : '#FFFFFF',
-              color: activeTab === 'requests' ? '#FFFFFF' : '#E6E6FA',
+              backgroundColor: activeTab === 'requests' ? THEME.emeraldGreen : THEME.warmIvory,
+              color: activeTab === 'requests' ? THEME.warmIvory : THEME.deepForestCharcoal,
+              borderColor: activeTab === 'requests' ? THEME.emeraldGreen : THEME.deepForestCharcoal,
               fontSize: '13px',
-              padding: '8px 14px',
+              padding: '7px 14px',
             }}
           >
             <span>Requests ({incoming.length})</span>
+            {incoming.length > 0 && (
+              <span className="badge badge-urgent" style={{ marginLeft: '4px', padding: '1px 5px', fontSize: '10px' }}>
+                {incoming.length}
+              </span>
+            )}
           </button>
 
           <button
             onClick={() => setActiveTab('search')}
             style={{
-              backgroundColor: activeTab === 'search' ? '#E6E6FA' : '#FFFFFF',
-              color: activeTab === 'search' ? '#FFFFFF' : '#E6E6FA',
+              backgroundColor: activeTab === 'search' ? THEME.emeraldGreen : THEME.warmIvory,
+              color: activeTab === 'search' ? THEME.warmIvory : THEME.deepForestCharcoal,
+              borderColor: activeTab === 'search' ? THEME.emeraldGreen : THEME.deepForestCharcoal,
               fontSize: '13px',
-              padding: '8px 14px',
+              padding: '7px 14px',
             }}
           >
-            <Search size={16} color={activeTab === 'search' ? '#FFFFFF' : '#E6E6FA'} />
+            <Search size={15} color={activeTab === 'search' ? THEME.warmIvory : THEME.deepForestCharcoal} />
             <span>Find Students</span>
           </button>
         </div>
@@ -132,9 +145,11 @@ export const Friends: React.FC = () => {
         <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
           {friends.length === 0 ? (
             <div className="card-secondary" style={{ textAlign: 'center', padding: '40px' }}>
-              <Users size={32} color="#E6E6FA" style={{ margin: '0 auto 12px' }} />
-              <div style={{ fontSize: '16px', fontWeight: 800, marginBottom: '6px' }}>No friends connected yet</div>
-              <p style={{ fontSize: '13px', marginBottom: '16px' }}>
+              <Users size={32} color={THEME.warmStone} style={{ margin: '0 auto 12px' }} />
+              <div style={{ fontSize: '16px', fontWeight: 800, marginBottom: '6px', color: THEME.deepForestCharcoal }}>
+                No friends connected yet
+              </div>
+              <p style={{ fontSize: '13px', marginBottom: '16px', color: THEME.warmStone }}>
                 Use the Find Students tab to search for peers by name, Student ID, or degree.
               </p>
               <button onClick={() => setActiveTab('search')} className="btn-primary">
@@ -144,33 +159,44 @@ export const Friends: React.FC = () => {
           ) : (
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: '14px' }}>
               {friends.map((friend) => (
-                <div key={friend.id} className="card" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                <div
+                  key={friend.id}
+                  className="card"
+                  style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', border: `1.5px solid ${THEME.deepForestCharcoal}` }}
+                >
                   <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
                     <div
                       style={{
-                        width: '40px',
-                        height: '40px',
+                        width: '38px',
+                        height: '38px',
                         borderRadius: '50%',
-                        backgroundColor: '#E6E6FA',
-                        color: '#FFFFFF',
+                        backgroundColor: THEME.emeraldGreen,
+                        color: THEME.warmIvory,
                         display: 'flex',
                         alignItems: 'center',
                         justifyContent: 'center',
-                        fontWeight: 900,
+                        fontWeight: 800,
+                        fontSize: '14px',
+                        border: `1.5px solid ${THEME.deepForestCharcoal}`,
+                        flexShrink: 0,
                       }}
                     >
                       {friend.full_name ? friend.full_name[0].toUpperCase() : 'S'}
                     </div>
                     <div>
-                      <div style={{ fontSize: '14px', fontWeight: 900 }}>{friend.full_name}</div>
-                      <div style={{ fontSize: '12px' }}>@{friend.username} • {friend.course || 'Student'}</div>
+                      <div style={{ fontSize: '14px', fontWeight: 800, color: THEME.deepForestCharcoal }}>
+                        {friend.full_name}
+                      </div>
+                      <div style={{ fontSize: '12px', color: THEME.warmStone }}>
+                        @{friend.username} • {friend.course || 'Student'}
+                      </div>
                     </div>
                   </div>
 
                   <button
                     onClick={() => handleRemoveFriend(friend.friendship_id)}
                     className="btn-secondary"
-                    style={{ padding: '6px 10px', fontSize: '11px' }}
+                    style={{ padding: '5px 10px', fontSize: '11px' }}
                     title="Remove friend connection"
                   >
                     <span>Remove</span>
@@ -186,13 +212,13 @@ export const Friends: React.FC = () => {
       {activeTab === 'requests' && (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
           {/* Incoming */}
-          <div className="card">
-            <h2 style={{ fontSize: '16px', fontWeight: 900, marginBottom: '12px' }}>
+          <div className="card" style={{ border: `1.5px solid ${THEME.deepForestCharcoal}` }}>
+            <h2 style={{ fontSize: '16px', fontWeight: 800, marginBottom: '12px', color: THEME.deepForestCharcoal }}>
               Incoming Requests ({incoming.length})
             </h2>
 
             {incoming.length === 0 ? (
-              <div style={{ fontSize: '13px' }}>No pending incoming requests.</div>
+              <div style={{ fontSize: '13px', color: THEME.warmStone }}>No pending incoming requests.</div>
             ) : (
               <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
                 {incoming.map((req) => (
@@ -203,14 +229,18 @@ export const Friends: React.FC = () => {
                       alignItems: 'center',
                       justifyContent: 'space-between',
                       padding: '10px 14px',
-                      backgroundColor: '#F0F8FF',
-                      borderRadius: '8px',
-                      border: '1px solid #E6E6FA',
+                      backgroundColor: THEME.warmIvory,
+                      borderRadius: '6px',
+                      border: `1.5px solid ${THEME.deepForestCharcoal}`,
                     }}
                   >
                     <div>
-                      <div style={{ fontSize: '14px', fontWeight: 900 }}>{req.full_name}</div>
-                      <div style={{ fontSize: '12px' }}>@{req.username} • {req.course || 'Student'}</div>
+                      <div style={{ fontSize: '14px', fontWeight: 800, color: THEME.deepForestCharcoal }}>
+                        {req.full_name}
+                      </div>
+                      <div style={{ fontSize: '12px', color: THEME.warmStone }}>
+                        @{req.username} • {req.course || 'Student'}
+                      </div>
                     </div>
 
                     <div style={{ display: 'flex', gap: '8px' }}>
@@ -219,7 +249,7 @@ export const Friends: React.FC = () => {
                         className="btn-primary"
                         style={{ padding: '6px 12px', fontSize: '12px' }}
                       >
-                        <Check size={14} color="#FFFFFF" />
+                        <Check size={14} color={THEME.warmIvory} />
                         <span>Accept</span>
                       </button>
                       <button
@@ -227,7 +257,7 @@ export const Friends: React.FC = () => {
                         className="btn-secondary"
                         style={{ padding: '6px 12px', fontSize: '12px' }}
                       >
-                        <X size={14} color="#E6E6FA" />
+                        <X size={14} color={THEME.deepForestCharcoal} />
                         <span>Decline</span>
                       </button>
                     </div>
@@ -239,12 +269,12 @@ export const Friends: React.FC = () => {
 
           {/* Outgoing */}
           <div className="card-secondary">
-            <h2 style={{ fontSize: '16px', fontWeight: 900, marginBottom: '12px' }}>
+            <h2 style={{ fontSize: '16px', fontWeight: 800, marginBottom: '12px', color: THEME.deepForestCharcoal }}>
               Sent Pending Requests ({outgoing.length})
             </h2>
 
             {outgoing.length === 0 ? (
-              <div style={{ fontSize: '13px' }}>No outgoing requests waiting for response.</div>
+              <div style={{ fontSize: '13px', color: THEME.warmStone }}>No outgoing requests waiting for response.</div>
             ) : (
               <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
                 {outgoing.map((req) => (
@@ -255,16 +285,18 @@ export const Friends: React.FC = () => {
                       alignItems: 'center',
                       justifyContent: 'space-between',
                       padding: '10px 14px',
-                      backgroundColor: '#FFFFFF',
-                      borderRadius: '8px',
-                      border: '1px solid #E6E6FA',
+                      backgroundColor: THEME.warmIvory,
+                      borderRadius: '6px',
+                      border: `1px solid ${THEME.warmStone}`,
                     }}
                   >
                     <div>
-                      <div style={{ fontSize: '14px', fontWeight: 800 }}>{req.full_name}</div>
-                      <div style={{ fontSize: '12px' }}>@{req.username}</div>
+                      <div style={{ fontSize: '14px', fontWeight: 700, color: THEME.deepForestCharcoal }}>
+                        {req.full_name}
+                      </div>
+                      <div style={{ fontSize: '12px', color: THEME.warmStone }}>@{req.username}</div>
                     </div>
-                    <span className="badge-outline">Pending</span>
+                    <span className="badge-stone">Pending</span>
                   </div>
                 ))}
               </div>
@@ -284,7 +316,7 @@ export const Friends: React.FC = () => {
               onChange={(e) => setSearchQuery(e.target.value)}
             />
             <button type="submit" className="btn-primary" style={{ flexShrink: 0 }}>
-              <Search size={16} color="#FFFFFF" />
+              <Search size={15} color={THEME.warmIvory} />
               <span>Search</span>
             </button>
           </form>
@@ -295,7 +327,7 @@ export const Friends: React.FC = () => {
                 <div
                   key={student.id}
                   className="card"
-                  style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}
+                  style={{ display: 'flex', flexDirection: 'column', gap: '10px', border: `1.5px solid ${THEME.deepForestCharcoal}` }}
                 >
                   <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
                     <div
@@ -303,32 +335,35 @@ export const Friends: React.FC = () => {
                         width: '36px',
                         height: '36px',
                         borderRadius: '50%',
-                        backgroundColor: '#E6E6FA',
-                        color: '#FFFFFF',
+                        backgroundColor: THEME.emeraldGreen,
+                        color: THEME.warmIvory,
                         display: 'flex',
                         alignItems: 'center',
                         justifyContent: 'center',
-                        fontWeight: 900,
+                        fontWeight: 800,
+                        border: `1.5px solid ${THEME.deepForestCharcoal}`,
                       }}
                     >
                       {student.full_name[0].toUpperCase()}
                     </div>
                     <div>
-                      <div style={{ fontSize: '14px', fontWeight: 900 }}>{student.full_name}</div>
-                      <div style={{ fontSize: '11px' }}>@{student.username}</div>
+                      <div style={{ fontSize: '14px', fontWeight: 800, color: THEME.deepForestCharcoal }}>
+                        {student.full_name}
+                      </div>
+                      <div style={{ fontSize: '11px', color: THEME.warmStone }}>@{student.username}</div>
                     </div>
                   </div>
 
-                  <div style={{ fontSize: '12px' }}>
+                  <div style={{ fontSize: '12px', color: THEME.warmStone }}>
                     {student.course} {student.college ? `• ${student.college}` : ''}
                   </div>
 
                   <button
                     onClick={() => handleSendRequest(student.id)}
-                    className="btn-secondary"
-                    style={{ width: '100%', marginTop: 'auto', padding: '8px' }}
+                    className="btn-primary"
+                    style={{ width: '100%', marginTop: 'auto', padding: '7px' }}
                   >
-                    <UserPlus size={14} color="#E6E6FA" />
+                    <UserPlus size={14} color={THEME.warmIvory} />
                     <span>Connect</span>
                   </button>
                 </div>

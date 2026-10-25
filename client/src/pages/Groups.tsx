@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { NavLink } from 'react-router-dom';
 import { apiRequest } from '../api/client';
-import { UsersRound, Plus, KeyRound, ArrowRight, Lock, Globe } from 'lucide-react';
+import { THEME } from '../theme';
+import { UsersRound, Plus, KeyRound, ArrowRight, Globe } from 'lucide-react';
 
 export const Groups: React.FC = () => {
   const [myGroups, setMyGroups] = useState<any[]>([]);
@@ -92,17 +93,21 @@ export const Groups: React.FC = () => {
       {/* Header */}
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '12px' }}>
         <div>
-          <h1 style={{ fontSize: '22px', fontWeight: 900 }}>Study Groups</h1>
-          <p style={{ fontSize: '13px' }}>Join collaborative student circles, share syllabus boards, and hold group focus pacts.</p>
+          <h1 style={{ fontSize: '22px', fontWeight: 800, color: THEME.deepForestCharcoal }}>
+            Study Groups
+          </h1>
+          <p style={{ fontSize: '13px', color: THEME.warmStone }}>
+            Join collaborative student circles, share syllabus boards, and hold group focus pacts.
+          </p>
         </div>
 
         <div style={{ display: 'flex', gap: '10px' }}>
           <button onClick={() => setShowJoinModal(true)} className="btn-secondary">
-            <KeyRound size={16} color="#E6E6FA" />
+            <KeyRound size={15} color={THEME.deepForestCharcoal} />
             <span>Join with Code</span>
           </button>
           <button onClick={() => setShowCreateModal(true)} className="btn-primary">
-            <Plus size={16} color="#FFFFFF" />
+            <Plus size={15} color={THEME.warmIvory} />
             <span>Create Group</span>
           </button>
         </div>
@@ -110,13 +115,17 @@ export const Groups: React.FC = () => {
 
       {/* My Groups Section */}
       <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
-        <h2 style={{ fontSize: '16px', fontWeight: 900 }}>My Enrolled Groups ({myGroups.length})</h2>
+        <h2 style={{ fontSize: '16px', fontWeight: 800, color: THEME.deepForestCharcoal }}>
+          My Enrolled Groups ({myGroups.length})
+        </h2>
 
         {myGroups.length === 0 ? (
           <div className="card-secondary" style={{ textAlign: 'center', padding: '36px' }}>
-            <UsersRound size={36} color="#E6E6FA" style={{ margin: '0 auto 10px' }} />
-            <div style={{ fontSize: '15px', fontWeight: 800, marginBottom: '6px' }}>You haven't joined any study groups yet.</div>
-            <div style={{ fontSize: '13px', marginBottom: '14px' }}>
+            <UsersRound size={36} color={THEME.warmStone} style={{ margin: '0 auto 10px' }} />
+            <div style={{ fontSize: '15px', fontWeight: 800, marginBottom: '6px', color: THEME.deepForestCharcoal }}>
+              You haven't joined any study groups yet.
+            </div>
+            <div style={{ fontSize: '13px', marginBottom: '14px', color: THEME.warmStone }}>
               Create a group for your course or enter an invitation code to join peers!
             </div>
             <button onClick={() => setShowCreateModal(true)} className="btn-primary">
@@ -129,26 +138,39 @@ export const Groups: React.FC = () => {
               <div
                 key={g.id}
                 className="card"
-                style={{ display: 'flex', flexDirection: 'column', justifyContent: 'space-between', gap: '12px' }}
+                style={{
+                  display: 'flex',
+                  flexDirection: 'column',
+                  justifyContent: 'space-between',
+                  gap: '12px',
+                  border: `1.5px solid ${THEME.deepForestCharcoal}`,
+                  backgroundColor: THEME.warmIvory,
+                }}
               >
                 <div>
                   <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '6px' }}>
                     <span className="badge">{g.role}</span>
-                    <span style={{ fontSize: '12px' }}>{g.member_count} member{g.member_count === 1 ? '' : 's'}</span>
+                    <span style={{ fontSize: '12px', color: THEME.warmStone, fontWeight: 600 }}>
+                      {g.member_count} member{g.member_count === 1 ? '' : 's'}
+                    </span>
                   </div>
 
-                  <h3 style={{ fontSize: '16px', fontWeight: 900, marginBottom: '4px' }}>{g.name}</h3>
-                  <div style={{ fontSize: '12px', marginBottom: '8px' }}>
+                  <h3 style={{ fontSize: '16px', fontWeight: 800, marginBottom: '4px', color: THEME.deepForestCharcoal }}>
+                    {g.name}
+                  </h3>
+                  <div style={{ fontSize: '12px', marginBottom: '8px', color: THEME.warmStone }}>
                     {g.subject ? `${g.subject} • ` : ''}{g.course || 'General'}
                   </div>
                   {g.description && (
-                    <p style={{ fontSize: '13px', lineHeight: 1.4 }}>{g.description}</p>
+                    <p style={{ fontSize: '13px', lineHeight: 1.4, color: THEME.deepForestCharcoal }}>
+                      {g.description}
+                    </p>
                   )}
                 </div>
 
                 <NavLink to={`/groups/${g.id}`} className="btn-secondary" style={{ width: '100%' }}>
                   <span>Open Group Workspace</span>
-                  <ArrowRight size={14} color="#E6E6FA" />
+                  <ArrowRight size={14} color={THEME.deepForestCharcoal} />
                 </NavLink>
               </div>
             ))}
@@ -159,17 +181,36 @@ export const Groups: React.FC = () => {
       {/* Discover Public Groups */}
       {publicGroups.length > 0 && (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '14px', marginTop: '10px' }}>
-          <h2 style={{ fontSize: '16px', fontWeight: 900 }}>Explore Public Study Communities</h2>
+          <h2 style={{ fontSize: '16px', fontWeight: 800, color: THEME.deepForestCharcoal }}>
+            Explore Public Study Communities
+          </h2>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))', gap: '16px' }}>
             {publicGroups.map((g) => (
-              <div key={g.id} className="card-secondary" style={{ display: 'flex', flexDirection: 'column', justifyContent: 'space-between', gap: '12px' }}>
+              <div
+                key={g.id}
+                className="card-secondary"
+                style={{
+                  display: 'flex',
+                  flexDirection: 'column',
+                  justifyContent: 'space-between',
+                  gap: '12px',
+                  backgroundColor: THEME.warmIvory,
+                  border: `1.5px solid ${THEME.warmStone}`,
+                }}
+              >
                 <div>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '6px' }}>
-                    <Globe size={14} color="#E6E6FA" />
-                    <span style={{ fontSize: '11px', textTransform: 'uppercase', fontWeight: 800 }}>Public Group</span>
+                    <Globe size={14} color={THEME.emeraldGreen} />
+                    <span style={{ fontSize: '11px', textTransform: 'uppercase', fontWeight: 800, color: THEME.emeraldGreen }}>
+                      Public Group
+                    </span>
                   </div>
-                  <h3 style={{ fontSize: '15px', fontWeight: 900, marginBottom: '4px' }}>{g.name}</h3>
-                  <div style={{ fontSize: '12px' }}>{g.subject} • {g.member_count} members</div>
+                  <h3 style={{ fontSize: '15px', fontWeight: 800, marginBottom: '4px', color: THEME.deepForestCharcoal }}>
+                    {g.name}
+                  </h3>
+                  <div style={{ fontSize: '12px', color: THEME.warmStone }}>
+                    {g.subject} • {g.member_count} members
+                  </div>
                 </div>
 
                 <button onClick={() => handleJoinPublic(g.id)} className="btn-primary" style={{ width: '100%' }}>
@@ -185,10 +226,14 @@ export const Groups: React.FC = () => {
       {showCreateModal && (
         <div className="modal-overlay">
           <div className="modal-content">
-            <h2 style={{ fontSize: '18px', fontWeight: 900, marginBottom: '16px' }}>Create New Study Group</h2>
+            <h2 style={{ fontSize: '18px', fontWeight: 800, marginBottom: '16px', color: THEME.deepForestCharcoal }}>
+              Create New Study Group
+            </h2>
             <form onSubmit={handleCreateGroup} style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
               <div>
-                <label style={{ fontSize: '12px', fontWeight: 800, display: 'block', marginBottom: '4px' }}>Group Name *</label>
+                <label style={{ fontSize: '12px', fontWeight: 700, display: 'block', marginBottom: '4px', color: THEME.deepForestCharcoal }}>
+                  Group Name *
+                </label>
                 <input
                   type="text"
                   placeholder="e.g. Distributed Systems & Cloud"
@@ -199,7 +244,9 @@ export const Groups: React.FC = () => {
               </div>
 
               <div>
-                <label style={{ fontSize: '12px', fontWeight: 800, display: 'block', marginBottom: '4px' }}>Subject</label>
+                <label style={{ fontSize: '12px', fontWeight: 700, display: 'block', marginBottom: '4px', color: THEME.deepForestCharcoal }}>
+                  Subject
+                </label>
                 <input
                   type="text"
                   placeholder="e.g. Computer Science"
@@ -209,7 +256,9 @@ export const Groups: React.FC = () => {
               </div>
 
               <div>
-                <label style={{ fontSize: '12px', fontWeight: 800, display: 'block', marginBottom: '4px' }}>Course / Degree</label>
+                <label style={{ fontSize: '12px', fontWeight: 700, display: 'block', marginBottom: '4px', color: THEME.deepForestCharcoal }}>
+                  Course / Degree
+                </label>
                 <input
                   type="text"
                   placeholder="e.g. B.Tech 6th Sem"
@@ -219,7 +268,9 @@ export const Groups: React.FC = () => {
               </div>
 
               <div>
-                <label style={{ fontSize: '12px', fontWeight: 800, display: 'block', marginBottom: '4px' }}>Description</label>
+                <label style={{ fontSize: '12px', fontWeight: 700, display: 'block', marginBottom: '4px', color: THEME.deepForestCharcoal }}>
+                  Description
+                </label>
                 <textarea
                   rows={3}
                   placeholder="What will this study group focus on? Exam prep, homework, project work..."
@@ -228,15 +279,15 @@ export const Groups: React.FC = () => {
                 />
               </div>
 
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
                 <input
                   type="checkbox"
                   id="isPrivate"
                   checked={isPrivate}
                   onChange={(e) => setIsPrivate(e.target.checked)}
-                  style={{ width: '18px', height: '18px' }}
+                  style={{ width: '18px', height: '18px', accentColor: THEME.emeraldGreen }}
                 />
-                <label htmlFor="isPrivate" style={{ fontSize: '13px', fontWeight: 800, cursor: 'pointer' }}>
+                <label htmlFor="isPrivate" style={{ fontSize: '13px', fontWeight: 700, cursor: 'pointer', color: THEME.deepForestCharcoal }}>
                   Private Group (Invite code required to join)
                 </label>
               </div>
@@ -258,10 +309,12 @@ export const Groups: React.FC = () => {
       {showJoinModal && (
         <div className="modal-overlay">
           <div className="modal-content">
-            <h2 style={{ fontSize: '18px', fontWeight: 900, marginBottom: '16px' }}>Join Group with Invite Code</h2>
+            <h2 style={{ fontSize: '18px', fontWeight: 800, marginBottom: '16px', color: THEME.deepForestCharcoal }}>
+              Join Group with Invite Code
+            </h2>
             <form onSubmit={handleJoinByCode} style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
               <div>
-                <label style={{ fontSize: '12px', fontWeight: 800, display: 'block', marginBottom: '4px' }}>
+                <label style={{ fontSize: '12px', fontWeight: 700, display: 'block', marginBottom: '4px', color: THEME.deepForestCharcoal }}>
                   Enter 8-Character Invite Code
                 </label>
                 <input

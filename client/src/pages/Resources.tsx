@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { apiRequest } from '../api/client';
-import { FolderOpen, Upload, Plus, Download, Trash2, FileText, Link, Image as ImageIcon, ExternalLink } from 'lucide-react';
+import { THEME } from '../theme';
+import { FolderOpen, Upload, Download, Trash2, FileText, Link, Image as ImageIcon, ExternalLink } from 'lucide-react';
 
 export const Resources: React.FC = () => {
   const [searchParams] = useSearchParams();
@@ -106,13 +107,13 @@ export const Resources: React.FC = () => {
       case 'pdf':
       case 'document':
       case 'note':
-        return <FileText size={20} color="#E6E6FA" />;
+        return <FileText size={18} color={THEME.emeraldGreen} />;
       case 'image':
       case 'whiteboard':
-        return <ImageIcon size={20} color="#E6E6FA" />;
+        return <ImageIcon size={18} color={THEME.emeraldGreen} />;
       case 'link':
       default:
-        return <Link size={20} color="#E6E6FA" />;
+        return <Link size={18} color={THEME.emeraldGreen} />;
     }
   };
 
@@ -121,17 +122,21 @@ export const Resources: React.FC = () => {
       {/* Header */}
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '12px' }}>
         <div>
-          <h1 style={{ fontSize: '22px', fontWeight: 900 }}>Resource Library & Notes</h1>
-          <p style={{ fontSize: '13px' }}>Upload and share course notes, lecture slides, question banks, and whiteboard exports.</p>
+          <h1 style={{ fontSize: '22px', fontWeight: 800, color: THEME.deepForestCharcoal }}>
+            Resource Library & Notes
+          </h1>
+          <p style={{ fontSize: '13px', color: THEME.warmStone }}>
+            Upload and share course notes, lecture slides, question banks, and whiteboard exports.
+          </p>
         </div>
 
         <div style={{ display: 'flex', gap: '8px' }}>
           <button onClick={() => setShowLinkModal(true)} className="btn-secondary">
-            <Link size={16} color="#E6E6FA" />
+            <Link size={15} color={THEME.deepForestCharcoal} />
             <span>Add Link</span>
           </button>
           <button onClick={() => setShowUploadModal(true)} className="btn-primary">
-            <Upload size={16} color="#FFFFFF" />
+            <Upload size={15} color={THEME.warmIvory} />
             <span>Upload Document</span>
           </button>
         </div>
@@ -139,12 +144,18 @@ export const Resources: React.FC = () => {
 
       {/* Resources Grid */}
       {loading ? (
-        <div className="card" style={{ padding: '36px', textAlign: 'center' }}>Loading resources...</div>
+        <div className="card" style={{ padding: '36px', textAlign: 'center', color: THEME.warmStone }}>
+          Loading resources...
+        </div>
       ) : resources.length === 0 ? (
         <div className="card-secondary" style={{ textAlign: 'center', padding: '48px' }}>
-          <FolderOpen size={40} color="#E6E6FA" style={{ margin: '0 auto 12px' }} />
-          <div style={{ fontSize: '16px', fontWeight: 800, marginBottom: '6px' }}>No study resources uploaded yet</div>
-          <p style={{ fontSize: '13px', marginBottom: '16px' }}>Upload PDF notes, cheatsheets, or textbook diagrams to share with your group.</p>
+          <FolderOpen size={40} color={THEME.warmStone} style={{ margin: '0 auto 12px' }} />
+          <div style={{ fontSize: '16px', fontWeight: 800, marginBottom: '6px', color: THEME.deepForestCharcoal }}>
+            No study resources uploaded yet
+          </div>
+          <p style={{ fontSize: '13px', marginBottom: '16px', color: THEME.warmStone }}>
+            Upload PDF notes, cheatsheets, or textbook diagrams to share with your group.
+          </p>
           <button onClick={() => setShowUploadModal(true)} className="btn-primary">
             <span>Upload File</span>
           </button>
@@ -155,7 +166,14 @@ export const Resources: React.FC = () => {
             <div
               key={r.id}
               className="card"
-              style={{ display: 'flex', flexDirection: 'column', justifyContent: 'space-between', gap: '12px' }}
+              style={{
+                display: 'flex',
+                flexDirection: 'column',
+                justifyContent: 'space-between',
+                gap: '12px',
+                border: `1.5px solid ${THEME.deepForestCharcoal}`,
+                backgroundColor: THEME.warmIvory,
+              }}
             >
               <div>
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '8px' }}>
@@ -164,14 +182,16 @@ export const Resources: React.FC = () => {
                     <span className="badge">{r.file_type}</span>
                   </div>
                   <button onClick={() => handleDelete(r.id)} className="btn-secondary" style={{ padding: '4px 6px' }}>
-                    <Trash2 size={12} color="#E6E6FA" />
+                    <Trash2 size={12} color={THEME.deepForestCharcoal} />
                   </button>
                 </div>
 
-                <h3 style={{ fontSize: '15px', fontWeight: 900, marginBottom: '4px' }}>{r.title}</h3>
-                {r.description && <p style={{ fontSize: '12px', lineHeight: 1.4, marginBottom: '8px' }}>{r.description}</p>}
+                <h3 style={{ fontSize: '15px', fontWeight: 800, marginBottom: '4px', color: THEME.deepForestCharcoal }}>
+                  {r.title}
+                </h3>
+                {r.description && <p style={{ fontSize: '12px', lineHeight: 1.4, marginBottom: '8px', color: THEME.deepForestCharcoal }}>{r.description}</p>}
 
-                <div style={{ fontSize: '11px', marginTop: '6px' }}>
+                <div style={{ fontSize: '11px', marginTop: '6px', color: THEME.warmStone }}>
                   Uploaded by {r.author_name} {r.group_name ? `• ${r.group_name}` : ''}
                 </div>
               </div>
@@ -181,10 +201,10 @@ export const Resources: React.FC = () => {
                   href={r.file_url}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="btn-accent"
+                  className="btn-secondary"
                   style={{ width: '100%', textAlign: 'center', textDecoration: 'none' }}
                 >
-                  <ExternalLink size={14} color="#E6E6FA" />
+                  <ExternalLink size={14} color={THEME.deepForestCharcoal} />
                   <span>Open Resource Link</span>
                 </a>
               ) : (
@@ -194,7 +214,7 @@ export const Resources: React.FC = () => {
                   className="btn-primary"
                   style={{ width: '100%', textAlign: 'center', textDecoration: 'none' }}
                 >
-                  <Download size={14} color="#FFFFFF" />
+                  <Download size={14} color={THEME.warmIvory} />
                   <span>Download File</span>
                 </a>
               )}
@@ -207,10 +227,14 @@ export const Resources: React.FC = () => {
       {showUploadModal && (
         <div className="modal-overlay">
           <div className="modal-content">
-            <h2 style={{ fontSize: '18px', fontWeight: 900, marginBottom: '16px' }}>Upload Study Resource</h2>
+            <h2 style={{ fontSize: '18px', fontWeight: 800, marginBottom: '16px', color: THEME.deepForestCharcoal }}>
+              Upload Study Resource
+            </h2>
             <form onSubmit={handleFileUpload} style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
               <div>
-                <label style={{ fontSize: '12px', fontWeight: 800, display: 'block', marginBottom: '4px' }}>Choose File *</label>
+                <label style={{ fontSize: '12px', fontWeight: 700, display: 'block', marginBottom: '4px', color: THEME.deepForestCharcoal }}>
+                  Choose File *
+                </label>
                 <input
                   type="file"
                   onChange={(e) => {
@@ -220,11 +244,15 @@ export const Resources: React.FC = () => {
                   }}
                   required
                 />
-                <div style={{ fontSize: '11px', marginTop: '4px' }}>Max size: 15MB. Allowed: PDF, Images, Word, Text.</div>
+                <div style={{ fontSize: '11px', marginTop: '4px', color: THEME.warmStone }}>
+                  Max size: 15MB. Allowed: PDF, Images, Word, Text.
+                </div>
               </div>
 
               <div>
-                <label style={{ fontSize: '12px', fontWeight: 800, display: 'block', marginBottom: '4px' }}>Resource Title</label>
+                <label style={{ fontSize: '12px', fontWeight: 700, display: 'block', marginBottom: '4px', color: THEME.deepForestCharcoal }}>
+                  Resource Title
+                </label>
                 <input
                   type="text"
                   placeholder="e.g. Unit 2 Summary Notes & Cheat Sheet"
@@ -234,7 +262,9 @@ export const Resources: React.FC = () => {
               </div>
 
               <div>
-                <label style={{ fontSize: '12px', fontWeight: 800, display: 'block', marginBottom: '4px' }}>Description</label>
+                <label style={{ fontSize: '12px', fontWeight: 700, display: 'block', marginBottom: '4px', color: THEME.deepForestCharcoal }}>
+                  Description
+                </label>
                 <textarea
                   rows={2}
                   placeholder="What is covered in this document..."
@@ -260,10 +290,14 @@ export const Resources: React.FC = () => {
       {showLinkModal && (
         <div className="modal-overlay">
           <div className="modal-content">
-            <h2 style={{ fontSize: '18px', fontWeight: 900, marginBottom: '16px' }}>Add Educational Resource Link</h2>
+            <h2 style={{ fontSize: '18px', fontWeight: 800, marginBottom: '16px', color: THEME.deepForestCharcoal }}>
+              Add Educational Resource Link
+            </h2>
             <form onSubmit={handleLinkSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
               <div>
-                <label style={{ fontSize: '12px', fontWeight: 800, display: 'block', marginBottom: '4px' }}>Resource Title *</label>
+                <label style={{ fontSize: '12px', fontWeight: 700, display: 'block', marginBottom: '4px', color: THEME.deepForestCharcoal }}>
+                  Resource Title *
+                </label>
                 <input
                   type="text"
                   placeholder="e.g. NPTEL Operating Systems Lecture Series"
@@ -274,7 +308,9 @@ export const Resources: React.FC = () => {
               </div>
 
               <div>
-                <label style={{ fontSize: '12px', fontWeight: 800, display: 'block', marginBottom: '4px' }}>URL *</label>
+                <label style={{ fontSize: '12px', fontWeight: 700, display: 'block', marginBottom: '4px', color: THEME.deepForestCharcoal }}>
+                  URL *
+                </label>
                 <input
                   type="url"
                   placeholder="https://..."
@@ -285,7 +321,9 @@ export const Resources: React.FC = () => {
               </div>
 
               <div>
-                <label style={{ fontSize: '12px', fontWeight: 800, display: 'block', marginBottom: '4px' }}>Description</label>
+                <label style={{ fontSize: '12px', fontWeight: 700, display: 'block', marginBottom: '4px', color: THEME.deepForestCharcoal }}>
+                  Description
+                </label>
                 <textarea
                   rows={2}
                   placeholder="Why is this resource useful..."

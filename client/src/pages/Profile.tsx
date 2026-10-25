@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { apiRequest } from '../api/client';
-import { UserCheck, Save, GraduationCap, BookOpen, ShieldCheck, Check } from 'lucide-react';
+import { THEME } from '../theme';
+import { Save, GraduationCap, BookOpen, Check } from 'lucide-react';
 
 export const Profile: React.FC = () => {
   const { user, refreshUser } = useAuth();
@@ -66,48 +67,65 @@ export const Profile: React.FC = () => {
     <div style={{ display: 'flex', flexDirection: 'column', gap: '24px', maxWidth: '800px' }}>
       {/* Header */}
       <div>
-        <h1 style={{ fontSize: '22px', fontWeight: 900 }}>Student Identity & Profile</h1>
-        <p style={{ fontSize: '13px' }}>Your public academic profile visible to peers and study groups on StudySync.</p>
+        <h1 style={{ fontSize: '22px', fontWeight: 800, color: THEME.deepForestCharcoal }}>
+          Student Identity & Profile
+        </h1>
+        <p style={{ fontSize: '13px', color: THEME.warmStone }}>
+          Your public academic profile visible to peers and study groups on StudySync.
+        </p>
       </div>
 
       {successMsg && (
-        <div className="alert-box" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-          <Check size={16} color="#E6E6FA" />
-          <span>{successMsg}</span>
+        <div className="alert-box-emerald" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <Check size={16} color={THEME.emeraldGreen} />
+          <span style={{ color: THEME.deepForestCharcoal }}>{successMsg}</span>
         </div>
       )}
 
       {/* Main Profile Form Card */}
-      <form onSubmit={handleSubmit} className="card" style={{ display: 'flex', flexDirection: 'column', gap: '18px' }}>
+      <form
+        onSubmit={handleSubmit}
+        className="card"
+        style={{
+          display: 'flex',
+          flexDirection: 'column',
+          gap: '18px',
+          border: `1.5px solid ${THEME.deepForestCharcoal}`,
+          backgroundColor: THEME.warmIvory,
+        }}
+      >
         <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
           <div
             style={{
               width: '64px',
               height: '64px',
               borderRadius: '50%',
-              backgroundColor: '#E6E6FA',
+              backgroundColor: THEME.emeraldGreen,
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
-              fontSize: '24px',
-              color: '#FFFFFF',
-              fontWeight: 900,
-              border: '2px solid #E6E6FA',
+              fontSize: '22px',
+              color: THEME.warmIvory,
+              fontWeight: 800,
+              border: `2px solid ${THEME.deepForestCharcoal}`,
+              flexShrink: 0,
             }}
           >
             {user?.full_name ? user.full_name[0].toUpperCase() : 'S'}
           </div>
 
           <div>
-            <div style={{ fontSize: '18px', fontWeight: 900 }}>{user?.full_name}</div>
-            <div style={{ fontSize: '13px' }}>@{user?.username} (Student ID)</div>
-            <div style={{ fontSize: '12px' }}>{user?.email}</div>
+            <div style={{ fontSize: '18px', fontWeight: 800, color: THEME.deepForestCharcoal }}>{user?.full_name}</div>
+            <div style={{ fontSize: '13px', color: THEME.warmStone }}>@{user?.username} (Student ID)</div>
+            <div style={{ fontSize: '12px', color: THEME.warmStone }}>{user?.email}</div>
           </div>
         </div>
 
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))', gap: '14px' }}>
           <div>
-            <label style={{ fontSize: '12px', fontWeight: 800, display: 'block', marginBottom: '4px' }}>Full Name *</label>
+            <label style={{ fontSize: '12px', fontWeight: 700, display: 'block', marginBottom: '4px', color: THEME.deepForestCharcoal }}>
+              Full Name *
+            </label>
             <input
               type="text"
               value={fullName}
@@ -117,7 +135,9 @@ export const Profile: React.FC = () => {
           </div>
 
           <div>
-            <label style={{ fontSize: '12px', fontWeight: 800, display: 'block', marginBottom: '4px' }}>Course / Degree</label>
+            <label style={{ fontSize: '12px', fontWeight: 700, display: 'block', marginBottom: '4px', color: THEME.deepForestCharcoal }}>
+              Course / Degree
+            </label>
             <input
               type="text"
               placeholder="e.g. Computer Science & Engineering"
@@ -127,7 +147,9 @@ export const Profile: React.FC = () => {
           </div>
 
           <div>
-            <label style={{ fontSize: '12px', fontWeight: 800, display: 'block', marginBottom: '4px' }}>College / University</label>
+            <label style={{ fontSize: '12px', fontWeight: 700, display: 'block', marginBottom: '4px', color: THEME.deepForestCharcoal }}>
+              College / University
+            </label>
             <input
               type="text"
               placeholder="e.g. National Institute of Technology"
@@ -137,7 +159,9 @@ export const Profile: React.FC = () => {
           </div>
 
           <div>
-            <label style={{ fontSize: '12px', fontWeight: 800, display: 'block', marginBottom: '4px' }}>Academic Year</label>
+            <label style={{ fontSize: '12px', fontWeight: 700, display: 'block', marginBottom: '4px', color: THEME.deepForestCharcoal }}>
+              Academic Year
+            </label>
             <input
               type="text"
               placeholder="e.g. 3rd Year"
@@ -148,7 +172,9 @@ export const Profile: React.FC = () => {
         </div>
 
         <div>
-          <label style={{ fontSize: '12px', fontWeight: 800, display: 'block', marginBottom: '4px' }}>Study Status / Availability</label>
+          <label style={{ fontSize: '12px', fontWeight: 700, display: 'block', marginBottom: '4px', color: THEME.deepForestCharcoal }}>
+            Study Status / Availability
+          </label>
           <select value={availability} onChange={(e) => setAvailability(e.target.value)}>
             <option value="available">Available for Peer Study</option>
             <option value="studying">Currently Deep Studying</option>
@@ -157,7 +183,9 @@ export const Profile: React.FC = () => {
         </div>
 
         <div>
-          <label style={{ fontSize: '12px', fontWeight: 800, display: 'block', marginBottom: '4px' }}>Introduction & Study Goals</label>
+          <label style={{ fontSize: '12px', fontWeight: 700, display: 'block', marginBottom: '4px', color: THEME.deepForestCharcoal }}>
+            Introduction & Study Goals
+          </label>
           <textarea
             rows={3}
             placeholder="Tell peers what you are studying, topics you excel at, or what exams you are targeting..."
@@ -166,25 +194,29 @@ export const Profile: React.FC = () => {
           />
         </div>
 
-        <div style={{ display: 'flex', justifyContent: 'flex-end', paddingTop: '10px', borderTop: '1px solid #E6E6FA' }}>
+        <div style={{ display: 'flex', justifyContent: 'flex-end', paddingTop: '10px', borderTop: `1px solid ${THEME.warmStone}` }}>
           <button type="submit" disabled={saving} className="btn-primary">
-            <Save size={16} color="#FFFFFF" />
+            <Save size={15} color={THEME.warmIvory} />
             <span>{saving ? 'Saving...' : 'Save Profile'}</span>
           </button>
         </div>
       </form>
 
       {/* Topics Summary */}
-      <div className="card-secondary" style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
-        <h2 style={{ fontSize: '16px', fontWeight: 900 }}>Academic Specialties (Teach & Learn)</h2>
+      <div className="card-secondary" style={{ display: 'flex', flexDirection: 'column', gap: '14px', backgroundColor: THEME.warmIvory, border: `1.5px solid ${THEME.warmStone}` }}>
+        <h2 style={{ fontSize: '16px', fontWeight: 800, color: THEME.deepForestCharcoal }}>
+          Academic Specialties (Teach & Learn)
+        </h2>
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))', gap: '14px' }}>
           <div>
             <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '8px' }}>
-              <GraduationCap size={16} color="#E6E6FA" />
-              <span style={{ fontSize: '13px', fontWeight: 800 }}>Topics You Can Teach ({teachTopics.length})</span>
+              <GraduationCap size={16} color={THEME.emeraldGreen} />
+              <span style={{ fontSize: '13px', fontWeight: 700, color: THEME.deepForestCharcoal }}>
+                Topics You Can Teach ({teachTopics.length})
+              </span>
             </div>
             {teachTopics.length === 0 ? (
-              <div style={{ fontSize: '12px' }}>No teaching topics added yet.</div>
+              <div style={{ fontSize: '12px', color: THEME.warmStone }}>No teaching topics added yet.</div>
             ) : (
               <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
                 {teachTopics.map((t) => (
@@ -196,11 +228,13 @@ export const Profile: React.FC = () => {
 
           <div>
             <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '8px' }}>
-              <BookOpen size={16} color="#E6E6FA" />
-              <span style={{ fontSize: '13px', fontWeight: 800 }}>Topics You Need Help With ({learnTopics.length})</span>
+              <BookOpen size={16} color={THEME.deepForestCharcoal} />
+              <span style={{ fontSize: '13px', fontWeight: 700, color: THEME.deepForestCharcoal }}>
+                Topics You Need Help With ({learnTopics.length})
+              </span>
             </div>
             {learnTopics.length === 0 ? (
-              <div style={{ fontSize: '12px' }}>No learning topics added yet.</div>
+              <div style={{ fontSize: '12px', color: THEME.warmStone }}>No learning topics added yet.</div>
             ) : (
               <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
                 {learnTopics.map((t) => (

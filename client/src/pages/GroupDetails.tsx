@@ -3,8 +3,8 @@ import { useParams, useNavigate, NavLink } from 'react-router-dom';
 import { apiRequest } from '../api/client';
 import { useAuth } from '../context/AuthContext';
 import { DoubtQueue } from '../components/DoubtQueue';
+import { THEME } from '../theme';
 import {
-  UsersRound,
   Video,
   ListTodo,
   Timer,
@@ -13,8 +13,6 @@ import {
   LogOut,
   Megaphone,
   Plus,
-  Shield,
-  KeyRound,
 } from 'lucide-react';
 
 export const GroupDetails: React.FC = () => {
@@ -93,7 +91,11 @@ export const GroupDetails: React.FC = () => {
   };
 
   if (loading || !groupData) {
-    return <div className="card" style={{ padding: '40px', textAlign: 'center' }}>Loading group workspace...</div>;
+    return (
+      <div className="card" style={{ padding: '40px', textAlign: 'center', color: THEME.warmStone }}>
+        Loading group workspace...
+      </div>
+    );
   }
 
   const { group, membership, members, announcements, activeRooms } = groupData;
@@ -102,60 +104,94 @@ export const GroupDetails: React.FC = () => {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
       {/* Group Header Card */}
-      <div className="card-secondary" style={{ display: 'flex', flexDirection: 'column', gap: '14px', padding: '24px' }}>
+      <div
+        className="card"
+        style={{
+          display: 'flex',
+          flexDirection: 'column',
+          gap: '14px',
+          padding: '24px',
+          backgroundColor: THEME.warmIvory,
+          border: `2px solid ${THEME.emeraldGreen}`,
+        }}
+      >
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '12px' }}>
           <div>
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
               <span className="badge">{membership?.role || 'Member'}</span>
               <span className="badge-outline">Code: {group.invite_code}</span>
             </div>
-            <h1 style={{ fontSize: '24px', fontWeight: 900 }}>{group.name}</h1>
-            <p style={{ fontSize: '13px' }}>
+            <h1 style={{ fontSize: '24px', fontWeight: 800, color: THEME.deepForestCharcoal }}>
+              {group.name}
+            </h1>
+            <p style={{ fontSize: '13px', color: THEME.warmStone }}>
               {group.subject ? `${group.subject} • ` : ''}{group.course || 'Study Group'} • {members.length} member{members.length === 1 ? '' : 's'}
             </p>
           </div>
 
           <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
             <button onClick={() => setShowInviteModal(true)} className="btn-secondary">
-              <Mail size={14} color="#E6E6FA" />
+              <Mail size={14} color={THEME.deepForestCharcoal} />
               <span>Invite Member</span>
             </button>
             <NavLink to={`/rooms?group_id=${group.id}`} className="btn-primary">
-              <Video size={14} color="#FFFFFF" />
+              <Video size={14} color={THEME.warmIvory} />
               <span>Start Room</span>
             </NavLink>
             <button onClick={handleLeave} className="btn-secondary" title="Leave Group">
-              <LogOut size={14} color="#E6E6FA" />
+              <LogOut size={14} color={THEME.deepForestCharcoal} />
             </button>
           </div>
         </div>
 
-        {group.description && <p style={{ fontSize: '14px', lineHeight: 1.5 }}>{group.description}</p>}
+        {group.description && (
+          <p style={{ fontSize: '13.5px', lineHeight: 1.5, color: THEME.deepForestCharcoal }}>
+            {group.description}
+          </p>
+        )}
 
         {/* Quick Collaboration Links */}
-        <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap', paddingTop: '8px', borderTop: '1px solid #E6E6FA' }}>
-          <NavLink to={`/syllabus?group_id=${group.id}`} className="btn-accent" style={{ fontSize: '12px', padding: '6px 12px' }}>
-            <ListTodo size={14} color="#E6E6FA" />
+        <div
+          style={{
+            display: 'flex',
+            gap: '10px',
+            flexWrap: 'wrap',
+            paddingTop: '10px',
+            borderTop: `1px solid ${THEME.warmStone}`,
+          }}
+        >
+          <NavLink to={`/syllabus?group_id=${group.id}`} className="btn-secondary" style={{ fontSize: '12px', padding: '6px 12px' }}>
+            <ListTodo size={14} color={THEME.deepForestCharcoal} />
             <span>Syllabus Board</span>
           </NavLink>
-          <NavLink to={`/focus?group_id=${group.id}`} className="btn-accent" style={{ fontSize: '12px', padding: '6px 12px' }}>
-            <Timer size={14} color="#E6E6FA" />
+          <NavLink to={`/focus?group_id=${group.id}`} className="btn-secondary" style={{ fontSize: '12px', padding: '6px 12px' }}>
+            <Timer size={14} color={THEME.deepForestCharcoal} />
             <span>Group Focus Pact</span>
           </NavLink>
-          <NavLink to={`/resources?group_id=${group.id}`} className="btn-accent" style={{ fontSize: '12px', padding: '6px 12px' }}>
-            <FolderOpen size={14} color="#E6E6FA" />
+          <NavLink to={`/resources?group_id=${group.id}`} className="btn-secondary" style={{ fontSize: '12px', padding: '6px 12px' }}>
+            <FolderOpen size={14} color={THEME.deepForestCharcoal} />
             <span>Shared Resources</span>
           </NavLink>
         </div>
       </div>
 
       {/* Tabs */}
-      <div style={{ display: 'flex', gap: '8px', borderBottom: '2px solid #E6E6FA', paddingBottom: '8px' }}>
+      <div
+        style={{
+          display: 'flex',
+          gap: '8px',
+          borderBottom: `1.5px solid ${THEME.deepForestCharcoal}`,
+          paddingBottom: '8px',
+          overflowX: 'auto',
+        }}
+      >
         <button
           onClick={() => setActiveTab('overview')}
           style={{
-            backgroundColor: activeTab === 'overview' ? '#E6E6FA' : '#FFFFFF',
-            color: activeTab === 'overview' ? '#FFFFFF' : '#E6E6FA',
+            backgroundColor: activeTab === 'overview' ? THEME.emeraldGreen : THEME.warmIvory,
+            color: activeTab === 'overview' ? THEME.warmIvory : THEME.deepForestCharcoal,
+            borderColor: activeTab === 'overview' ? THEME.emeraldGreen : THEME.deepForestCharcoal,
+            fontSize: '13px',
           }}
         >
           Overview & Announcements
@@ -163,8 +199,10 @@ export const GroupDetails: React.FC = () => {
         <button
           onClick={() => setActiveTab('doubts')}
           style={{
-            backgroundColor: activeTab === 'doubts' ? '#E6E6FA' : '#FFFFFF',
-            color: activeTab === 'doubts' ? '#FFFFFF' : '#E6E6FA',
+            backgroundColor: activeTab === 'doubts' ? THEME.emeraldGreen : THEME.warmIvory,
+            color: activeTab === 'doubts' ? THEME.warmIvory : THEME.deepForestCharcoal,
+            borderColor: activeTab === 'doubts' ? THEME.emeraldGreen : THEME.deepForestCharcoal,
+            fontSize: '13px',
           }}
         >
           Group Doubt Queue
@@ -172,8 +210,10 @@ export const GroupDetails: React.FC = () => {
         <button
           onClick={() => setActiveTab('members')}
           style={{
-            backgroundColor: activeTab === 'members' ? '#E6E6FA' : '#FFFFFF',
-            color: activeTab === 'members' ? '#FFFFFF' : '#E6E6FA',
+            backgroundColor: activeTab === 'members' ? THEME.emeraldGreen : THEME.warmIvory,
+            color: activeTab === 'members' ? THEME.warmIvory : THEME.deepForestCharcoal,
+            borderColor: activeTab === 'members' ? THEME.emeraldGreen : THEME.deepForestCharcoal,
+            fontSize: '13px',
           }}
         >
           Members Directory ({members.length})
@@ -185,8 +225,10 @@ export const GroupDetails: React.FC = () => {
         <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
           {/* Active Study Rooms */}
           {activeRooms.length > 0 && (
-            <div className="card">
-              <h2 style={{ fontSize: '16px', fontWeight: 900, marginBottom: '12px' }}>Active Study Rooms Now</h2>
+            <div className="card" style={{ border: `1.5px solid ${THEME.deepForestCharcoal}` }}>
+              <h2 style={{ fontSize: '16px', fontWeight: 800, marginBottom: '12px', color: THEME.deepForestCharcoal }}>
+                Active Study Rooms Now
+              </h2>
               <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
                 {activeRooms.map((r: any) => (
                   <div
@@ -196,14 +238,14 @@ export const GroupDetails: React.FC = () => {
                       alignItems: 'center',
                       justifyContent: 'space-between',
                       padding: '12px',
-                      backgroundColor: '#F0F8FF',
-                      borderRadius: '8px',
-                      border: '1px solid #E6E6FA',
+                      backgroundColor: THEME.warmIvory,
+                      borderRadius: '6px',
+                      border: `1px solid ${THEME.deepForestCharcoal}`,
                     }}
                   >
                     <div>
-                      <div style={{ fontSize: '14px', fontWeight: 900 }}>{r.name}</div>
-                      <div style={{ fontSize: '12px' }}>Host: {r.host_name} • {r.subject}</div>
+                      <div style={{ fontSize: '14px', fontWeight: 800, color: THEME.deepForestCharcoal }}>{r.name}</div>
+                      <div style={{ fontSize: '12px', color: THEME.warmStone }}>Host: {r.host_name} • {r.subject}</div>
                     </div>
                     <NavLink to={`/rooms/${r.id}`} className="btn-primary">
                       <span>Join Room</span>
@@ -215,22 +257,24 @@ export const GroupDetails: React.FC = () => {
           )}
 
           {/* Announcements */}
-          <div className="card" style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+          <div className="card" style={{ display: 'flex', flexDirection: 'column', gap: '14px', border: `1.5px solid ${THEME.deepForestCharcoal}` }}>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                <Megaphone size={18} color="#E6E6FA" />
-                <h2 style={{ fontSize: '16px', fontWeight: 900 }}>Group Announcements</h2>
+                <Megaphone size={18} color={THEME.emeraldGreen} />
+                <h2 style={{ fontSize: '16px', fontWeight: 800, color: THEME.deepForestCharcoal }}>
+                  Group Announcements
+                </h2>
               </div>
               {isOwnerOrMod && (
                 <button onClick={() => setShowAnnounceModal(true)} className="btn-secondary" style={{ padding: '6px 12px', fontSize: '12px' }}>
-                  <Plus size={14} color="#E6E6FA" />
+                  <Plus size={14} color={THEME.deepForestCharcoal} />
                   <span>Post Announcement</span>
                 </button>
               )}
             </div>
 
             {announcements.length === 0 ? (
-              <div style={{ fontSize: '13px', textAlign: 'center', padding: '20px' }}>
+              <div style={{ fontSize: '13px', textAlign: 'center', padding: '20px', color: THEME.warmStone }}>
                 No announcements posted yet.
               </div>
             ) : (
@@ -240,17 +284,17 @@ export const GroupDetails: React.FC = () => {
                     key={a.id}
                     style={{
                       padding: '14px',
-                      backgroundColor: '#F0F8FF',
-                      borderRadius: '8px',
-                      border: '1px solid #E6E6FA',
+                      backgroundColor: THEME.warmIvory,
+                      borderRadius: '6px',
+                      border: `1px solid ${THEME.deepForestCharcoal}`,
                     }}
                   >
                     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '6px' }}>
-                      <h3 style={{ fontSize: '14px', fontWeight: 900 }}>{a.title}</h3>
-                      <span style={{ fontSize: '11px' }}>{new Date(a.created_at).toLocaleDateString()}</span>
+                      <h3 style={{ fontSize: '14px', fontWeight: 800, color: THEME.deepForestCharcoal }}>{a.title}</h3>
+                      <span style={{ fontSize: '11px', color: THEME.warmStone }}>{new Date(a.created_at).toLocaleDateString()}</span>
                     </div>
-                    <p style={{ fontSize: '13px', lineHeight: 1.5, marginBottom: '8px' }}>{a.content}</p>
-                    <div style={{ fontSize: '11px', fontWeight: 800 }}>Posted by {a.author_name}</div>
+                    <p style={{ fontSize: '13px', lineHeight: 1.5, marginBottom: '8px', color: THEME.deepForestCharcoal }}>{a.content}</p>
+                    <div style={{ fontSize: '11px', fontWeight: 700, color: THEME.warmStone }}>Posted by {a.author_name}</div>
                   </div>
                 ))}
               </div>
@@ -266,8 +310,10 @@ export const GroupDetails: React.FC = () => {
 
       {/* Tab 3: Members Directory */}
       {activeTab === 'members' && (
-        <div className="card" style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-          <h2 style={{ fontSize: '16px', fontWeight: 900 }}>Group Members ({members.length})</h2>
+        <div className="card" style={{ display: 'flex', flexDirection: 'column', gap: '12px', border: `1.5px solid ${THEME.deepForestCharcoal}` }}>
+          <h2 style={{ fontSize: '16px', fontWeight: 800, color: THEME.deepForestCharcoal }}>
+            Group Members ({members.length})
+          </h2>
           <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
             {members.map((m: any) => (
               <div
@@ -277,9 +323,9 @@ export const GroupDetails: React.FC = () => {
                   alignItems: 'center',
                   justifyContent: 'space-between',
                   padding: '10px 14px',
-                  backgroundColor: '#F0F8FF',
-                  borderRadius: '8px',
-                  border: '1px solid #E6E6FA',
+                  backgroundColor: THEME.warmIvory,
+                  borderRadius: '6px',
+                  border: `1px solid ${THEME.deepForestCharcoal}`,
                 }}
               >
                 <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
@@ -288,19 +334,20 @@ export const GroupDetails: React.FC = () => {
                       width: '32px',
                       height: '32px',
                       borderRadius: '50%',
-                      backgroundColor: '#E6E6FA',
-                      color: '#FFFFFF',
+                      backgroundColor: THEME.emeraldGreen,
+                      color: THEME.warmIvory,
                       display: 'flex',
                       alignItems: 'center',
                       justifyContent: 'center',
-                      fontWeight: 900,
+                      fontWeight: 800,
+                      border: `1.5px solid ${THEME.deepForestCharcoal}`,
                     }}
                   >
                     {m.full_name[0].toUpperCase()}
                   </div>
                   <div>
-                    <div style={{ fontSize: '13px', fontWeight: 900 }}>{m.full_name}</div>
-                    <div style={{ fontSize: '11px' }}>@{m.username} • {m.course || 'Student'}</div>
+                    <div style={{ fontSize: '13px', fontWeight: 800, color: THEME.deepForestCharcoal }}>{m.full_name}</div>
+                    <div style={{ fontSize: '11px', color: THEME.warmStone }}>@{m.username} • {m.course || 'Student'}</div>
                   </div>
                 </div>
 
@@ -315,10 +362,12 @@ export const GroupDetails: React.FC = () => {
       {showAnnounceModal && (
         <div className="modal-overlay">
           <div className="modal-content">
-            <h2 style={{ fontSize: '18px', fontWeight: 900, marginBottom: '16px' }}>Post Announcement</h2>
+            <h2 style={{ fontSize: '18px', fontWeight: 800, marginBottom: '16px', color: THEME.deepForestCharcoal }}>
+              Post Announcement
+            </h2>
             <form onSubmit={handlePostAnnouncement} style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
               <div>
-                <label style={{ fontSize: '12px', fontWeight: 800, display: 'block', marginBottom: '4px' }}>Title</label>
+                <label style={{ fontSize: '12px', fontWeight: 700, display: 'block', marginBottom: '4px', color: THEME.deepForestCharcoal }}>Title</label>
                 <input
                   type="text"
                   placeholder="e.g. Schedule Update for DBMS Lab"
@@ -329,7 +378,7 @@ export const GroupDetails: React.FC = () => {
               </div>
 
               <div>
-                <label style={{ fontSize: '12px', fontWeight: 800, display: 'block', marginBottom: '4px' }}>Content</label>
+                <label style={{ fontSize: '12px', fontWeight: 700, display: 'block', marginBottom: '4px', color: THEME.deepForestCharcoal }}>Content</label>
                 <textarea
                   rows={4}
                   placeholder="Details of the announcement..."
@@ -356,10 +405,12 @@ export const GroupDetails: React.FC = () => {
       {showInviteModal && (
         <div className="modal-overlay">
           <div className="modal-content">
-            <h2 style={{ fontSize: '18px', fontWeight: 900, marginBottom: '16px' }}>Invite Student to Group</h2>
+            <h2 style={{ fontSize: '18px', fontWeight: 800, marginBottom: '16px', color: THEME.deepForestCharcoal }}>
+              Invite Student to Group
+            </h2>
             <form onSubmit={handleSendInvite} style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
               <div>
-                <label style={{ fontSize: '12px', fontWeight: 800, display: 'block', marginBottom: '4px' }}>
+                <label style={{ fontSize: '12px', fontWeight: 700, display: 'block', marginBottom: '4px', color: THEME.deepForestCharcoal }}>
                   Student Email Address
                 </label>
                 <input
@@ -371,7 +422,7 @@ export const GroupDetails: React.FC = () => {
                 />
               </div>
 
-              <div className="card-secondary" style={{ fontSize: '12px' }}>
+              <div className="card-secondary" style={{ fontSize: '12px', color: THEME.deepForestCharcoal }}>
                 Or share the direct invite code: <strong>{group.invite_code}</strong>
               </div>
 

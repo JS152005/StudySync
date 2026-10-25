@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { NavLink, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
+import { THEME } from '../../theme';
 import { Sparkles, UserPlus } from 'lucide-react';
 
 export const Register: React.FC = () => {
@@ -67,7 +68,7 @@ export const Register: React.FC = () => {
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
-        backgroundColor: '#F0F8FF',
+        backgroundColor: THEME.warmIvory,
         padding: '30px 20px',
       }}
     >
@@ -80,40 +81,44 @@ export const Register: React.FC = () => {
           display: 'flex',
           flexDirection: 'column',
           gap: '20px',
-          backgroundColor: '#FFFFFF',
-          border: '3px solid #E6E6FA',
+          backgroundColor: THEME.warmIvory,
+          border: `1.5px solid ${THEME.deepForestCharcoal}`,
+          borderRadius: '8px',
         }}
       >
         <div style={{ textAlign: 'center' }}>
           <div
             style={{
-              width: '48px',
-              height: '48px',
-              borderRadius: '12px',
-              backgroundColor: '#E6E6FA',
+              width: '46px',
+              height: '46px',
+              borderRadius: '8px',
+              backgroundColor: THEME.emeraldGreen,
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
-              margin: '0 auto 12px',
+              margin: '0 auto 14px',
+              border: `1.5px solid ${THEME.deepForestCharcoal}`,
             }}
           >
-            <Sparkles size={28} color="#FFFFFF" />
+            <Sparkles size={24} color={THEME.warmIvory} strokeWidth={2.5} />
           </div>
-          <h1 style={{ fontSize: '24px', fontWeight: 900 }}>Create Student Account</h1>
-          <p style={{ fontSize: '13px', marginTop: '4px' }}>
+          <h1 style={{ fontSize: '24px', fontWeight: 800, color: THEME.deepForestCharcoal }}>
+            Create Student Account
+          </h1>
+          <p style={{ fontSize: '13px', marginTop: '4px', color: THEME.warmStone }}>
             Join thousands of engineering and medical students learning together.
           </p>
         </div>
 
         {error && (
-          <div className="alert-box" style={{ borderColor: '#E6E6FA', fontSize: '13px' }}>
-            [ERROR] {error}
+          <div className="alert-box-vermilion" style={{ fontSize: '13px' }}>
+            <span style={{ color: THEME.vermilion, fontWeight: 700 }}>[ERROR]</span> {error}
           </div>
         )}
 
         <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
           <div>
-            <label style={{ fontSize: '12px', fontWeight: 800, display: 'block', marginBottom: '4px' }}>
+            <label style={{ fontSize: '12px', fontWeight: 700, display: 'block', marginBottom: '4px', color: THEME.deepForestCharcoal }}>
               Full Name *
             </label>
             <input
@@ -127,7 +132,7 @@ export const Register: React.FC = () => {
 
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '12px' }}>
             <div>
-              <label style={{ fontSize: '12px', fontWeight: 800, display: 'block', marginBottom: '4px' }}>
+              <label style={{ fontSize: '12px', fontWeight: 700, display: 'block', marginBottom: '4px', color: THEME.deepForestCharcoal }}>
                 Email Address *
               </label>
               <input
@@ -140,7 +145,7 @@ export const Register: React.FC = () => {
             </div>
 
             <div>
-              <label style={{ fontSize: '12px', fontWeight: 800, display: 'block', marginBottom: '4px' }}>
+              <label style={{ fontSize: '12px', fontWeight: 700, display: 'block', marginBottom: '4px', color: THEME.deepForestCharcoal }}>
                 Username or Student ID *
               </label>
               <input
@@ -155,7 +160,7 @@ export const Register: React.FC = () => {
 
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '12px' }}>
             <div>
-              <label style={{ fontSize: '12px', fontWeight: 800, display: 'block', marginBottom: '4px' }}>
+              <label style={{ fontSize: '12px', fontWeight: 700, display: 'block', marginBottom: '4px', color: THEME.deepForestCharcoal }}>
                 Password (min 8 chars) *
               </label>
               <input
@@ -168,7 +173,7 @@ export const Register: React.FC = () => {
             </div>
 
             <div>
-              <label style={{ fontSize: '12px', fontWeight: 800, display: 'block', marginBottom: '4px' }}>
+              <label style={{ fontSize: '12px', fontWeight: 700, display: 'block', marginBottom: '4px', color: THEME.deepForestCharcoal }}>
                 Confirm Password *
               </label>
               <input
@@ -183,7 +188,7 @@ export const Register: React.FC = () => {
 
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '12px' }}>
             <div>
-              <label style={{ fontSize: '12px', fontWeight: 800, display: 'block', marginBottom: '4px' }}>
+              <label style={{ fontSize: '12px', fontWeight: 700, display: 'block', marginBottom: '4px', color: THEME.deepForestCharcoal }}>
                 Course / Major
               </label>
               <input
@@ -195,7 +200,7 @@ export const Register: React.FC = () => {
             </div>
 
             <div>
-              <label style={{ fontSize: '12px', fontWeight: 800, display: 'block', marginBottom: '4px' }}>
+              <label style={{ fontSize: '12px', fontWeight: 700, display: 'block', marginBottom: '4px', color: THEME.deepForestCharcoal }}>
                 College / University
               </label>
               <input
@@ -208,7 +213,7 @@ export const Register: React.FC = () => {
           </div>
 
           <div>
-            <label style={{ fontSize: '12px', fontWeight: 800, display: 'block', marginBottom: '4px' }}>
+            <label style={{ fontSize: '12px', fontWeight: 700, display: 'block', marginBottom: '4px', color: THEME.deepForestCharcoal }}>
               Academic Year
             </label>
             <select value={academicYear} onChange={(e) => setAcademicYear(e.target.value)}>
@@ -220,16 +225,16 @@ export const Register: React.FC = () => {
             </select>
           </div>
 
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginTop: '6px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginTop: '6px' }}>
             <input
               type="checkbox"
               id="terms"
               checked={termsAccepted}
               onChange={(e) => setTermsAccepted(e.target.checked)}
-              style={{ width: '18px', height: '18px', cursor: 'pointer' }}
+              style={{ width: '18px', height: '18px', cursor: 'pointer', accentColor: THEME.emeraldGreen }}
               required
             />
-            <label htmlFor="terms" style={{ fontSize: '12px', fontWeight: 700, cursor: 'pointer' }}>
+            <label htmlFor="terms" style={{ fontSize: '12.5px', fontWeight: 600, cursor: 'pointer', color: THEME.deepForestCharcoal }}>
               I agree to the StudySync Terms of Service and Privacy Policy.
             </label>
           </div>
@@ -238,16 +243,24 @@ export const Register: React.FC = () => {
             type="submit"
             disabled={loading || !termsAccepted}
             className="btn-primary"
-            style={{ width: '100%', padding: '12px', marginTop: '10px' }}
+            style={{ width: '100%', padding: '11px', marginTop: '10px' }}
           >
-            <UserPlus size={16} color="#FFFFFF" />
+            <UserPlus size={16} color={THEME.warmIvory} />
             <span>{loading ? 'Creating Account...' : 'Complete Registration'}</span>
           </button>
         </form>
 
-        <div style={{ textAlign: 'center', fontSize: '13px', borderTop: '1px solid #E6E6FA', paddingTop: '16px' }}>
+        <div
+          style={{
+            textAlign: 'center',
+            fontSize: '13px',
+            borderTop: `1px solid ${THEME.warmStone}`,
+            paddingTop: '16px',
+            color: THEME.warmStone,
+          }}
+        >
           Already have an account?{' '}
-          <NavLink to="/login" style={{ textDecoration: 'underline' }}>
+          <NavLink to="/login" style={{ textDecoration: 'underline', color: THEME.emeraldGreen, fontWeight: 700 }}>
             Sign In
           </NavLink>
         </div>

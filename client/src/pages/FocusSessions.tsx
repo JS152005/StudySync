@@ -2,7 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { apiRequest } from '../api/client';
 import { useAuth } from '../context/AuthContext';
-import { Timer, Play, Pause, RotateCcw, CheckCircle, Plus, Users, Coffee } from 'lucide-react';
+import { THEME } from '../theme';
+import { Timer, Play, Pause, CheckCircle, Plus, Users, Coffee } from 'lucide-react';
 
 export const FocusSessions: React.FC = () => {
   const [searchParams] = useSearchParams();
@@ -167,23 +168,27 @@ export const FocusSessions: React.FC = () => {
       {/* Header */}
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '12px' }}>
         <div>
-          <h1 style={{ fontSize: '22px', fontWeight: 900 }}>Group Focus Pact</h1>
-          <p style={{ fontSize: '13px' }}>
+          <h1 style={{ fontSize: '22px', fontWeight: 800, color: THEME.deepForestCharcoal }}>
+            Group Focus Pact
+          </h1>
+          <p style={{ fontSize: '13px', color: THEME.warmStone }}>
             Synchronized Pomodoro focus sessions. Lock in personal goals, study in tandem, and report outcomes.
           </p>
         </div>
 
         <button onClick={() => setShowCreateModal(true)} className="btn-primary">
-          <Plus size={16} color="#FFFFFF" />
+          <Plus size={15} color={THEME.warmIvory} />
           <span>New Focus Pact</span>
         </button>
       </div>
 
       {sessions.length === 0 ? (
         <div className="card-secondary" style={{ textAlign: 'center', padding: '48px' }}>
-          <Timer size={40} color="#E6E6FA" style={{ margin: '0 auto 12px' }} />
-          <div style={{ fontSize: '16px', fontWeight: 800, marginBottom: '6px' }}>No active focus pacts</div>
-          <p style={{ fontSize: '13px', marginBottom: '16px' }}>
+          <Timer size={40} color={THEME.warmStone} style={{ margin: '0 auto 12px' }} />
+          <div style={{ fontSize: '16px', fontWeight: 800, marginBottom: '6px', color: THEME.deepForestCharcoal }}>
+            No active focus pacts
+          </div>
+          <p style={{ fontSize: '13px', marginBottom: '16px', color: THEME.warmStone }}>
             Start a 25-minute focus session with your study group or accountability partner!
           </p>
           <button onClick={() => setShowCreateModal(true)} className="btn-primary">
@@ -203,35 +208,41 @@ export const FocusSessions: React.FC = () => {
               padding: '36px',
               textAlign: 'center',
               gap: '18px',
+              border: `1.5px solid ${session?.phase === 'break' ? THEME.vermilion : THEME.deepForestCharcoal}`,
+              backgroundColor: THEME.warmIvory,
             }}
           >
             {/* Session Selector & Phase Badge */}
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <span className={`badge ${session?.phase === 'break' ? 'badge-outline' : ''}`}>
+              <span className={session?.phase === 'break' ? 'badge badge-urgent' : 'badge'}>
                 {session?.phase === 'break' ? 'Break Time' : 'Deep Focus'}
               </span>
               <span className="badge-outline">Status: {session?.status}</span>
             </div>
 
             <div>
-              <h2 style={{ fontSize: '20px', fontWeight: 900 }}>{session?.subject}</h2>
-              {session?.topic && <div style={{ fontSize: '13px' }}>{session.topic}</div>}
-              <div style={{ fontSize: '12px', marginTop: '2px' }}>Host: {sessionDetail?.session?.host_name}</div>
+              <h2 style={{ fontSize: '20px', fontWeight: 800, color: THEME.deepForestCharcoal }}>{session?.subject}</h2>
+              {session?.topic && <div style={{ fontSize: '13px', color: THEME.warmStone }}>{session.topic}</div>}
+              <div style={{ fontSize: '12px', marginTop: '2px', color: THEME.warmStone }}>
+                Host: {sessionDetail?.session?.host_name}
+              </div>
             </div>
 
-            {/* Huge Synchronized Clock Display */}
+            {/* Prominent Synchronized Clock Display */}
             <div
               style={{
-                fontSize: '64px',
-                fontWeight: 900,
-                color: '#E6E6FA',
+                fontSize: '60px',
+                fontWeight: 800,
+                color: THEME.deepForestCharcoal,
                 letterSpacing: '0.04em',
-                padding: '20px 32px',
-                backgroundColor: '#F0F8FF',
-                borderRadius: '16px',
-                border: '3px solid #E6E6FA',
+                padding: '16px 32px',
+                backgroundColor: THEME.warmIvory,
+                borderRadius: '8px',
+                border: `2px solid ${session?.phase === 'break' ? THEME.vermilion : THEME.emeraldGreen}`,
                 width: '100%',
                 maxWidth: '340px',
+                fontFamily: 'monospace',
+                lineHeight: 1.1,
               }}
             >
               {formatTime(remainingSeconds)}
@@ -243,33 +254,33 @@ export const FocusSessions: React.FC = () => {
                 <>
                   {session?.status === 'idle' && (
                     <button onClick={() => handleTimerControl('start')} className="btn-primary">
-                      <Play size={16} color="#FFFFFF" />
+                      <Play size={15} color={THEME.warmIvory} />
                       <span>Start Pact</span>
                     </button>
                   )}
                   {session?.status === 'running' && (
                     <button onClick={() => handleTimerControl('pause')} className="btn-secondary">
-                      <Pause size={16} color="#E6E6FA" />
+                      <Pause size={15} color={THEME.deepForestCharcoal} />
                       <span>Pause</span>
                     </button>
                   )}
                   {session?.status === 'paused' && (
                     <button onClick={() => handleTimerControl('resume')} className="btn-primary">
-                      <Play size={16} color="#FFFFFF" />
+                      <Play size={15} color={THEME.warmIvory} />
                       <span>Resume</span>
                     </button>
                   )}
                   <button onClick={() => handleTimerControl('break')} className="btn-accent">
-                    <Coffee size={16} color="#E6E6FA" />
+                    <Coffee size={15} color={THEME.warmIvory} />
                     <span>Break Mode</span>
                   </button>
                   <button onClick={() => handleTimerControl('complete')} className="btn-secondary">
-                    <CheckCircle size={16} color="#E6E6FA" />
+                    <CheckCircle size={15} color={THEME.deepForestCharcoal} />
                     <span>End Session</span>
                   </button>
                 </>
               ) : (
-                <div style={{ fontSize: '12px', fontWeight: 700 }}>
+                <div style={{ fontSize: '12px', fontWeight: 600, color: THEME.warmStone }}>
                   Timer is controlled by host ({sessionDetail?.session?.host_name})
                 </div>
               )}
@@ -279,8 +290,19 @@ export const FocusSessions: React.FC = () => {
           {/* Right Column: Personal Goal & Participants */}
           <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
             {/* Personal Goal Commitment */}
-            <div className="card-secondary" style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-              <h3 style={{ fontSize: '15px', fontWeight: 900 }}>My Personal Study Goal</h3>
+            <div
+              className="card"
+              style={{
+                display: 'flex',
+                flexDirection: 'column',
+                gap: '12px',
+                border: `1.5px solid ${THEME.deepForestCharcoal}`,
+                backgroundColor: THEME.warmIvory,
+              }}
+            >
+              <h3 style={{ fontSize: '15px', fontWeight: 800, color: THEME.deepForestCharcoal }}>
+                My Personal Study Goal
+              </h3>
 
               <form onSubmit={handleSaveGoal} style={{ display: 'flex', gap: '8px' }}>
                 <input
@@ -298,40 +320,47 @@ export const FocusSessions: React.FC = () => {
               {/* Goal Outcome Reporting */}
               {myGoal && (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginTop: '6px' }}>
-                  <div style={{ fontSize: '12px', fontWeight: 800 }}>Report Goal Outcome:</div>
+                  <div style={{ fontSize: '12px', fontWeight: 700, color: THEME.deepForestCharcoal }}>
+                    Report Goal Outcome:
+                  </div>
                   <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
-                    {(['completed', 'partially_completed', 'not_completed'] as const).map((outcome) => (
-                      <button
-                        key={outcome}
-                        type="button"
-                        onClick={() => handleReportOutcome(outcome)}
-                        style={{
-                          padding: '6px 10px',
-                          fontSize: '11px',
-                          textTransform: 'capitalize',
-                          backgroundColor: myGoal.outcome === outcome ? '#E6E6FA' : '#FFFFFF',
-                          color: myGoal.outcome === outcome ? '#FFFFFF' : '#E6E6FA',
-                        }}
-                      >
-                        {outcome.replace('_', ' ')}
-                      </button>
-                    ))}
+                    {(['completed', 'partially_completed', 'not_completed'] as const).map((outcome) => {
+                      const isSelected = myGoal.outcome === outcome;
+                      return (
+                        <button
+                          key={outcome}
+                          type="button"
+                          onClick={() => handleReportOutcome(outcome)}
+                          style={{
+                            padding: '6px 10px',
+                            fontSize: '11px',
+                            textTransform: 'capitalize',
+                            backgroundColor: isSelected ? THEME.emeraldGreen : THEME.warmIvory,
+                            color: isSelected ? THEME.warmIvory : THEME.deepForestCharcoal,
+                            borderColor: isSelected ? THEME.emeraldGreen : THEME.deepForestCharcoal,
+                            borderRadius: '4px',
+                          }}
+                        >
+                          {outcome.replace('_', ' ')}
+                        </button>
+                      );
+                    })}
                   </div>
                 </div>
               )}
             </div>
 
             {/* Participants & Their Goals */}
-            <div className="card" style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+            <div className="card" style={{ display: 'flex', flexDirection: 'column', gap: '12px', border: `1.5px solid ${THEME.deepForestCharcoal}`, backgroundColor: THEME.warmIvory }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                <Users size={16} color="#E6E6FA" />
-                <h3 style={{ fontSize: '14px', fontWeight: 900 }}>
+                <Users size={16} color={THEME.emeraldGreen} />
+                <h3 style={{ fontSize: '14px', fontWeight: 800, color: THEME.deepForestCharcoal }}>
                   Pact Participants ({participants.length})
                 </h3>
               </div>
 
               {participants.length === 0 ? (
-                <div style={{ fontSize: '13px' }}>Set your goal to join this focus pact!</div>
+                <div style={{ fontSize: '13px', color: THEME.warmStone }}>Set your goal to join this focus pact!</div>
               ) : (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
                   {participants.map((p: any) => (
@@ -339,18 +368,18 @@ export const FocusSessions: React.FC = () => {
                       key={p.id}
                       style={{
                         padding: '10px',
-                        backgroundColor: '#F0F8FF',
-                        borderRadius: '8px',
-                        border: '1px solid #E6E6FA',
+                        backgroundColor: THEME.warmIvory,
+                        borderRadius: '6px',
+                        border: `1px solid ${THEME.deepForestCharcoal}`,
                       }}
                     >
                       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '4px' }}>
-                        <span style={{ fontSize: '13px', fontWeight: 800 }}>{p.full_name}</span>
+                        <span style={{ fontSize: '13px', fontWeight: 700, color: THEME.deepForestCharcoal }}>{p.full_name}</span>
                         <span className="badge" style={{ fontSize: '10px' }}>
                           {p.outcome.replace('_', ' ')}
                         </span>
                       </div>
-                      <div style={{ fontSize: '12px' }}>"{p.goal_text}"</div>
+                      <div style={{ fontSize: '12px', color: THEME.warmStone }}>"{p.goal_text}"</div>
                     </div>
                   ))}
                 </div>
@@ -364,10 +393,14 @@ export const FocusSessions: React.FC = () => {
       {showCreateModal && (
         <div className="modal-overlay">
           <div className="modal-content">
-            <h2 style={{ fontSize: '18px', fontWeight: 900, marginBottom: '16px' }}>Start Group Focus Pact</h2>
+            <h2 style={{ fontSize: '18px', fontWeight: 800, marginBottom: '16px', color: THEME.deepForestCharcoal }}>
+              Start Group Focus Pact
+            </h2>
             <form onSubmit={handleCreateSession} style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
               <div>
-                <label style={{ fontSize: '12px', fontWeight: 800, display: 'block', marginBottom: '4px' }}>Subject *</label>
+                <label style={{ fontSize: '12px', fontWeight: 700, display: 'block', marginBottom: '4px', color: THEME.deepForestCharcoal }}>
+                  Subject *
+                </label>
                 <input
                   type="text"
                   placeholder="e.g. Engineering Mathematics"
@@ -378,7 +411,9 @@ export const FocusSessions: React.FC = () => {
               </div>
 
               <div>
-                <label style={{ fontSize: '12px', fontWeight: 800, display: 'block', marginBottom: '4px' }}>Topic</label>
+                <label style={{ fontSize: '12px', fontWeight: 700, display: 'block', marginBottom: '4px', color: THEME.deepForestCharcoal }}>
+                  Topic
+                </label>
                 <input
                   type="text"
                   placeholder="e.g. Fourier Transforms & Differential Equations"
@@ -389,7 +424,9 @@ export const FocusSessions: React.FC = () => {
 
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
                 <div>
-                  <label style={{ fontSize: '12px', fontWeight: 800, display: 'block', marginBottom: '4px' }}>Focus Duration (mins)</label>
+                  <label style={{ fontSize: '12px', fontWeight: 700, display: 'block', marginBottom: '4px', color: THEME.deepForestCharcoal }}>
+                    Focus Duration (mins)
+                  </label>
                   <input
                     type="number"
                     min="5"
@@ -399,7 +436,9 @@ export const FocusSessions: React.FC = () => {
                   />
                 </div>
                 <div>
-                  <label style={{ fontSize: '12px', fontWeight: 800, display: 'block', marginBottom: '4px' }}>Break Duration (mins)</label>
+                  <label style={{ fontSize: '12px', fontWeight: 700, display: 'block', marginBottom: '4px', color: THEME.deepForestCharcoal }}>
+                    Break Duration (mins)
+                  </label>
                   <input
                     type="number"
                     min="1"
@@ -411,7 +450,9 @@ export const FocusSessions: React.FC = () => {
               </div>
 
               <div>
-                <label style={{ fontSize: '12px', fontWeight: 800, display: 'block', marginBottom: '4px' }}>Initial Study Goal</label>
+                <label style={{ fontSize: '12px', fontWeight: 700, display: 'block', marginBottom: '4px', color: THEME.deepForestCharcoal }}>
+                  Initial Study Goal
+                </label>
                 <input
                   type="text"
                   placeholder="e.g. Complete exercises 1 through 10"

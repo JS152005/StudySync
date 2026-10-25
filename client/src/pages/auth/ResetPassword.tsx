@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useSearchParams, NavLink, useNavigate } from 'react-router-dom';
 import { apiRequest } from '../../api/client';
+import { THEME } from '../../theme';
 import { KeyRound, Check } from 'lucide-react';
 
 export const ResetPassword: React.FC = () => {
@@ -58,7 +59,7 @@ export const ResetPassword: React.FC = () => {
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
-        backgroundColor: '#F0F8FF',
+        backgroundColor: THEME.warmIvory,
         padding: '20px',
       }}
     >
@@ -71,42 +72,46 @@ export const ResetPassword: React.FC = () => {
           display: 'flex',
           flexDirection: 'column',
           gap: '20px',
-          backgroundColor: '#FFFFFF',
-          border: '3px solid #E6E6FA',
+          backgroundColor: THEME.warmIvory,
+          border: `1.5px solid ${THEME.deepForestCharcoal}`,
+          borderRadius: '8px',
         }}
       >
         <div style={{ textAlign: 'center' }}>
           <div
             style={{
-              width: '48px',
-              height: '48px',
-              borderRadius: '12px',
-              backgroundColor: '#E6E6FA',
+              width: '46px',
+              height: '46px',
+              borderRadius: '8px',
+              backgroundColor: THEME.emeraldGreen,
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
-              margin: '0 auto 12px',
+              margin: '0 auto 14px',
+              border: `1.5px solid ${THEME.deepForestCharcoal}`,
             }}
           >
-            <KeyRound size={24} color="#FFFFFF" />
+            <KeyRound size={22} color={THEME.warmIvory} />
           </div>
-          <h1 style={{ fontSize: '22px', fontWeight: 900 }}>Create New Password</h1>
-          <p style={{ fontSize: '13px', marginTop: '4px' }}>
+          <h1 style={{ fontSize: '22px', fontWeight: 800, color: THEME.deepForestCharcoal }}>
+            Create New Password
+          </h1>
+          <p style={{ fontSize: '13px', marginTop: '4px', color: THEME.warmStone }}>
             Choose a secure, memorable password for your account.
           </p>
         </div>
 
         {error && (
-          <div className="alert-box" style={{ borderColor: '#E6E6FA', fontSize: '13px' }}>
-            [ERROR] {error}
+          <div className="alert-box-vermilion" style={{ fontSize: '13px' }}>
+            <span style={{ color: THEME.vermilion, fontWeight: 700 }}>[ERROR]</span> {error}
           </div>
         )}
 
         {success ? (
           <div style={{ display: 'flex', flexDirection: 'column', gap: '14px', textAlign: 'center' }}>
-            <div className="alert-box" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <Check size={18} color="#E6E6FA" />
-              <span>Password successfully reset! You can now sign in.</span>
+            <div className="alert-box-emerald" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <Check size={18} color={THEME.emeraldGreen} />
+              <span style={{ color: THEME.deepForestCharcoal }}>Password successfully reset! You can now sign in.</span>
             </div>
             <button onClick={() => navigate('/login')} className="btn-primary" style={{ width: '100%' }}>
               Proceed to Sign In
@@ -115,7 +120,7 @@ export const ResetPassword: React.FC = () => {
         ) : (
           <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
             <div>
-              <label style={{ fontSize: '12px', fontWeight: 800, display: 'block', marginBottom: '6px' }}>
+              <label style={{ fontSize: '12px', fontWeight: 700, display: 'block', marginBottom: '6px', color: THEME.deepForestCharcoal }}>
                 New Password (min 8 chars) *
               </label>
               <input
@@ -128,7 +133,7 @@ export const ResetPassword: React.FC = () => {
             </div>
 
             <div>
-              <label style={{ fontSize: '12px', fontWeight: 800, display: 'block', marginBottom: '6px' }}>
+              <label style={{ fontSize: '12px', fontWeight: 700, display: 'block', marginBottom: '6px', color: THEME.deepForestCharcoal }}>
                 Confirm New Password *
               </label>
               <input
@@ -140,12 +145,12 @@ export const ResetPassword: React.FC = () => {
               />
             </div>
 
-            <button type="submit" disabled={loading} className="btn-primary" style={{ width: '100%', padding: '12px' }}>
+            <button type="submit" disabled={loading} className="btn-primary" style={{ width: '100%', padding: '11px' }}>
               <span>{loading ? 'Updating Password...' : 'Reset Password'}</span>
             </button>
 
             <div style={{ textAlign: 'center' }}>
-              <NavLink to="/login" style={{ fontSize: '13px' }}>
+              <NavLink to="/login" style={{ fontSize: '13px', color: THEME.emeraldGreen }}>
                 Cancel and Return to Sign In
               </NavLink>
             </div>

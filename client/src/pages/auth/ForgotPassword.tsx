@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { NavLink } from 'react-router-dom';
 import { apiRequest } from '../../api/client';
+import { THEME } from '../../theme';
 import { Mail, ArrowLeft, Check } from 'lucide-react';
 
 export const ForgotPassword: React.FC = () => {
@@ -36,7 +37,7 @@ export const ForgotPassword: React.FC = () => {
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
-        backgroundColor: '#F0F8FF',
+        backgroundColor: THEME.warmIvory,
         padding: '20px',
       }}
     >
@@ -49,38 +50,42 @@ export const ForgotPassword: React.FC = () => {
           display: 'flex',
           flexDirection: 'column',
           gap: '20px',
-          backgroundColor: '#FFFFFF',
-          border: '3px solid #E6E6FA',
+          backgroundColor: THEME.warmIvory,
+          border: `1.5px solid ${THEME.deepForestCharcoal}`,
+          borderRadius: '8px',
         }}
       >
         <div style={{ textAlign: 'center' }}>
           <div
             style={{
-              width: '48px',
-              height: '48px',
-              borderRadius: '12px',
-              backgroundColor: '#E6E6FA',
+              width: '46px',
+              height: '46px',
+              borderRadius: '8px',
+              backgroundColor: THEME.emeraldGreen,
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
-              margin: '0 auto 12px',
+              margin: '0 auto 14px',
+              border: `1.5px solid ${THEME.deepForestCharcoal}`,
             }}
           >
-            <Mail size={24} color="#FFFFFF" />
+            <Mail size={22} color={THEME.warmIvory} />
           </div>
-          <h1 style={{ fontSize: '22px', fontWeight: 900 }}>Reset Password</h1>
-          <p style={{ fontSize: '13px', marginTop: '4px' }}>
+          <h1 style={{ fontSize: '22px', fontWeight: 800, color: THEME.deepForestCharcoal }}>
+            Reset Password
+          </h1>
+          <p style={{ fontSize: '13px', marginTop: '4px', color: THEME.warmStone }}>
             Enter your email to receive a secure, single-use password reset link.
           </p>
         </div>
 
         {submitted ? (
           <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
-            <div className="alert-box" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <Check size={18} color="#E6E6FA" />
-              <span style={{ fontSize: '13px' }}>{msg}</span>
+            <div className="alert-box-emerald" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <Check size={18} color={THEME.emeraldGreen} />
+              <span style={{ fontSize: '13px', color: THEME.deepForestCharcoal }}>{msg}</span>
             </div>
-            <p style={{ fontSize: '12px', lineHeight: 1.5 }}>
+            <p style={{ fontSize: '12px', lineHeight: 1.5, color: THEME.warmStone }}>
               Please check your spam folder if you do not see the message within a few minutes.
             </p>
             <NavLink to="/login" className="btn-secondary" style={{ width: '100%', textAlign: 'center' }}>
@@ -90,7 +95,7 @@ export const ForgotPassword: React.FC = () => {
         ) : (
           <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
             <div>
-              <label style={{ fontSize: '12px', fontWeight: 800, display: 'block', marginBottom: '6px' }}>
+              <label style={{ fontSize: '12px', fontWeight: 700, display: 'block', marginBottom: '6px', color: THEME.deepForestCharcoal }}>
                 Registered Email Address *
               </label>
               <input
@@ -102,13 +107,13 @@ export const ForgotPassword: React.FC = () => {
               />
             </div>
 
-            <button type="submit" disabled={loading || !email} className="btn-primary" style={{ width: '100%', padding: '12px' }}>
+            <button type="submit" disabled={loading || !email} className="btn-primary" style={{ width: '100%', padding: '11px' }}>
               <span>{loading ? 'Sending Request...' : 'Send Reset Link'}</span>
             </button>
 
             <div style={{ textAlign: 'center', marginTop: '8px' }}>
-              <NavLink to="/login" style={{ fontSize: '13px', display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
-                <ArrowLeft size={14} color="#E6E6FA" />
+              <NavLink to="/login" style={{ fontSize: '13px', display: 'inline-flex', alignItems: 'center', gap: '6px', color: THEME.emeraldGreen, fontWeight: 600 }}>
+                <ArrowLeft size={14} color={THEME.emeraldGreen} />
                 <span>Return to Sign In</span>
               </NavLink>
             </div>

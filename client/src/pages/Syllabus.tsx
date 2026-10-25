@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { apiRequest } from '../api/client';
-import { ListTodo, Plus, CheckCircle, Clock, Circle, Filter, UserCheck, Calendar } from 'lucide-react';
+import { THEME } from '../theme';
+import { ListTodo, Plus, CheckCircle, Clock, Circle, Filter, Calendar } from 'lucide-react';
 
 export const Syllabus: React.FC = () => {
   const [searchParams] = useSearchParams();
@@ -134,22 +135,36 @@ export const Syllabus: React.FC = () => {
       {/* Header */}
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '12px' }}>
         <div>
-          <h1 style={{ fontSize: '22px', fontWeight: 900 }}>Syllabus Conquer Board</h1>
-          <p style={{ fontSize: '13px' }}>Organize exam syllabus by units, assign preparation topics, and track collective group progress.</p>
+          <h1 style={{ fontSize: '22px', fontWeight: 800, color: THEME.deepForestCharcoal }}>
+            Syllabus Conquer Board
+          </h1>
+          <p style={{ fontSize: '13px', color: THEME.warmStone }}>
+            Organize exam syllabus by units, assign preparation topics, and track collective group progress.
+          </p>
         </div>
 
         <button onClick={() => setShowBoardModal(true)} className="btn-primary">
-          <Plus size={16} color="#FFFFFF" />
+          <Plus size={15} color={THEME.warmIvory} />
           <span>New Syllabus Board</span>
         </button>
       </div>
 
       {/* Boards Selector & Summary Bar */}
       {boards.length > 0 && (
-        <div className="card-secondary" style={{ display: 'flex', flexDirection: 'column', gap: '16px', padding: '20px' }}>
+        <div
+          className="card"
+          style={{
+            display: 'flex',
+            flexDirection: 'column',
+            gap: '16px',
+            padding: '20px',
+            border: `1.5px solid ${THEME.deepForestCharcoal}`,
+            backgroundColor: THEME.warmIvory,
+          }}
+        >
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '12px' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-              <span style={{ fontSize: '13px', fontWeight: 800 }}>Active Board:</span>
+              <span style={{ fontSize: '13px', fontWeight: 800, color: THEME.deepForestCharcoal }}>Active Board:</span>
               <select
                 value={selectedBoardId}
                 onChange={(e) => setSelectedBoardId(e.target.value)}
@@ -164,8 +179,8 @@ export const Syllabus: React.FC = () => {
             </div>
 
             {boardDetails?.board?.exam_date && (
-              <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '13px', fontWeight: 800 }}>
-                <Calendar size={16} color="#E6E6FA" />
+              <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '13px', fontWeight: 700, color: THEME.deepForestCharcoal }}>
+                <Calendar size={16} color={THEME.emeraldGreen} />
                 <span>Exam Date: {new Date(boardDetails.board.exam_date).toLocaleDateString()}</span>
               </div>
             )}
@@ -174,18 +189,18 @@ export const Syllabus: React.FC = () => {
           {/* Progress Bar & Stats */}
           {boardDetails?.stats && (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13px', fontWeight: 800 }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13px', fontWeight: 800, color: THEME.deepForestCharcoal }}>
                 <span>Overall Syllabus Completion</span>
                 <span>{boardDetails.stats.percentage}% Completed ({boardDetails.stats.completed}/{boardDetails.stats.total} topics)</span>
               </div>
 
-              {/* Strict 3-color Progress Bar */}
+              {/* Progress Bar in Five-Color Palette */}
               <div
                 style={{
                   height: '14px',
-                  backgroundColor: '#FFFFFF',
+                  backgroundColor: THEME.warmIvory,
                   borderRadius: '7px',
-                  border: '2px solid #E6E6FA',
+                  border: `1.5px solid ${THEME.deepForestCharcoal}`,
                   overflow: 'hidden',
                 }}
               >
@@ -193,13 +208,13 @@ export const Syllabus: React.FC = () => {
                   style={{
                     height: '100%',
                     width: `${boardDetails.stats.percentage}%`,
-                    backgroundColor: '#E6E6FA',
+                    backgroundColor: THEME.emeraldGreen,
                     transition: 'width 0.3s ease',
                   }}
                 />
               </div>
 
-              <div style={{ display: 'flex', gap: '16px', fontSize: '12px', marginTop: '4px' }}>
+              <div style={{ display: 'flex', gap: '16px', fontSize: '12px', marginTop: '4px', color: THEME.warmStone, fontWeight: 600 }}>
                 <span>Completed: {boardDetails.stats.completed}</span>
                 <span>In Progress: {boardDetails.stats.inProgress}</span>
                 <span>Remaining: {boardDetails.stats.remaining}</span>
@@ -211,10 +226,12 @@ export const Syllabus: React.FC = () => {
 
       {/* Board Topics Container */}
       {boards.length === 0 ? (
-        <div className="card" style={{ textAlign: 'center', padding: '48px' }}>
-          <ListTodo size={40} color="#E6E6FA" style={{ margin: '0 auto 12px' }} />
-          <div style={{ fontSize: '16px', fontWeight: 800, marginBottom: '6px' }}>No syllabus boards created yet</div>
-          <p style={{ fontSize: '13px', marginBottom: '16px' }}>
+        <div className="card" style={{ textAlign: 'center', padding: '48px', border: `1.5px solid ${THEME.deepForestCharcoal}` }}>
+          <ListTodo size={40} color={THEME.warmStone} style={{ margin: '0 auto 12px' }} />
+          <div style={{ fontSize: '16px', fontWeight: 800, marginBottom: '6px', color: THEME.deepForestCharcoal }}>
+            No syllabus boards created yet
+          </div>
+          <p style={{ fontSize: '13px', marginBottom: '16px', color: THEME.warmStone }}>
             Create an exam board to systematically break down units and conquer your exam schedule!
           </p>
           <button onClick={() => setShowBoardModal(true)} className="btn-primary">
@@ -233,10 +250,12 @@ export const Syllabus: React.FC = () => {
               flexWrap: 'wrap',
               gap: '12px',
               padding: '12px 18px',
+              border: `1.5px solid ${THEME.deepForestCharcoal}`,
+              backgroundColor: THEME.warmIvory,
             }}
           >
             <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
-              <Filter size={16} color="#E6E6FA" />
+              <Filter size={16} color={THEME.deepForestCharcoal} />
 
               {/* Status Filter */}
               <select
@@ -265,8 +284,8 @@ export const Syllabus: React.FC = () => {
               )}
             </div>
 
-            <button onClick={() => setShowTopicModal(true)} className="btn-primary" style={{ padding: '8px 14px', fontSize: '13px' }}>
-              <Plus size={14} color="#FFFFFF" />
+            <button onClick={() => setShowTopicModal(true)} className="btn-primary" style={{ padding: '7px 14px', fontSize: '12.5px' }}>
+              <Plus size={14} color={THEME.warmIvory} />
               <span>Add Topic</span>
             </button>
           </div>
@@ -274,7 +293,9 @@ export const Syllabus: React.FC = () => {
           {/* Topics List */}
           {filteredTopics.length === 0 ? (
             <div className="card-secondary" style={{ textAlign: 'center', padding: '36px' }}>
-              <div style={{ fontSize: '14px', fontWeight: 800 }}>No topics match current filters.</div>
+              <div style={{ fontSize: '14px', fontWeight: 800, color: THEME.deepForestCharcoal }}>
+                No topics match current filters.
+              </div>
             </div>
           ) : (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
@@ -287,7 +308,8 @@ export const Syllabus: React.FC = () => {
                     alignItems: 'center',
                     justifyContent: 'space-between',
                     padding: '14px 18px',
-                    backgroundColor: t.status === 'completed' ? '#F0F8FF' : '#FFFFFF',
+                    backgroundColor: THEME.warmIvory,
+                    border: `1.5px solid ${t.status === 'completed' ? THEME.emeraldGreen : THEME.deepForestCharcoal}`,
                   }}
                 >
                   <div style={{ flex: 1, minWidth: 0, marginRight: '16px' }}>
@@ -295,13 +317,13 @@ export const Syllabus: React.FC = () => {
                       <span className="badge">{t.subject}</span>
                       <span className="badge-outline" style={{ fontSize: '11px' }}>{t.unit}</span>
                       {t.assigned_to_name && (
-                        <span style={{ fontSize: '12px' }}>Assigned: {t.assigned_to_name}</span>
+                        <span style={{ fontSize: '12px', color: THEME.warmStone }}>Assigned: {t.assigned_to_name}</span>
                       )}
                     </div>
-                    <div style={{ fontSize: '15px', fontWeight: 900, marginBottom: '2px' }}>
+                    <div style={{ fontSize: '15px', fontWeight: 800, marginBottom: '2px', color: THEME.deepForestCharcoal }}>
                       {t.title}
                     </div>
-                    {t.notes && <div style={{ fontSize: '12px', fontStyle: 'italic' }}>{t.notes}</div>}
+                    {t.notes && <div style={{ fontSize: '12px', fontStyle: 'italic', color: THEME.warmStone }}>{t.notes}</div>}
                   </div>
 
                   {/* Status Toggle Buttons */}
@@ -312,11 +334,12 @@ export const Syllabus: React.FC = () => {
                       style={{
                         padding: '6px 10px',
                         fontSize: '11px',
-                        backgroundColor: t.status === 'not_started' ? '#E6E6FA' : '#FFFFFF',
-                        color: t.status === 'not_started' ? '#FFFFFF' : '#E6E6FA',
+                        backgroundColor: t.status === 'not_started' ? THEME.deepForestCharcoal : THEME.warmIvory,
+                        color: t.status === 'not_started' ? THEME.warmIvory : THEME.deepForestCharcoal,
+                        borderColor: THEME.deepForestCharcoal,
                       }}
                     >
-                      <Circle size={12} color={t.status === 'not_started' ? '#FFFFFF' : '#E6E6FA'} />
+                      <Circle size={12} color={t.status === 'not_started' ? THEME.warmIvory : THEME.deepForestCharcoal} />
                       <span>Not Started</span>
                     </button>
 
@@ -326,11 +349,12 @@ export const Syllabus: React.FC = () => {
                       style={{
                         padding: '6px 10px',
                         fontSize: '11px',
-                        backgroundColor: t.status === 'in_progress' ? '#E6E6FA' : '#FFFFFF',
-                        color: t.status === 'in_progress' ? '#FFFFFF' : '#E6E6FA',
+                        backgroundColor: t.status === 'in_progress' ? THEME.vermilion : THEME.warmIvory,
+                        color: t.status === 'in_progress' ? THEME.warmIvory : THEME.deepForestCharcoal,
+                        borderColor: t.status === 'in_progress' ? THEME.vermilion : THEME.deepForestCharcoal,
                       }}
                     >
-                      <Clock size={12} color={t.status === 'in_progress' ? '#FFFFFF' : '#E6E6FA'} />
+                      <Clock size={12} color={t.status === 'in_progress' ? THEME.warmIvory : THEME.deepForestCharcoal} />
                       <span>In Progress</span>
                     </button>
 
@@ -340,11 +364,12 @@ export const Syllabus: React.FC = () => {
                       style={{
                         padding: '6px 10px',
                         fontSize: '11px',
-                        backgroundColor: t.status === 'completed' ? '#E6E6FA' : '#FFFFFF',
-                        color: t.status === 'completed' ? '#FFFFFF' : '#E6E6FA',
+                        backgroundColor: t.status === 'completed' ? THEME.emeraldGreen : THEME.warmIvory,
+                        color: t.status === 'completed' ? THEME.warmIvory : THEME.deepForestCharcoal,
+                        borderColor: t.status === 'completed' ? THEME.emeraldGreen : THEME.deepForestCharcoal,
                       }}
                     >
-                      <CheckCircle size={12} color={t.status === 'completed' ? '#FFFFFF' : '#E6E6FA'} />
+                      <CheckCircle size={12} color={t.status === 'completed' ? THEME.warmIvory : THEME.deepForestCharcoal} />
                       <span>Completed</span>
                     </button>
                   </div>
@@ -359,10 +384,12 @@ export const Syllabus: React.FC = () => {
       {showBoardModal && (
         <div className="modal-overlay">
           <div className="modal-content">
-            <h2 style={{ fontSize: '18px', fontWeight: 900, marginBottom: '16px' }}>New Exam Syllabus Board</h2>
+            <h2 style={{ fontSize: '18px', fontWeight: 800, marginBottom: '16px', color: THEME.deepForestCharcoal }}>
+              New Exam Syllabus Board
+            </h2>
             <form onSubmit={handleCreateBoard} style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
               <div>
-                <label style={{ fontSize: '12px', fontWeight: 800, display: 'block', marginBottom: '4px' }}>
+                <label style={{ fontSize: '12px', fontWeight: 700, display: 'block', marginBottom: '4px', color: THEME.deepForestCharcoal }}>
                   Exam Name *
                 </label>
                 <input
@@ -375,7 +402,7 @@ export const Syllabus: React.FC = () => {
               </div>
 
               <div>
-                <label style={{ fontSize: '12px', fontWeight: 800, display: 'block', marginBottom: '4px' }}>
+                <label style={{ fontSize: '12px', fontWeight: 700, display: 'block', marginBottom: '4px', color: THEME.deepForestCharcoal }}>
                   Exam Date (Optional)
                 </label>
                 <input
@@ -402,10 +429,14 @@ export const Syllabus: React.FC = () => {
       {showTopicModal && (
         <div className="modal-overlay">
           <div className="modal-content">
-            <h2 style={{ fontSize: '18px', fontWeight: 900, marginBottom: '16px' }}>Add Syllabus Topic</h2>
+            <h2 style={{ fontSize: '18px', fontWeight: 800, marginBottom: '16px', color: THEME.deepForestCharcoal }}>
+              Add Syllabus Topic
+            </h2>
             <form onSubmit={handleAddTopic} style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
               <div>
-                <label style={{ fontSize: '12px', fontWeight: 800, display: 'block', marginBottom: '4px' }}>Subject *</label>
+                <label style={{ fontSize: '12px', fontWeight: 700, display: 'block', marginBottom: '4px', color: THEME.deepForestCharcoal }}>
+                  Subject *
+                </label>
                 <input
                   type="text"
                   placeholder="e.g. Computer Networks"
@@ -416,7 +447,9 @@ export const Syllabus: React.FC = () => {
               </div>
 
               <div>
-                <label style={{ fontSize: '12px', fontWeight: 800, display: 'block', marginBottom: '4px' }}>Unit / Chapter *</label>
+                <label style={{ fontSize: '12px', fontWeight: 700, display: 'block', marginBottom: '4px', color: THEME.deepForestCharcoal }}>
+                  Unit / Chapter *
+                </label>
                 <input
                   type="text"
                   placeholder="e.g. Unit 3: Transport Layer Protocols"
@@ -427,7 +460,9 @@ export const Syllabus: React.FC = () => {
               </div>
 
               <div>
-                <label style={{ fontSize: '12px', fontWeight: 800, display: 'block', marginBottom: '4px' }}>Topic Title *</label>
+                <label style={{ fontSize: '12px', fontWeight: 700, display: 'block', marginBottom: '4px', color: THEME.deepForestCharcoal }}>
+                  Topic Title *
+                </label>
                 <input
                   type="text"
                   placeholder="e.g. TCP 3-Way Handshake & Congestion Control"
@@ -438,7 +473,9 @@ export const Syllabus: React.FC = () => {
               </div>
 
               <div>
-                <label style={{ fontSize: '12px', fontWeight: 800, display: 'block', marginBottom: '4px' }}>Notes</label>
+                <label style={{ fontSize: '12px', fontWeight: 700, display: 'block', marginBottom: '4px', color: THEME.deepForestCharcoal }}>
+                  Notes
+                </label>
                 <textarea
                   rows={2}
                   placeholder="Key theorems, textbook chapter references..."

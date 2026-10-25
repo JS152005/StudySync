@@ -1,5 +1,7 @@
 import React, { useState } from 'react';
-import { GraduationCap, Hand, BookOpen, CheckSquare, Save } from 'lucide-react';
+import { THEME } from '../theme';
+import { Button } from './ui/Button';
+import { GraduationCap, Hand, BookOpen, CheckSquare, Save, Check } from 'lucide-react';
 
 interface TeachModePanelProps {
   subject?: string;
@@ -28,39 +30,67 @@ export const TeachModePanel: React.FC<TeachModePanelProps> = ({
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
       {/* Session Header Card */}
-      <div className="card-secondary" style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+      <div
+        className="card"
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          gap: '14px',
+          border: `1.5px solid ${THEME.emeraldGreen}`,
+          backgroundColor: THEME.warmIvory,
+          borderRadius: THEME.radius.card,
+          boxShadow: THEME.shadow.subtle,
+        }}
+      >
         <div
           style={{
-            width: '42px',
-            height: '42px',
-            borderRadius: '8px',
-            backgroundColor: '#E6E6FA',
+            width: '44px',
+            height: '44px',
+            borderRadius: THEME.radius.md,
+            backgroundColor: THEME.emeraldGreen,
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
+            border: `1.5px solid ${THEME.deepForestCharcoal}`,
           }}
         >
-          <GraduationCap size={24} color="#FFFFFF" />
+          <GraduationCap size={22} color={THEME.warmIvory} />
         </div>
         <div>
-          <div style={{ fontSize: '16px', fontWeight: 900 }}>Teach Mode Active</div>
-          <div style={{ fontSize: '13px' }}>
+          <div style={{ fontSize: '16px', fontWeight: 800, color: THEME.deepForestCharcoal, fontFamily: 'var(--font-serif)' }}>
+            Teach Mode Active
+          </div>
+          <div style={{ fontSize: '13px', color: THEME.warmStone }}>
             {subject ? `${subject} — ${topic || 'General Lecture'}` : 'Peer Teaching Session'}
           </div>
         </div>
       </div>
 
       {/* Raised Hands Queue */}
-      <div className="card">
-        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '10px' }}>
-          <Hand size={18} color="#E6E6FA" />
-          <span style={{ fontSize: '14px', fontWeight: 900 }}>Raised Hands ({raisedHands.length})</span>
+      <div
+        className="card"
+        style={{
+          border: `1.5px solid ${THEME.deepForestCharcoal}`,
+          backgroundColor: THEME.warmIvory,
+          borderRadius: THEME.radius.card,
+        }}
+      >
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '12px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <Hand size={18} color={THEME.vermilion} />
+            <span style={{ fontSize: '14.5px', fontWeight: 800, color: THEME.deepForestCharcoal }}>
+              Raised Hands Queue ({raisedHands.length})
+            </span>
+          </div>
+          {raisedHands.length > 0 && <span className="urgent-pulse-dot" />}
         </div>
 
         {raisedHands.length === 0 ? (
-          <div style={{ fontSize: '13px' }}>No hands currently raised by students.</div>
+          <div style={{ fontSize: '13px', color: THEME.warmStone, fontStyle: 'italic' }}>
+            No hands currently raised by students in this session.
+          </div>
         ) : (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
             {raisedHands.map((p) => (
               <div
                 key={p.id}
@@ -68,14 +98,19 @@ export const TeachModePanel: React.FC<TeachModePanelProps> = ({
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'space-between',
-                  padding: '8px 12px',
-                  backgroundColor: '#F0F8FF',
-                  borderRadius: '6px',
-                  border: '1px solid #E6E6FA',
+                  padding: '10px 14px',
+                  backgroundColor: THEME.warmIvory,
+                  borderRadius: THEME.radius.md,
+                  border: `1.5px solid ${THEME.vermilion}`,
+                  animation: `studysync-slide-up ${THEME.motion.durationFast} ${THEME.motion.easeSpring}`,
                 }}
               >
-                <span style={{ fontSize: '13px', fontWeight: 800 }}>{p.full_name} (@{p.username})</span>
-                <span className="badge">Wants to speak</span>
+                <span style={{ fontSize: '13.5px', fontWeight: 700, color: THEME.deepForestCharcoal }}>
+                  {p.full_name} (@{p.username})
+                </span>
+                <span className="badge badge-urgent" style={{ fontSize: '10.5px' }}>
+                  Wants to speak
+                </span>
               </div>
             ))}
           </div>
@@ -83,38 +118,77 @@ export const TeachModePanel: React.FC<TeachModePanelProps> = ({
       </div>
 
       {/* Teaching Notes & Agenda */}
-      <div className="card" style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+      <div
+        className="card"
+        style={{
+          display: 'flex',
+          flexDirection: 'column',
+          gap: '12px',
+          border: `1.5px solid ${THEME.deepForestCharcoal}`,
+          backgroundColor: THEME.warmIvory,
+          borderRadius: THEME.radius.card,
+        }}
+      >
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-          <BookOpen size={18} color="#E6E6FA" />
-          <span style={{ fontSize: '14px', fontWeight: 900 }}>Teaching Notes & Agenda</span>
+          <BookOpen size={18} color={THEME.emeraldGreen} />
+          <span style={{ fontSize: '14.5px', fontWeight: 800, color: THEME.deepForestCharcoal, fontFamily: 'var(--font-serif)' }}>
+            Teaching Notes & Agenda
+          </span>
         </div>
 
         <textarea
           rows={4}
-          placeholder="Outline main points, theorem steps, formula derivations, code examples..."
+          placeholder="Outline main lecture points, theorem steps, formula derivations, code examples..."
           value={teachingNotes}
           onChange={(e) => setTeachingNotes(e.target.value)}
         />
 
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-          {savedNotes && <span style={{ fontSize: '12px' }}>Notes saved locally!</span>}
-          <button
+          {savedNotes && (
+            <span
+              style={{
+                fontSize: '12px',
+                color: THEME.emeraldGreen,
+                fontWeight: 700,
+                display: 'flex',
+                alignItems: 'center',
+                gap: '4px',
+              }}
+            >
+              <Check size={14} color={THEME.emeraldGreen} />
+              Notes saved locally!
+            </span>
+          )}
+          <Button
             type="button"
+            variant="secondary"
+            size="sm"
             onClick={handleSaveNotes}
-            className="btn-secondary"
-            style={{ padding: '6px 12px', fontSize: '12px', marginLeft: 'auto' }}
+            leftIcon={<Save size={13} color={THEME.deepForestCharcoal} />}
+            style={{ marginLeft: 'auto' }}
           >
-            <Save size={14} color="#E6E6FA" />
-            <span>Save Notes</span>
-          </button>
+            Save Notes
+          </Button>
         </div>
       </div>
 
       {/* Session Outcome & Takeaways */}
-      <div className="card-secondary" style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+      <div
+        className="card-secondary"
+        style={{
+          display: 'flex',
+          flexDirection: 'column',
+          gap: '10px',
+          border: `1.5px solid ${THEME.warmStone}`,
+          backgroundColor: THEME.warmIvory,
+          borderRadius: THEME.radius.card,
+        }}
+      >
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-          <CheckSquare size={18} color="#E6E6FA" />
-          <span style={{ fontSize: '14px', fontWeight: 900 }}>Session Outcome & Next Steps</span>
+          <CheckSquare size={18} color={THEME.deepForestCharcoal} />
+          <span style={{ fontSize: '14.5px', fontWeight: 800, color: THEME.deepForestCharcoal, fontFamily: 'var(--font-serif)' }}>
+            Session Outcome & Next Steps
+          </span>
         </div>
 
         <textarea
@@ -127,3 +201,5 @@ export const TeachModePanel: React.FC<TeachModePanelProps> = ({
     </div>
   );
 };
+
+export default TeachModePanel;

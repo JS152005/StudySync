@@ -1,5 +1,7 @@
 import React, { useRef, useState, useEffect } from 'react';
 import { apiRequest } from '../api/client';
+import { THEME } from '../theme';
+import { Button } from './ui/Button';
 import {
   Pen,
   Eraser,
@@ -10,6 +12,7 @@ import {
   RotateCcw,
   Download,
   Save,
+  Check,
 } from 'lucide-react';
 
 interface WhiteboardProps {
@@ -17,10 +20,12 @@ interface WhiteboardProps {
 }
 
 type Tool = 'pen' | 'eraser' | 'rect' | 'circle' | 'line' | 'text';
+type InkColor = typeof THEME.deepForestCharcoal | typeof THEME.emeraldGreen | typeof THEME.vermilion;
 
 export const Whiteboard: React.FC<WhiteboardProps> = ({ roomId }) => {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const [currentTool, setCurrentTool] = useState<Tool>('pen');
+  const [inkColor, setInkColor] = useState<InkColor>(THEME.deepForestCharcoal);
   const [lineWidth, setLineWidth] = useState<number>(3);
   const [isDrawing, setIsDrawing] = useState(false);
   const [startPos, setStartPos] = useState<{ x: number; y: number } | null>(null);
@@ -34,8 +39,8 @@ export const Whiteboard: React.FC<WhiteboardProps> = ({ roomId }) => {
     const ctx = canvas.getContext('2d');
     if (!ctx) return;
 
-    // Fill white background initially
-    ctx.fillStyle = '#FFFFFF';
+    // Fill Warm Ivory background initially
+    ctx.fillStyle = THEME.warmIvory;
     ctx.fillRect(0, 0, canvas.width, canvas.height);
 
     apiRequest<{ canvasData: string }>(`/rooms/${roomId}/whiteboard`)
@@ -82,13 +87,13 @@ export const Whiteboard: React.FC<WhiteboardProps> = ({ roomId }) => {
     const x = e.clientX - rect.left;
     const y = e.clientY - rect.top;
 
-    // Colors strictly adhering to palette
+    // Strict palette adherence
     if (currentTool === 'eraser') {
-      ctx.strokeStyle = '#FFFFFF';
-      ctx.lineWidth = lineWidth * 4;
+      ctx.strokeStyle = THEME.warmIvory;
+      ctx.lineWidth = lineWidth * 5;
     } else {
-      ctx.strokeStyle = '#E6E6FA';
-      ctx.fillStyle = '#E6E6FA';
+      ctx.strokeStyle = inkColor;
+      ctx.fillStyle = inkColor;
       ctx.lineWidth = lineWidth;
     }
 
@@ -125,7 +130,7 @@ export const Whiteboard: React.FC<WhiteboardProps> = ({ roomId }) => {
       const text = prompt('Enter text annotation:');
       if (text) {
         ctx.font = 'bold 16px -apple-system, sans-serif';
-        ctx.fillStyle = '#E6E6FA';
+        ctx.fillStyle = inkColor;
         ctx.fillText(text, startPos.x, startPos.y);
       }
     }
@@ -141,7 +146,7 @@ export const Whiteboard: React.FC<WhiteboardProps> = ({ roomId }) => {
     const ctx = canvas.getContext('2d');
     if (!ctx) return;
 
-    ctx.fillStyle = '#FFFFFF';
+    ctx.fillStyle = THEME.warmIvory;
     ctx.fillRect(0, 0, canvas.width, canvas.height);
   };
 
@@ -176,15 +181,20 @@ export const Whiteboard: React.FC<WhiteboardProps> = ({ roomId }) => {
     <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', width: '100%' }}>
       {/* Whiteboard Toolbar */}
       <div
-        className="card-secondary"
+        className="card"
         style={{
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'space-between',
           flexWrap: 'wrap',
-          gap: '8px',
+          gap: '10px',
           padding: '10px 16px',
+          backgroundColor: THEME.warmIvory,
+          border: `1.5px solid ${THEME.deepForestCharcoal}`,
+          borderRadius: THEME.radius.card,
         }}
+        role="toolbar"
+        aria-label="Whiteboard drawing tools"
       >
         <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
           {[
@@ -204,12 +214,16 @@ export const Whiteboard: React.FC<WhiteboardProps> = ({ roomId }) => {
                 onClick={() => setCurrentTool(tool.id as Tool)}
                 style={{
                   padding: '6px 10px',
-                  backgroundColor: active ? '#E6E6FA' : '#FFFFFF',
-                  color: active ? '#FFFFFF' : '#E6E6FA',
+                  backgroundColor: active ? THEME.emeraldGreen : THEME.warmIvory,
+                  color: active ? THEME.warmIvory : THEME.deepForestCharcoal,
+                  borderColor: active ? THEME.emeraldGreen : THEME.deepForestCharcoal,
                   fontSize: '12px',
+                  borderRadius: THEME.radius.sm,
+                  fontWeight: active ? 700 : 600,
+                  transition: `background-color ${THEME.motion.durationFast} ${THEME.motion.easeOut}`,
                 }}
               >
-                <Icon size={14} color={active ? '#FFFFFF' : '#E6E6FA'} />
+                <Icon size={14} color={active ? THEME.warmIvory : THEME.deepForestCharcoal} />
                 <span>{tool.label}</span>
               </button>
             );
@@ -217,73 +231,131 @@ export const Whiteboard: React.FC<WhiteboardProps> = ({ roomId }) => {
 
           {/* Stroke Width Selector */}
           <div style={{ display: 'flex', alignItems: 'center', gap: '4px', marginLeft: '6px' }}>
-            {[2, 4, 8].map((size) => (
+            {[2, 4, 8].map((size) => {
+              const active = lineWidth === size;
+              return (
+                <button
+                  key={size}
+                  type="button"
+                  onClick={() => setLineWidth(size)}
+                  style={{
+                    padding: '4px 8px',
+                    fontSize: '11px',
+                    backgroundColor: active ? THEME.deepForestCharcoal : THEME.warmIvory,
+                    color: active ? THEME.warmIvory : THEME.deepForestCharcoal,
+                    borderColor: active ? THEME.deepForestCharcoal : THEME.warmStone,
+                    borderRadius: THEME.radius.sm,
+                    fontWeight: 700,
+                  }}
+                >
+                  {size}px
+                </button>
+              );
+            })}
+          </div>
+
+          {/* Color Chooser (Approved Palette ONLY) */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginLeft: '8px' }}>
+            {[THEME.deepForestCharcoal, THEME.emeraldGreen, THEME.vermilion].map((col) => (
               <button
-                key={size}
+                key={col}
                 type="button"
-                onClick={() => setLineWidth(size)}
+                onClick={() => setInkColor(col as InkColor)}
+                aria-label={`Select ink color ${col}`}
                 style={{
-                  padding: '4px 8px',
-                  fontSize: '11px',
-                  backgroundColor: lineWidth === size ? '#E6E6FA' : '#FFFFFF',
-                  color: lineWidth === size ? '#FFFFFF' : '#E6E6FA',
+                  width: '24px',
+                  height: '24px',
+                  borderRadius: THEME.radius.full,
+                  backgroundColor: col,
+                  border: inkColor === col ? `3px solid ${THEME.warmIvory}` : `1.5px solid ${THEME.deepForestCharcoal}`,
+                  outline: inkColor === col ? `2px solid ${THEME.deepForestCharcoal}` : 'none',
+                  cursor: 'pointer',
+                  padding: 0,
                 }}
-              >
-                {size}px
-              </button>
+              />
             ))}
           </div>
         </div>
 
+        {/* Action Controls */}
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-          {saveStatus && <span style={{ fontSize: '12px', fontWeight: 800 }}>{saveStatus}</span>}
+          {saveStatus && (
+            <span
+              style={{
+                fontSize: '12px',
+                fontWeight: 700,
+                color: THEME.emeraldGreen,
+                display: 'flex',
+                alignItems: 'center',
+                gap: '4px',
+              }}
+            >
+              <Check size={14} color={THEME.emeraldGreen} />
+              {saveStatus}
+            </span>
+          )}
 
-          <button type="button" onClick={handleSave} className="btn-accent" style={{ padding: '6px 12px', fontSize: '12px' }}>
-            <Save size={14} color="#E6E6FA" />
-            <span>Save</span>
-          </button>
+          <Button
+            variant="secondary"
+            size="sm"
+            onClick={handleClear}
+            leftIcon={<RotateCcw size={13} color={THEME.deepForestCharcoal} />}
+          >
+            Clear
+          </Button>
 
-          <button type="button" onClick={handleDownload} className="btn-secondary" style={{ padding: '6px 12px', fontSize: '12px' }}>
-            <Download size={14} color="#E6E6FA" />
-            <span>Export PNG</span>
-          </button>
+          <Button
+            variant="secondary"
+            size="sm"
+            onClick={handleDownload}
+            leftIcon={<Download size={13} color={THEME.deepForestCharcoal} />}
+          >
+            Export
+          </Button>
 
-          <button type="button" onClick={handleClear} className="btn-secondary" style={{ padding: '6px 10px', fontSize: '12px' }}>
-            <RotateCcw size={14} color="#E6E6FA" />
-            <span>Clear</span>
-          </button>
+          <Button
+            variant="primary"
+            size="sm"
+            onClick={handleSave}
+            leftIcon={<Save size={13} color={THEME.warmIvory} />}
+          >
+            Save Board
+          </Button>
         </div>
       </div>
 
-      {/* HTML5 Canvas Surface */}
+      {/* Canvas Frame */}
       <div
+        className="card"
         style={{
-          border: '3px solid #E6E6FA',
-          borderRadius: '12px',
+          padding: 0,
           overflow: 'hidden',
-          backgroundColor: '#FFFFFF',
-          display: 'flex',
-          justifyContent: 'center',
-          boxShadow: 'none',
+          backgroundColor: THEME.warmIvory,
+          border: `2px solid ${THEME.deepForestCharcoal}`,
+          borderRadius: THEME.radius.card,
+          boxShadow: THEME.shadow.card,
         }}
       >
         <canvas
           ref={canvasRef}
-          width={1000}
-          height={600}
+          width={900}
+          height={560}
           onMouseDown={startDrawing}
           onMouseMove={draw}
           onMouseUp={stopDrawing}
           onMouseLeave={stopDrawing}
           style={{
-            cursor: currentTool === 'eraser' ? 'cell' : 'crosshair',
-            backgroundColor: '#FFFFFF',
-            maxWidth: '100%',
-            height: 'auto',
             display: 'block',
+            width: '100%',
+            height: 'auto',
+            maxHeight: '600px',
+            cursor: currentTool === 'eraser' ? 'cell' : 'crosshair',
+            backgroundColor: THEME.warmIvory,
           }}
         />
       </div>
     </div>
   );
 };
+
+export default Whiteboard;

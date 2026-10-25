@@ -1,6 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { apiRequest } from '../api/client';
-import { ThumbsUp, CheckCircle, Clock, HelpCircle, Trash2, Plus } from 'lucide-react';
+import { THEME } from '../theme';
+import { Button } from './ui/Button';
+import { SegmentedControl, SegmentOption } from './ui/SegmentedControl';
+import { Skeleton } from './ui/Skeleton';
+import { EmptyState } from './ui/EmptyState';
+import { useToast } from './ui/ToastContext';
+import { ThumbsUp, CheckCircle, Clock, HelpCircle, Trash2, Plus, Sparkles, MessageCircleQuestion } from 'lucide-react';
 
 interface Doubt {
   id: string;
@@ -24,6 +30,7 @@ interface DoubtQueueProps {
 }
 
 export const DoubtQueue: React.FC<DoubtQueueProps> = ({ roomId, groupId, isHost }) => {
+  const toast = useToast();
   const [doubts, setDoubts] = useState<Doubt[]>([]);
   const [loading, setLoading] = useState(true);
   const [questionText, setQuestionText] = useState('');
@@ -57,8 +64,9 @@ export const DoubtQueue: React.FC<DoubtQueueProps> = ({ roomId, groupId, isHost 
       setDoubts((prev) =>
         prev.map((d) => (d.id === doubtId ? { ...d, votes_count: res.votes_count, user_voted: res.user_voted } : d))
       );
+      toast.info(res.user_voted ? 'Upvoted question' : 'Removed upvote');
     } catch (err: any) {
-      alert(err.message);
+      toast.error(err.message);
     }
   };
 
@@ -68,19 +76,20 @@ export const DoubtQueue: React.FC<DoubtQueueProps> = ({ roomId, groupId, isHost 
         method: 'PUT',
         body: JSON.stringify({ status: newStatus }),
       });
+      toast.success(`Doubt marked as ${newStatus}`);
       loadDoubts();
     } catch (err: any) {
-      alert(err.message);
+      toast.error(err.message);
     }
   };
 
   const handleDelete = async (doubtId: string) => {
-    if (!window.confirm('Delete this doubt?')) return;
     try {
       await apiRequest(`/doubts/${doubtId}`, { method: 'DELETE' });
       setDoubts((prev) => prev.filter((d) => d.id !== doubtId));
+      toast.info('Doubt deleted');
     } catch (err: any) {
-      alert(err.message);
+      toast.error(err.message);
     }
   };
 
@@ -102,8 +111,9 @@ export const DoubtQueue: React.FC<DoubtQueueProps> = ({ roomId, groupId, isHost 
       setDoubts((prev) => [res.doubt, ...prev]);
       setQuestionText('');
       setTopicText('');
+      toast.success('Question added to queue!');
     } catch (err: any) {
-      alert(err.message);
+      toast.error(err.message);
     } finally {
       setSubmitting(false);
     }
@@ -111,17 +121,38 @@ export const DoubtQueue: React.FC<DoubtQueueProps> = ({ roomId, groupId, isHost 
 
   const filteredDoubts = doubts.filter((d) => (filter === 'all' ? true : d.status === filter));
 
+  const filterOptions: SegmentOption<'all' | 'waiting' | 'answering' | 'solved'>[] = [
+    { value: 'all', label: 'All', count: doubts.length },
+    { value: 'waiting', label: 'Waiting', count: doubts.filter((d) => d.status === 'waiting').length },
+    { value: 'answering', label: 'Answering', count: doubts.filter((d) => d.status === 'answering').length },
+    { value: 'solved', label: 'Solved', count: doubts.filter((d) => d.status === 'solved').length },
+  ];
+
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
       {/* Submit Doubt Form */}
       <form
         onSubmit={handleSubmit}
-        className="card-secondary"
-        style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}
+        className="card"
+        style={{
+          display: 'flex',
+          flexDirection: 'column',
+          gap: '12px',
+          border: `1.5px solid ${THEME.deepForestCharcoal}`,
+          backgroundColor: THEME.warmIvory,
+          borderRadius: THEME.radius.card,
+        }}
       >
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-          <HelpCircle size={18} color="#E6E6FA" />
-          <span style={{ fontSize: '15px', fontWeight: 900, color: '#E6E6FA' }}>
+          <HelpCircle size={18} color={THEME.emeraldGreen} />
+          <span
+            style={{
+              fontSize: '15px',
+              fontWeight: 800,
+              color: THEME.deepForestCharcoal,
+              fontFamily: 'var(--font-serif)',
+            }}
+          >
             Ask a Question (Doubt Queue)
           </span>
         </div>
@@ -142,44 +173,45 @@ export const DoubtQueue: React.FC<DoubtQueueProps> = ({ roomId, groupId, isHost 
         />
 
         <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
-          <button type="submit" disabled={submitting || !questionText.trim()} className="btn-primary">
-            <Plus size={16} color="#FFFFFF" />
-            <span>Submit Doubt</span>
-          </button>
+          <Button
+            type="submit"
+            variant="primary"
+            shape="pill"
+            size="sm"
+            disabled={!questionText.trim()}
+            loading={submitting}
+            leftIcon={<Plus size={15} color={THEME.warmIvory} />}
+          >
+            Submit Doubt
+          </Button>
         </div>
       </form>
 
-      {/* Filter Tabs */}
-      <div style={{ display: 'flex', gap: '8px', borderBottom: '2px solid #E6E6FA', paddingBottom: '8px' }}>
-        {(['all', 'waiting', 'answering', 'solved'] as const).map((tab) => (
-          <button
-            key={tab}
-            onClick={() => setFilter(tab)}
-            style={{
-              padding: '6px 12px',
-              fontSize: '12px',
-              backgroundColor: filter === tab ? '#E6E6FA' : '#FFFFFF',
-              color: filter === tab ? '#FFFFFF' : '#E6E6FA',
-              textTransform: 'capitalize',
-            }}
-          >
-            {tab} ({tab === 'all' ? doubts.length : doubts.filter((d) => d.status === tab).length})
-          </button>
-        ))}
+      {/* Filter Tabs using SegmentedControl */}
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+        <SegmentedControl
+          options={filterOptions}
+          value={filter}
+          onChange={(val) => setFilter(val)}
+          variant="pill"
+          size="sm"
+        />
       </div>
 
       {/* Doubts Queue List */}
       {loading ? (
-        <div className="card" style={{ textAlign: 'center', padding: '24px' }}>
-          Loading doubt queue...
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+          <Skeleton height="80px" borderRadius={THEME.radius.card} />
+          <Skeleton height="80px" borderRadius={THEME.radius.card} />
         </div>
       ) : filteredDoubts.length === 0 ? (
-        <div className="card-secondary" style={{ textAlign: 'center', padding: '30px' }}>
-          <div style={{ fontSize: '16px', fontWeight: 800, marginBottom: '6px' }}>No doubts in this queue</div>
-          <div style={{ fontSize: '13px' }}>Ask any questions above to queue them for discussion!</div>
-        </div>
+        <EmptyState
+          icon={<MessageCircleQuestion size={28} />}
+          title="No doubts in this queue"
+          description="Ask any questions above to queue them for peer discussion and resolution!"
+        />
       ) : (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
           {filteredDoubts.map((doubt) => (
             <div
               key={doubt.id}
@@ -188,47 +220,81 @@ export const DoubtQueue: React.FC<DoubtQueueProps> = ({ roomId, groupId, isHost 
                 display: 'flex',
                 gap: '14px',
                 alignItems: 'flex-start',
-                backgroundColor: doubt.status === 'answering' ? '#F0F8FF' : '#FFFFFF',
+                backgroundColor: THEME.warmIvory,
+                border: `1.5px solid ${doubt.status === 'answering' ? THEME.vermilion : THEME.deepForestCharcoal}`,
+                borderRadius: THEME.radius.card,
+                boxShadow: doubt.status === 'answering' ? THEME.shadow.lifted : THEME.shadow.card,
+                transition: `all ${THEME.motion.durationNormal} ${THEME.motion.easeOut}`,
               }}
             >
-              {/* Upvote Button */}
+              {/* Upvote Button with Tactile Scale Feedback */}
               <button
+                type="button"
                 onClick={() => handleVote(doubt.id)}
                 style={{
                   display: 'flex',
                   flexDirection: 'column',
                   alignItems: 'center',
                   padding: '8px 12px',
-                  minWidth: '54px',
-                  backgroundColor: doubt.user_voted ? '#E6E6FA' : '#FFFFFF',
-                  color: doubt.user_voted ? '#FFFFFF' : '#E6E6FA',
-                  borderColor: '#E6E6FA',
+                  minWidth: '56px',
+                  backgroundColor: doubt.user_voted ? THEME.emeraldGreen : THEME.warmIvory,
+                  color: doubt.user_voted ? THEME.warmIvory : THEME.deepForestCharcoal,
+                  border: `1.5px solid ${doubt.user_voted ? THEME.emeraldGreen : THEME.deepForestCharcoal}`,
+                  borderRadius: THEME.radius.md,
+                  cursor: 'pointer',
+                  transition: `transform ${THEME.motion.durationFast} ${THEME.motion.easeSpring}, background-color ${THEME.motion.durationFast} ${THEME.motion.easeOut}`,
                 }}
+                className="btn"
                 title={doubt.user_voted ? 'Remove upvote' : 'Upvote question'}
+                aria-label={`Upvote question, current count: ${doubt.votes_count}`}
               >
-                <ThumbsUp size={16} color={doubt.user_voted ? '#FFFFFF' : '#E6E6FA'} />
-                <span style={{ fontSize: '13px', fontWeight: 900, marginTop: '2px' }}>
+                <ThumbsUp size={16} color={doubt.user_voted ? THEME.warmIvory : THEME.deepForestCharcoal} />
+                <span
+                  style={{
+                    fontSize: '13px',
+                    fontWeight: 800,
+                    marginTop: '2px',
+                    color: doubt.user_voted ? THEME.warmIvory : THEME.deepForestCharcoal,
+                  }}
+                >
                   {doubt.votes_count}
                 </span>
               </button>
 
               {/* Doubt Details */}
               <div style={{ flex: 1, minWidth: 0 }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap', marginBottom: '4px' }}>
-                  <span className={`badge ${doubt.status === 'solved' ? '' : 'badge-outline'}`}>
-                    {doubt.status}
-                  </span>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap', marginBottom: '6px' }}>
+                  {/* Status Badge */}
+                  {doubt.status === 'solved' && (
+                    <span className="badge" style={{ gap: '4px' }}>
+                      <CheckCircle size={11} color={THEME.warmIvory} />
+                      Solved
+                    </span>
+                  )}
+                  {doubt.status === 'answering' && (
+                    <span className="badge badge-urgent" style={{ gap: '4px' }}>
+                      <Sparkles size={11} color={THEME.warmIvory} />
+                      Answering Now
+                    </span>
+                  )}
+                  {doubt.status === 'waiting' && (
+                    <span className="badge-outline" style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+                      <Clock size={11} color={THEME.deepForestCharcoal} />
+                      Waiting
+                    </span>
+                  )}
+
                   {doubt.topic && (
-                    <span className="badge-outline" style={{ fontSize: '11px', padding: '2px 8px' }}>
+                    <span className="badge-stone">
                       {doubt.topic}
                     </span>
                   )}
-                  <span style={{ fontSize: '12px', fontWeight: 700 }}>
+                  <span style={{ fontSize: '12px', fontWeight: 600, color: THEME.warmStone }}>
                     Asked by {doubt.author_name}
                   </span>
                 </div>
 
-                <div style={{ fontSize: '14px', fontWeight: 800, color: '#E6E6FA', margin: '6px 0' }}>
+                <div style={{ fontSize: '15px', fontWeight: 700, color: THEME.deepForestCharcoal, margin: '6px 0' }}>
                   {doubt.question}
                 </div>
 
@@ -237,36 +303,40 @@ export const DoubtQueue: React.FC<DoubtQueueProps> = ({ roomId, groupId, isHost 
                   {isHost && (
                     <>
                       {doubt.status !== 'answering' && (
-                        <button
+                        <Button
+                          variant="accent"
+                          size="sm"
+                          shape="pill"
                           onClick={() => handleStatusChange(doubt.id, 'answering')}
-                          className="btn-accent"
-                          style={{ padding: '4px 10px', fontSize: '11px' }}
+                          leftIcon={<Sparkles size={12} color={THEME.warmIvory} />}
                         >
-                          <Clock size={12} color="#E6E6FA" />
-                          <span>Answering</span>
-                        </button>
+                          Answering
+                        </Button>
                       )}
                       {doubt.status !== 'solved' && (
-                        <button
+                        <Button
+                          variant="primary"
+                          size="sm"
+                          shape="pill"
                           onClick={() => handleStatusChange(doubt.id, 'solved')}
-                          className="btn-primary"
-                          style={{ padding: '4px 10px', fontSize: '11px' }}
+                          leftIcon={<CheckCircle size={12} color={THEME.warmIvory} />}
                         >
-                          <CheckCircle size={12} color="#FFFFFF" />
-                          <span>Mark Solved</span>
-                        </button>
+                          Mark Solved
+                        </Button>
                       )}
                     </>
                   )}
 
-                  <button
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    shape="pill"
                     onClick={() => handleDelete(doubt.id)}
-                    className="btn-secondary"
-                    style={{ padding: '4px 8px', fontSize: '11px', marginLeft: 'auto' }}
-                    title="Delete doubt"
+                    style={{ marginLeft: 'auto' }}
+                    aria-label="Delete question"
                   >
-                    <Trash2 size={12} color="#E6E6FA" />
-                  </button>
+                    <Trash2 size={13} color={THEME.warmStone} />
+                  </Button>
                 </div>
               </div>
             </div>
@@ -276,3 +346,5 @@ export const DoubtQueue: React.FC<DoubtQueueProps> = ({ roomId, groupId, isHost 
     </div>
   );
 };
+
+export default DoubtQueue;

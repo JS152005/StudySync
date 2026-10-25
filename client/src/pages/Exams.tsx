@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { apiRequest } from '../api/client';
-import { CalendarDays, Plus, CheckCircle, Circle, Trash2, Clock, AlertCircle } from 'lucide-react';
+import { THEME } from '../theme';
+import { CalendarDays, Plus, CheckCircle, Circle, Trash2 } from 'lucide-react';
 
 export const Exams: React.FC = () => {
   const [exams, setExams] = useState<any[]>([]);
@@ -128,17 +129,21 @@ export const Exams: React.FC = () => {
       {/* Header */}
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '12px' }}>
         <div>
-          <h1 style={{ fontSize: '22px', fontWeight: 900 }}>Exam Planner & Study Schedule</h1>
-          <p style={{ fontSize: '13px' }}>Track countdowns to semester examinations, schedule revision milestones, and check off study tasks.</p>
+          <h1 style={{ fontSize: '22px', fontWeight: 800, color: THEME.deepForestCharcoal }}>
+            Exam Planner & Study Schedule
+          </h1>
+          <p style={{ fontSize: '13px', color: THEME.warmStone }}>
+            Track countdowns to semester examinations, schedule revision milestones, and check off study tasks.
+          </p>
         </div>
 
         <div style={{ display: 'flex', gap: '8px' }}>
           <button onClick={() => setShowTaskModal(true)} className="btn-secondary">
-            <Plus size={16} color="#E6E6FA" />
+            <Plus size={15} color={THEME.deepForestCharcoal} />
             <span>Add Task</span>
           </button>
           <button onClick={() => setShowExamModal(true)} className="btn-primary">
-            <CalendarDays size={16} color="#FFFFFF" />
+            <CalendarDays size={15} color={THEME.warmIvory} />
             <span>Schedule Exam</span>
           </button>
         </div>
@@ -146,13 +151,19 @@ export const Exams: React.FC = () => {
 
       {/* Examinations Grid with Real Countdowns */}
       <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-        <h2 style={{ fontSize: '16px', fontWeight: 900 }}>Scheduled Examinations ({exams.length})</h2>
+        <h2 style={{ fontSize: '16px', fontWeight: 800, color: THEME.deepForestCharcoal }}>
+          Scheduled Examinations ({exams.length})
+        </h2>
 
         {exams.length === 0 ? (
           <div className="card-secondary" style={{ textAlign: 'center', padding: '36px' }}>
-            <CalendarDays size={36} color="#E6E6FA" style={{ margin: '0 auto 10px' }} />
-            <div style={{ fontSize: '15px', fontWeight: 800, marginBottom: '6px' }}>No examinations scheduled yet</div>
-            <p style={{ fontSize: '13px', marginBottom: '14px' }}>Add your midterm, lab viva, or final semester examination dates.</p>
+            <CalendarDays size={36} color={THEME.warmStone} style={{ margin: '0 auto 10px' }} />
+            <div style={{ fontSize: '15px', fontWeight: 800, marginBottom: '6px', color: THEME.deepForestCharcoal }}>
+              No examinations scheduled yet
+            </div>
+            <p style={{ fontSize: '13px', marginBottom: '14px', color: THEME.warmStone }}>
+              Add your midterm, lab viva, or final semester examination dates.
+            </p>
             <button onClick={() => setShowExamModal(true)} className="btn-primary">
               <span>Schedule Your First Exam</span>
             </button>
@@ -161,18 +172,32 @@ export const Exams: React.FC = () => {
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: '16px' }}>
             {exams.map((ex) => {
               const daysLeft = calculateDaysLeft(ex.exam_date);
+              const isUrgent = daysLeft >= 0 && daysLeft <= 3;
               return (
-                <div key={ex.id} className="card" style={{ display: 'flex', flexDirection: 'column', justifyContent: 'space-between', gap: '12px' }}>
+                <div
+                  key={ex.id}
+                  className="card"
+                  style={{
+                    display: 'flex',
+                    flexDirection: 'column',
+                    justifyContent: 'space-between',
+                    gap: '12px',
+                    border: `1.5px solid ${isUrgent ? THEME.vermilion : THEME.deepForestCharcoal}`,
+                    backgroundColor: THEME.warmIvory,
+                  }}
+                >
                   <div>
                     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '6px' }}>
                       <span className="badge">{ex.subject}</span>
                       <button onClick={() => handleDeleteExam(ex.id)} className="btn-secondary" style={{ padding: '2px 6px' }}>
-                        <Trash2 size={12} color="#E6E6FA" />
+                        <Trash2 size={12} color={THEME.deepForestCharcoal} />
                       </button>
                     </div>
 
-                    <h3 style={{ fontSize: '16px', fontWeight: 900, marginBottom: '4px' }}>{ex.exam_name}</h3>
-                    <div style={{ fontSize: '12px', marginBottom: '8px' }}>
+                    <h3 style={{ fontSize: '16px', fontWeight: 800, marginBottom: '4px', color: THEME.deepForestCharcoal }}>
+                      {ex.exam_name}
+                    </h3>
+                    <div style={{ fontSize: '12px', marginBottom: '8px', color: THEME.warmStone }}>
                       Date: {new Date(ex.exam_date).toLocaleDateString()}
                     </div>
 
@@ -180,24 +205,35 @@ export const Exams: React.FC = () => {
                     <div
                       style={{
                         padding: '10px 14px',
-                        backgroundColor: '#F0F8FF',
-                        borderRadius: '8px',
-                        border: '1px solid #E6E6FA',
+                        backgroundColor: THEME.warmIvory,
+                        borderRadius: '6px',
+                        border: `1.5px solid ${isUrgent ? THEME.vermilion : THEME.deepForestCharcoal}`,
                         display: 'flex',
                         alignItems: 'center',
                         justifyContent: 'space-between',
                       }}
                     >
-                      <span style={{ fontSize: '12px', fontWeight: 800 }}>Countdown:</span>
-                      <span style={{ fontSize: '16px', fontWeight: 900 }}>
+                      <span style={{ fontSize: '12px', fontWeight: 700, color: THEME.warmStone }}>Countdown:</span>
+                      <span
+                        style={{
+                          fontSize: '15px',
+                          fontWeight: 800,
+                          color: isUrgent ? THEME.vermilion : THEME.deepForestCharcoal,
+                          fontFamily: 'var(--font-serif)',
+                        }}
+                      >
                         {daysLeft > 0 ? `${daysLeft} Days Left` : daysLeft === 0 ? 'Today!' : 'Completed'}
                       </span>
                     </div>
 
-                    {ex.notes && <div style={{ fontSize: '12px', marginTop: '8px', fontStyle: 'italic' }}>{ex.notes}</div>}
+                    {ex.notes && (
+                      <div style={{ fontSize: '12px', marginTop: '8px', fontStyle: 'italic', color: THEME.warmStone }}>
+                        {ex.notes}
+                      </div>
+                    )}
                   </div>
 
-                  <div style={{ fontSize: '11px', fontWeight: 700, borderTop: '1px solid #E6E6FA', paddingTop: '8px' }}>
+                  <div style={{ fontSize: '11.5px', fontWeight: 600, borderTop: `1px solid ${THEME.warmStone}`, paddingTop: '8px', color: THEME.warmStone }}>
                     Tasks completed: {ex.completed_tasks} / {ex.total_tasks}
                   </div>
                 </div>
@@ -208,17 +244,19 @@ export const Exams: React.FC = () => {
       </div>
 
       {/* Revision Tasks Checklist */}
-      <div className="card" style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+      <div className="card" style={{ display: 'flex', flexDirection: 'column', gap: '14px', border: `1.5px solid ${THEME.deepForestCharcoal}`, backgroundColor: THEME.warmIvory }}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-          <h2 style={{ fontSize: '16px', fontWeight: 900 }}>Revision Tasks Checklist ({tasks.length})</h2>
+          <h2 style={{ fontSize: '16px', fontWeight: 800, color: THEME.deepForestCharcoal }}>
+            Revision Tasks Checklist ({tasks.length})
+          </h2>
           <button onClick={() => setShowTaskModal(true)} className="btn-secondary" style={{ padding: '6px 12px', fontSize: '12px' }}>
-            <Plus size={14} color="#E6E6FA" />
+            <Plus size={14} color={THEME.deepForestCharcoal} />
             <span>Add Study Task</span>
           </button>
         </div>
 
         {tasks.length === 0 ? (
-          <div style={{ textAlign: 'center', padding: '24px', fontSize: '13px' }}>
+          <div style={{ textAlign: 'center', padding: '24px', fontSize: '13px', color: THEME.warmStone }}>
             No study tasks added yet. Create specific milestones to conquer your syllabus!
           </div>
         ) : (
@@ -231,9 +269,9 @@ export const Exams: React.FC = () => {
                   alignItems: 'center',
                   justifyContent: 'space-between',
                   padding: '10px 14px',
-                  backgroundColor: t.is_completed === 1 ? '#F0F8FF' : '#FFFFFF',
-                  borderRadius: '8px',
-                  border: '1px solid #E6E6FA',
+                  backgroundColor: THEME.warmIvory,
+                  borderRadius: '6px',
+                  border: `1px solid ${t.is_completed === 1 ? THEME.emeraldGreen : THEME.deepForestCharcoal}`,
                 }}
               >
                 <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flex: 1, minWidth: 0 }}>
@@ -247,24 +285,26 @@ export const Exams: React.FC = () => {
                     }}
                   >
                     {t.is_completed === 1 ? (
-                      <CheckCircle size={20} color="#E6E6FA" />
+                      <CheckCircle size={19} color={THEME.emeraldGreen} />
                     ) : (
-                      <Circle size={20} color="#E6E6FA" />
+                      <Circle size={19} color={THEME.deepForestCharcoal} />
                     )}
                   </button>
 
                   <div style={{ textDecoration: t.is_completed === 1 ? 'line-through' : 'none' }}>
-                    <div style={{ fontSize: '14px', fontWeight: 800 }}>{t.title}</div>
-                    <div style={{ fontSize: '11px' }}>
+                    <div style={{ fontSize: '13.5px', fontWeight: 700, color: THEME.deepForestCharcoal }}>{t.title}</div>
+                    <div style={{ fontSize: '11px', color: THEME.warmStone }}>
                       {t.exam_name ? `${t.exam_name} • ` : ''}Due: {t.due_date ? new Date(t.due_date).toLocaleDateString() : 'No date'}
                     </div>
                   </div>
                 </div>
 
                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                  <span className="badge">{t.priority}</span>
+                  <span className={t.priority === 'high' ? 'badge badge-urgent' : t.priority === 'medium' ? 'badge' : 'badge-outline'}>
+                    {t.priority}
+                  </span>
                   <button onClick={() => handleDeleteTask(t.id)} className="btn-secondary" style={{ padding: '4px 8px' }}>
-                    <Trash2 size={12} color="#E6E6FA" />
+                    <Trash2 size={12} color={THEME.deepForestCharcoal} />
                   </button>
                 </div>
               </div>
@@ -277,10 +317,14 @@ export const Exams: React.FC = () => {
       {showExamModal && (
         <div className="modal-overlay">
           <div className="modal-content">
-            <h2 style={{ fontSize: '18px', fontWeight: 900, marginBottom: '16px' }}>Schedule Examination</h2>
+            <h2 style={{ fontSize: '18px', fontWeight: 800, marginBottom: '16px', color: THEME.deepForestCharcoal }}>
+              Schedule Examination
+            </h2>
             <form onSubmit={handleCreateExam} style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
               <div>
-                <label style={{ fontSize: '12px', fontWeight: 800, display: 'block', marginBottom: '4px' }}>Exam Name *</label>
+                <label style={{ fontSize: '12px', fontWeight: 700, display: 'block', marginBottom: '4px', color: THEME.deepForestCharcoal }}>
+                  Exam Name *
+                </label>
                 <input
                   type="text"
                   placeholder="e.g. Artificial Intelligence Final Exam"
@@ -291,7 +335,9 @@ export const Exams: React.FC = () => {
               </div>
 
               <div>
-                <label style={{ fontSize: '12px', fontWeight: 800, display: 'block', marginBottom: '4px' }}>Subject *</label>
+                <label style={{ fontSize: '12px', fontWeight: 700, display: 'block', marginBottom: '4px', color: THEME.deepForestCharcoal }}>
+                  Subject *
+                </label>
                 <input
                   type="text"
                   placeholder="e.g. Computer Science"
@@ -302,7 +348,9 @@ export const Exams: React.FC = () => {
               </div>
 
               <div>
-                <label style={{ fontSize: '12px', fontWeight: 800, display: 'block', marginBottom: '4px' }}>Date *</label>
+                <label style={{ fontSize: '12px', fontWeight: 700, display: 'block', marginBottom: '4px', color: THEME.deepForestCharcoal }}>
+                  Date *
+                </label>
                 <input
                   type="date"
                   value={examDate}
@@ -312,7 +360,9 @@ export const Exams: React.FC = () => {
               </div>
 
               <div>
-                <label style={{ fontSize: '12px', fontWeight: 800, display: 'block', marginBottom: '4px' }}>Notes</label>
+                <label style={{ fontSize: '12px', fontWeight: 700, display: 'block', marginBottom: '4px', color: THEME.deepForestCharcoal }}>
+                  Notes
+                </label>
                 <textarea
                   rows={2}
                   placeholder="Exam hall, allowed calculators, syllabus references..."
@@ -338,10 +388,14 @@ export const Exams: React.FC = () => {
       {showTaskModal && (
         <div className="modal-overlay">
           <div className="modal-content">
-            <h2 style={{ fontSize: '18px', fontWeight: 900, marginBottom: '16px' }}>Add Study Task</h2>
+            <h2 style={{ fontSize: '18px', fontWeight: 800, marginBottom: '16px', color: THEME.deepForestCharcoal }}>
+              Add Study Task
+            </h2>
             <form onSubmit={handleCreateTask} style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
               <div>
-                <label style={{ fontSize: '12px', fontWeight: 800, display: 'block', marginBottom: '4px' }}>Task Title *</label>
+                <label style={{ fontSize: '12px', fontWeight: 700, display: 'block', marginBottom: '4px', color: THEME.deepForestCharcoal }}>
+                  Task Title *
+                </label>
                 <input
                   type="text"
                   placeholder="e.g. Solve previous year question paper 2024"
@@ -352,7 +406,9 @@ export const Exams: React.FC = () => {
               </div>
 
               <div>
-                <label style={{ fontSize: '12px', fontWeight: 800, display: 'block', marginBottom: '4px' }}>Due Date</label>
+                <label style={{ fontSize: '12px', fontWeight: 700, display: 'block', marginBottom: '4px', color: THEME.deepForestCharcoal }}>
+                  Due Date
+                </label>
                 <input
                   type="date"
                   value={taskDueDate}
@@ -362,7 +418,9 @@ export const Exams: React.FC = () => {
 
               {exams.length > 0 && (
                 <div>
-                  <label style={{ fontSize: '12px', fontWeight: 800, display: 'block', marginBottom: '4px' }}>Associate with Exam</label>
+                  <label style={{ fontSize: '12px', fontWeight: 700, display: 'block', marginBottom: '4px', color: THEME.deepForestCharcoal }}>
+                    Associate with Exam
+                  </label>
                   <select
                     value={taskExamId}
                     onChange={(e) => setTaskExamId(e.target.value)}
@@ -376,7 +434,9 @@ export const Exams: React.FC = () => {
               )}
 
               <div>
-                <label style={{ fontSize: '12px', fontWeight: 800, display: 'block', marginBottom: '4px' }}>Priority</label>
+                <label style={{ fontSize: '12px', fontWeight: 700, display: 'block', marginBottom: '4px', color: THEME.deepForestCharcoal }}>
+                  Priority
+                </label>
                 <select
                   value={taskPriority}
                   onChange={(e) => setTaskPriority(e.target.value)}

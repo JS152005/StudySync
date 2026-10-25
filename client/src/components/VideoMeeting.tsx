@@ -1,4 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { THEME } from '../theme';
+import { Button } from './ui/Button';
 import {
   Mic,
   MicOff,
@@ -8,6 +10,7 @@ import {
   PhoneOff,
   Hand,
   Users,
+  Volume2,
 } from 'lucide-react';
 
 interface Participant {
@@ -124,8 +127,8 @@ export const VideoMeeting: React.FC<VideoMeetingProps> = ({
     <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', width: '100%' }}>
       {/* Device notice if camera/mic is offline */}
       {deviceError && (
-        <div className="alert-box" style={{ fontSize: '13px' }}>
-          [MEDIA STATUS] {deviceError} Voice & Screen Share controls remain available.
+        <div className="alert-box-vermilion" style={{ fontSize: '13px' }}>
+          <span style={{ color: THEME.vermilion, fontWeight: 700 }}>[MEDIA STATUS]</span> {deviceError} Voice & Screen Share controls remain available.
         </div>
       )}
 
@@ -143,12 +146,15 @@ export const VideoMeeting: React.FC<VideoMeetingProps> = ({
             className="card"
             style={{
               position: 'relative',
-              backgroundColor: '#F0F8FF',
+              backgroundColor: THEME.warmIvory,
+              border: `2px solid ${THEME.emeraldGreen}`,
               minHeight: '360px',
               display: 'flex',
               flexDirection: 'column',
               overflow: 'hidden',
-              padding: '8px',
+              padding: '10px',
+              borderRadius: THEME.radius.card,
+              boxShadow: THEME.shadow.lifted,
             }}
           >
             <div
@@ -157,12 +163,14 @@ export const VideoMeeting: React.FC<VideoMeetingProps> = ({
                 alignItems: 'center',
                 justifyContent: 'space-between',
                 padding: '6px 12px',
-                borderBottom: '2px solid #E6E6FA',
+                borderBottom: `1.5px solid ${THEME.emeraldGreen}`,
                 marginBottom: '8px',
               }}
             >
               <span className="badge">Screen Share Active</span>
-              <span style={{ fontSize: '12px', fontWeight: 800 }}>Presenting to Study Room</span>
+              <span style={{ fontSize: '12px', fontWeight: 700, color: THEME.deepForestCharcoal }}>
+                Presenting to Study Room
+              </span>
             </div>
             <video
               ref={screenVideoRef}
@@ -172,9 +180,9 @@ export const VideoMeeting: React.FC<VideoMeetingProps> = ({
                 width: '100%',
                 height: '100%',
                 maxHeight: '480px',
-                backgroundColor: '#FFFFFF',
-                borderRadius: '8px',
-                border: '2px solid #E6E6FA',
+                backgroundColor: THEME.deepForestCharcoal,
+                borderRadius: THEME.radius.md,
+                border: `1.5px solid ${THEME.deepForestCharcoal}`,
                 objectFit: 'contain',
               }}
             />
@@ -186,7 +194,8 @@ export const VideoMeeting: React.FC<VideoMeetingProps> = ({
           className="card"
           style={{
             position: 'relative',
-            backgroundColor: '#F0F8FF',
+            backgroundColor: THEME.warmIvory,
+            border: `2px solid ${audioEnabled ? THEME.emeraldGreen : THEME.deepForestCharcoal}`,
             minHeight: '260px',
             display: 'flex',
             flexDirection: 'column',
@@ -194,6 +203,9 @@ export const VideoMeeting: React.FC<VideoMeetingProps> = ({
             alignItems: 'center',
             overflow: 'hidden',
             padding: 0,
+            borderRadius: THEME.radius.card,
+            boxShadow: THEME.shadow.card,
+            transition: `border-color ${THEME.motion.durationFast} ${THEME.motion.easeOut}`,
           }}
         >
           {localStream && videoEnabled ? (
@@ -207,31 +219,32 @@ export const VideoMeeting: React.FC<VideoMeetingProps> = ({
                 height: '100%',
                 minHeight: '260px',
                 objectFit: 'cover',
-                backgroundColor: '#FFFFFF',
+                backgroundColor: THEME.deepForestCharcoal,
               }}
             />
           ) : (
             <div style={{ textAlign: 'center', padding: '24px' }}>
               <div
                 style={{
-                  width: '64px',
-                  height: '64px',
-                  borderRadius: '50%',
-                  backgroundColor: '#E6E6FA',
+                  width: '68px',
+                  height: '68px',
+                  borderRadius: THEME.radius.full,
+                  backgroundColor: THEME.emeraldGreen,
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
                   margin: '0 auto 12px',
-                  border: '2px solid #E6E6FA',
-                  fontSize: '24px',
-                  color: '#FFFFFF',
-                  fontWeight: 900,
+                  border: `2px solid ${THEME.deepForestCharcoal}`,
+                  fontSize: '20px',
+                  color: THEME.warmIvory,
+                  fontWeight: 800,
+                  boxShadow: THEME.shadow.subtle,
                 }}
               >
                 You
               </div>
-              <div style={{ fontSize: '14px', fontWeight: 800, color: '#E6E6FA' }}>
-                Camera is off
+              <div style={{ fontSize: '13.5px', fontWeight: 700, color: THEME.warmStone }}>
+                Camera is muted
               </div>
             </div>
           )}
@@ -246,18 +259,22 @@ export const VideoMeeting: React.FC<VideoMeetingProps> = ({
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'space-between',
-              backgroundColor: '#FFFFFF',
+              backgroundColor: THEME.warmIvory,
               padding: '6px 12px',
-              borderRadius: '8px',
-              border: '2px solid #E6E6FA',
+              borderRadius: THEME.radius.md,
+              border: `1.5px solid ${THEME.deepForestCharcoal}`,
+              boxShadow: THEME.shadow.subtle,
             }}
           >
-            <span style={{ fontSize: '13px', fontWeight: 900, color: '#E6E6FA' }}>
-              You {isHost ? '(Host)' : ''}
-            </span>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+              <span style={{ fontSize: '12.5px', fontWeight: 800, color: THEME.deepForestCharcoal }}>
+                You {isHost ? '(Host)' : ''}
+              </span>
+              {audioEnabled && <Volume2 size={13} color={THEME.emeraldGreen} />}
+            </div>
             <div style={{ display: 'flex', gap: '6px' }}>
-              {!audioEnabled && <MicOff size={14} color="#E6E6FA" />}
-              {!videoEnabled && <VideoOff size={14} color="#E6E6FA" />}
+              {!audioEnabled && <MicOff size={14} color={THEME.vermilion} />}
+              {!videoEnabled && <VideoOff size={14} color={THEME.vermilion} />}
             </div>
           </div>
         </div>
@@ -271,37 +288,43 @@ export const VideoMeeting: React.FC<VideoMeetingProps> = ({
               key={peer.id}
               className="card"
               style={{
-                backgroundColor: '#F0F8FF',
+                backgroundColor: THEME.warmIvory,
+                border: `1.5px solid ${peer.is_hand_raised === 1 ? THEME.vermilion : THEME.deepForestCharcoal}`,
                 minHeight: '260px',
                 display: 'flex',
                 flexDirection: 'column',
                 justifyContent: 'center',
                 alignItems: 'center',
                 position: 'relative',
+                borderRadius: THEME.radius.card,
+                boxShadow: THEME.shadow.card,
               }}
             >
               <div
                 style={{
-                  width: '64px',
-                  height: '64px',
-                  borderRadius: '50%',
-                  backgroundColor: '#E6E6FA',
+                  width: '68px',
+                  height: '68px',
+                  borderRadius: THEME.radius.full,
+                  backgroundColor: THEME.emeraldGreen,
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
                   marginBottom: '12px',
-                  fontSize: '24px',
-                  color: '#FFFFFF',
-                  fontWeight: 900,
+                  fontSize: '22px',
+                  color: THEME.warmIvory,
+                  fontWeight: 800,
+                  border: `1.5px solid ${THEME.deepForestCharcoal}`,
                 }}
               >
                 {peer.full_name ? peer.full_name[0].toUpperCase() : 'P'}
               </div>
-              <div style={{ fontSize: '14px', fontWeight: 800 }}>{peer.full_name}</div>
-              <div style={{ fontSize: '12px' }}>@{peer.username}</div>
+              <div style={{ fontSize: '14.5px', fontWeight: 800, color: THEME.deepForestCharcoal }}>
+                {peer.full_name}
+              </div>
+              <div style={{ fontSize: '12px', color: THEME.warmStone }}>@{peer.username}</div>
 
               {peer.is_hand_raised === 1 && (
-                <div style={{ marginTop: '8px' }} className="badge">
+                <div style={{ marginTop: '8px' }} className="badge badge-urgent">
                   Hand Raised
                 </div>
               )}
@@ -311,20 +334,26 @@ export const VideoMeeting: React.FC<VideoMeetingProps> = ({
                   position: 'absolute',
                   bottom: '12px',
                   left: '12px',
-                  backgroundColor: '#FFFFFF',
-                  padding: '4px 8px',
-                  borderRadius: '6px',
-                  border: '1px solid #E6E6FA',
+                  backgroundColor: THEME.warmIvory,
+                  padding: '3px 8px',
+                  borderRadius: THEME.radius.pill,
+                  border: `1px solid ${THEME.deepForestCharcoal}`,
                   fontSize: '11px',
+                  fontWeight: 700,
+                  color: THEME.emeraldGreen,
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '4px',
                 }}
               >
-                Connected
+                <span className="live-pulse-dot" />
+                <span>Connected</span>
               </div>
             </div>
           ))}
       </div>
 
-      {/* Control Bar */}
+      {/* Expressive Media Control Bar */}
       <div
         className="card"
         style={{
@@ -333,52 +362,72 @@ export const VideoMeeting: React.FC<VideoMeetingProps> = ({
           justifyContent: 'center',
           gap: '12px',
           flexWrap: 'wrap',
-          padding: '12px',
-          backgroundColor: '#FFFFFF',
+          padding: '14px 20px',
+          backgroundColor: THEME.warmIvory,
+          border: `1.5px solid ${THEME.deepForestCharcoal}`,
+          borderRadius: THEME.radius.pill,
+          boxShadow: THEME.shadow.lifted,
         }}
+        role="toolbar"
+        aria-label="Media controls"
       >
-        <button
+        <Button
+          variant={audioEnabled ? 'primary' : 'secondary'}
+          shape="pill"
+          size="sm"
           onClick={toggleMic}
-          className={audioEnabled ? 'btn-primary' : 'btn-secondary'}
+          leftIcon={audioEnabled ? <Mic size={16} color={THEME.warmIvory} /> : <MicOff size={16} color={THEME.deepForestCharcoal} />}
           title={audioEnabled ? 'Mute Microphone' : 'Unmute Microphone'}
         >
-          {audioEnabled ? <Mic size={18} color="#FFFFFF" /> : <MicOff size={18} color="#E6E6FA" />}
-          <span>{audioEnabled ? 'Mute' : 'Unmuted'}</span>
-        </button>
+          {audioEnabled ? 'Mute Mic' : 'Unmuted'}
+        </Button>
 
-        <button
+        <Button
+          variant={videoEnabled ? 'primary' : 'secondary'}
+          shape="pill"
+          size="sm"
           onClick={toggleCamera}
-          className={videoEnabled ? 'btn-primary' : 'btn-secondary'}
+          leftIcon={videoEnabled ? <Video size={16} color={THEME.warmIvory} /> : <VideoOff size={16} color={THEME.deepForestCharcoal} />}
           title={videoEnabled ? 'Stop Video' : 'Start Video'}
         >
-          {videoEnabled ? <Video size={18} color="#FFFFFF" /> : <VideoOff size={18} color="#E6E6FA" />}
-          <span>{videoEnabled ? 'Stop Video' : 'Start Video'}</span>
-        </button>
+          {videoEnabled ? 'Stop Video' : 'Start Video'}
+        </Button>
 
-        <button
+        <Button
+          variant={isSharingScreen ? 'primary' : 'secondary'}
+          shape="pill"
+          size="sm"
           onClick={toggleScreenShare}
-          className={isSharingScreen ? 'btn-accent' : 'btn-secondary'}
-          title={isSharingScreen ? 'Stop Sharing' : 'Share Screen'}
+          leftIcon={<ScreenShare size={16} color={isSharingScreen ? THEME.warmIvory : THEME.deepForestCharcoal} />}
+          title={isSharingScreen ? 'Stop Screen Share' : 'Share Screen'}
         >
-          <ScreenShare size={18} color={isSharingScreen ? '#FFFFFF' : '#E6E6FA'} />
-          <span>{isSharingScreen ? 'Stop Share' : 'Share Screen'}</span>
-        </button>
+          {isSharingScreen ? 'Stop Screen' : 'Share Screen'}
+        </Button>
 
-        <button onClick={onToggleHand} className="btn-secondary" title="Raise or Lower Hand">
-          <Hand size={18} color="#E6E6FA" />
-          <span>Raise Hand</span>
-        </button>
+        <Button
+          variant="secondary"
+          shape="pill"
+          size="sm"
+          onClick={onToggleHand}
+          leftIcon={<Hand size={16} color={THEME.deepForestCharcoal} />}
+          title="Raise or Lower Hand"
+        >
+          Raise Hand
+        </Button>
 
-        <button
+        <Button
+          variant="vermilion"
+          shape="pill"
+          size="sm"
           onClick={onLeave}
-          className="btn-primary"
-          style={{ backgroundColor: '#FFFFFF', color: '#E6E6FA', borderColor: '#E6E6FA' }}
+          leftIcon={<PhoneOff size={16} color={THEME.warmIvory} />}
           title="Leave Study Room"
         >
-          <PhoneOff size={18} color="#E6E6FA" />
-          <span>Leave Room</span>
-        </button>
+          Leave Room
+        </Button>
       </div>
     </div>
   );
 };
+
+export default VideoMeeting;

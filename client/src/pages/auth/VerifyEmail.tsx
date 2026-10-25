@@ -2,7 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { useSearchParams, NavLink } from 'react-router-dom';
 import { apiRequest } from '../../api/client';
 import { useAuth } from '../../context/AuthContext';
-import { CheckCircle, AlertCircle, Mail, ArrowRight } from 'lucide-react';
+import { THEME } from '../../theme';
+import { CheckCircle, Mail, ArrowRight } from 'lucide-react';
 
 export const VerifyEmail: React.FC = () => {
   const [searchParams] = useSearchParams();
@@ -52,7 +53,7 @@ export const VerifyEmail: React.FC = () => {
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
-        backgroundColor: '#F0F8FF',
+        backgroundColor: THEME.warmIvory,
         padding: '20px',
       }}
     >
@@ -67,47 +68,51 @@ export const VerifyEmail: React.FC = () => {
           alignItems: 'center',
           textAlign: 'center',
           gap: '18px',
-          backgroundColor: '#FFFFFF',
-          border: '3px solid #E6E6FA',
+          backgroundColor: THEME.warmIvory,
+          border: `1.5px solid ${THEME.deepForestCharcoal}`,
+          borderRadius: '8px',
         }}
       >
         <div
           style={{
-            width: '56px',
-            height: '56px',
-            borderRadius: '16px',
-            backgroundColor: '#E6E6FA',
+            width: '54px',
+            height: '54px',
+            borderRadius: '8px',
+            backgroundColor: THEME.emeraldGreen,
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
+            border: `1.5px solid ${THEME.deepForestCharcoal}`,
           }}
         >
-          <Mail size={28} color="#FFFFFF" />
+          <Mail size={26} color={THEME.warmIvory} />
         </div>
 
-        <h1 style={{ fontSize: '22px', fontWeight: 900 }}>Email Verification</h1>
+        <h1 style={{ fontSize: '22px', fontWeight: 800, color: THEME.deepForestCharcoal }}>
+          Email Verification
+        </h1>
 
         {status === 'verifying' && (
-          <p style={{ fontSize: '14px' }}>Verifying your student email address...</p>
+          <p style={{ fontSize: '14px', color: THEME.deepForestCharcoal }}>Verifying your student email address...</p>
         )}
 
         {status === 'success' && (
           <div style={{ display: 'flex', flexDirection: 'column', gap: '14px', width: '100%' }}>
-            <div className="alert-box" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <CheckCircle size={18} color="#E6E6FA" />
-              <span>{message}</span>
+            <div className="alert-box-emerald" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <CheckCircle size={18} color={THEME.emeraldGreen} />
+              <span style={{ color: THEME.deepForestCharcoal }}>{message}</span>
             </div>
             <NavLink to="/dashboard" className="btn-primary" style={{ width: '100%' }}>
               <span>Enter StudySync Workspace</span>
-              <ArrowRight size={14} color="#FFFFFF" />
+              <ArrowRight size={14} color={THEME.warmIvory} />
             </NavLink>
           </div>
         )}
 
         {status === 'error' && (
           <div style={{ display: 'flex', flexDirection: 'column', gap: '14px', width: '100%' }}>
-            <div className="alert-box">
-              [VERIFICATION STATUS] {message}
+            <div className="alert-box-vermilion">
+              <span style={{ color: THEME.vermilion, fontWeight: 700 }}>[STATUS]</span> {message}
             </div>
             {user ? (
               <button onClick={handleResend} disabled={resending} className="btn-primary" style={{ width: '100%' }}>
@@ -123,7 +128,7 @@ export const VerifyEmail: React.FC = () => {
 
         {status === 'idle' && (
           <div style={{ display: 'flex', flexDirection: 'column', gap: '14px', width: '100%' }}>
-            <p style={{ fontSize: '13px' }}>
+            <p style={{ fontSize: '13px', color: THEME.warmStone }}>
               We sent a verification link to your registered email address. Click the link in your email to verify your student account.
             </p>
             {user && (
