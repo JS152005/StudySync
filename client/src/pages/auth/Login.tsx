@@ -3,7 +3,8 @@ import { NavLink, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import { THEME } from '../../theme';
 import { Button } from '../../components/ui/Button';
-import { Eye, EyeOff, Sparkles, LogIn, ArrowRight } from 'lucide-react';
+import { PasswordInput } from '../../components/ui/PasswordInput';
+import { Sparkles, LogIn, ArrowRight } from 'lucide-react';
 
 export const Login: React.FC = () => {
   const { login } = useAuth();
@@ -11,7 +12,6 @@ export const Login: React.FC = () => {
 
   const [identifier, setIdentifier] = useState('');
   const [password, setPassword] = useState('');
-  const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
 
@@ -112,35 +112,13 @@ export const Login: React.FC = () => {
                 Forgot Password?
               </NavLink>
             </div>
-            <div style={{ position: 'relative' }}>
-              <input
-                type={showPassword ? 'text' : 'password'}
-                placeholder="Enter password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                required
-                style={{ paddingRight: '42px' }}
-              />
-              <button
-                type="button"
-                onClick={() => setShowPassword(!showPassword)}
-                style={{
-                  position: 'absolute',
-                  right: '8px',
-                  top: '50%',
-                  transform: 'translateY(-50%)',
-                  background: 'none',
-                  border: 'none',
-                  padding: '6px',
-                  cursor: 'pointer',
-                  display: 'flex',
-                  alignItems: 'center',
-                }}
-                aria-label="Toggle password visibility"
-              >
-                {showPassword ? <EyeOff size={16} color={THEME.deepForestCharcoal} /> : <Eye size={16} color={THEME.warmStone} />}
-              </button>
-            </div>
+            <PasswordInput
+              placeholder="Enter password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              required
+              ariaLabel="Toggle password visibility"
+            />
           </div>
 
           <Button

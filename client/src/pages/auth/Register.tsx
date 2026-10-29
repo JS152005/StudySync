@@ -4,7 +4,8 @@ import { useAuth } from '../../context/AuthContext';
 import { THEME } from '../../theme';
 import { Button } from '../../components/ui/Button';
 import { ToggleSwitch } from '../../components/ui/ToggleSwitch';
-import { Eye, EyeOff, Sparkles, UserPlus } from 'lucide-react';
+import { PasswordInput } from '../../components/ui/PasswordInput';
+import { Sparkles, UserPlus } from 'lucide-react';
 
 export const Register: React.FC = () => {
   const { register } = useAuth();
@@ -15,8 +16,6 @@ export const Register: React.FC = () => {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
-  const [showPassword, setShowPassword] = useState(false);
-  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [course, setCourse] = useState('');
   const [college, setCollege] = useState('');
   const [academicYear, setAcademicYear] = useState('1st Year');
@@ -170,70 +169,26 @@ export const Register: React.FC = () => {
               <label style={{ fontSize: '12px', fontWeight: 700, display: 'block', marginBottom: '4px', color: THEME.deepForestCharcoal }}>
                 Password (min 8 chars) *
               </label>
-              <div style={{ position: 'relative' }}>
-                <input
-                  type={showPassword ? 'text' : 'password'}
-                  placeholder="Create strong password"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  required
-                  style={{ paddingRight: '42px' }}
-                />
-                <button
-                  type="button"
-                  onClick={() => setShowPassword(!showPassword)}
-                  style={{
-                    position: 'absolute',
-                    right: '8px',
-                    top: '50%',
-                    transform: 'translateY(-50%)',
-                    background: 'none',
-                    border: 'none',
-                    padding: '6px',
-                    cursor: 'pointer',
-                    display: 'flex',
-                    alignItems: 'center',
-                  }}
-                  aria-label="Toggle password visibility"
-                >
-                  {showPassword ? <EyeOff size={16} color={THEME.deepForestCharcoal} /> : <Eye size={16} color={THEME.warmStone} />}
-                </button>
-              </div>
+              <PasswordInput
+                placeholder="Create strong password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                required
+                ariaLabel="Toggle password visibility"
+              />
             </div>
 
             <div>
               <label style={{ fontSize: '12px', fontWeight: 700, display: 'block', marginBottom: '4px', color: THEME.deepForestCharcoal }}>
                 Confirm Password *
               </label>
-              <div style={{ position: 'relative' }}>
-                <input
-                  type={showConfirmPassword ? 'text' : 'password'}
-                  placeholder="Confirm password"
-                  value={confirmPassword}
-                  onChange={(e) => setConfirmPassword(e.target.value)}
-                  required
-                  style={{ paddingRight: '42px' }}
-                />
-                <button
-                  type="button"
-                  onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                  style={{
-                    position: 'absolute',
-                    right: '8px',
-                    top: '50%',
-                    transform: 'translateY(-50%)',
-                    background: 'none',
-                    border: 'none',
-                    padding: '6px',
-                    cursor: 'pointer',
-                    display: 'flex',
-                    alignItems: 'center',
-                  }}
-                  aria-label="Toggle confirm password visibility"
-                >
-                  {showConfirmPassword ? <EyeOff size={16} color={THEME.deepForestCharcoal} /> : <Eye size={16} color={THEME.warmStone} />}
-                </button>
-              </div>
+              <PasswordInput
+                placeholder="Confirm password"
+                value={confirmPassword}
+                onChange={(e) => setConfirmPassword(e.target.value)}
+                required
+                ariaLabel="Toggle confirm password visibility"
+              />
             </div>
           </div>
 

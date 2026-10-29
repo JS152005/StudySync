@@ -5,9 +5,10 @@ import { useNavigate } from 'react-router-dom';
 import { THEME } from '../theme';
 import { Button } from '../components/ui/Button';
 import { ToggleSwitch } from '../components/ui/ToggleSwitch';
+import { PasswordInput } from '../components/ui/PasswordInput';
 import { Modal } from '../components/ui/Modal';
 import { useToast } from '../components/ui/ToastContext';
-import { Mail, KeyRound, Shield, Trash2, Check, Sparkles, Eye, EyeOff } from 'lucide-react';
+import { Mail, KeyRound, Shield, Trash2, Check, Sparkles } from 'lucide-react';
 
 export const Settings: React.FC = () => {
   const { user, logout } = useAuth();
@@ -18,9 +19,6 @@ export const Settings: React.FC = () => {
   const [currentPassword, setCurrentPassword] = useState('');
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
-  const [showCurrentPassword, setShowCurrentPassword] = useState(false);
-  const [showNewPassword, setShowNewPassword] = useState(false);
-  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [passwordMsg, setPasswordMsg] = useState('');
   const [passwordError, setPasswordError] = useState('');
   const [savingPassword, setSavingPassword] = useState(false);
@@ -37,7 +35,6 @@ export const Settings: React.FC = () => {
   // Delete Account Modal
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [deletePassword, setDeletePassword] = useState('');
-  const [showDeletePassword, setShowDeletePassword] = useState(false);
   const [deleting, setDeleting] = useState(false);
 
   const handlePasswordChange = async (e: React.FormEvent) => {
@@ -262,102 +259,36 @@ export const Settings: React.FC = () => {
           <label style={{ fontSize: '12px', fontWeight: 700, display: 'block', marginBottom: '4px', color: THEME.deepForestCharcoal }}>
             Current Password *
           </label>
-          <div style={{ position: 'relative' }}>
-            <input
-              type={showCurrentPassword ? 'text' : 'password'}
-              value={currentPassword}
-              onChange={(e) => setCurrentPassword(e.target.value)}
-              required
-              style={{ paddingRight: '42px' }}
-            />
-            <button
-              type="button"
-              onClick={() => setShowCurrentPassword(!showCurrentPassword)}
-              style={{
-                position: 'absolute',
-                right: '8px',
-                top: '50%',
-                transform: 'translateY(-50%)',
-                background: 'none',
-                border: 'none',
-                padding: '6px',
-                cursor: 'pointer',
-                display: 'flex',
-                alignItems: 'center',
-              }}
-              aria-label="Toggle current password visibility"
-            >
-              {showCurrentPassword ? <EyeOff size={16} color={THEME.deepForestCharcoal} /> : <Eye size={16} color={THEME.warmStone} />}
-            </button>
-          </div>
+          <PasswordInput
+            value={currentPassword}
+            onChange={(e) => setCurrentPassword(e.target.value)}
+            required
+            ariaLabel="Toggle current password visibility"
+          />
         </div>
 
         <div>
           <label style={{ fontSize: '12px', fontWeight: 700, display: 'block', marginBottom: '4px', color: THEME.deepForestCharcoal }}>
             New Password (min 8 chars) *
           </label>
-          <div style={{ position: 'relative' }}>
-            <input
-              type={showNewPassword ? 'text' : 'password'}
-              value={newPassword}
-              onChange={(e) => setNewPassword(e.target.value)}
-              required
-              style={{ paddingRight: '42px' }}
-            />
-            <button
-              type="button"
-              onClick={() => setShowNewPassword(!showNewPassword)}
-              style={{
-                position: 'absolute',
-                right: '8px',
-                top: '50%',
-                transform: 'translateY(-50%)',
-                background: 'none',
-                border: 'none',
-                padding: '6px',
-                cursor: 'pointer',
-                display: 'flex',
-                alignItems: 'center',
-              }}
-              aria-label="Toggle new password visibility"
-            >
-              {showNewPassword ? <EyeOff size={16} color={THEME.deepForestCharcoal} /> : <Eye size={16} color={THEME.warmStone} />}
-            </button>
-          </div>
+          <PasswordInput
+            value={newPassword}
+            onChange={(e) => setNewPassword(e.target.value)}
+            required
+            ariaLabel="Toggle new password visibility"
+          />
         </div>
 
         <div>
           <label style={{ fontSize: '12px', fontWeight: 700, display: 'block', marginBottom: '4px', color: THEME.deepForestCharcoal }}>
             Confirm New Password *
           </label>
-          <div style={{ position: 'relative' }}>
-            <input
-              type={showConfirmPassword ? 'text' : 'password'}
-              value={confirmPassword}
-              onChange={(e) => setConfirmPassword(e.target.value)}
-              required
-              style={{ paddingRight: '42px' }}
-            />
-            <button
-              type="button"
-              onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-              style={{
-                position: 'absolute',
-                right: '8px',
-                top: '50%',
-                transform: 'translateY(-50%)',
-                background: 'none',
-                border: 'none',
-                padding: '6px',
-                cursor: 'pointer',
-                display: 'flex',
-                alignItems: 'center',
-              }}
-              aria-label="Toggle confirm new password visibility"
-            >
-              {showConfirmPassword ? <EyeOff size={16} color={THEME.deepForestCharcoal} /> : <Eye size={16} color={THEME.warmStone} />}
-            </button>
-          </div>
+          <PasswordInput
+            value={confirmPassword}
+            onChange={(e) => setConfirmPassword(e.target.value)}
+            required
+            ariaLabel="Toggle confirm new password visibility"
+          />
         </div>
 
         <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '6px' }}>
@@ -419,35 +350,13 @@ export const Settings: React.FC = () => {
             <label style={{ fontSize: '12px', fontWeight: 700, display: 'block', marginBottom: '4px', color: THEME.deepForestCharcoal }}>
               Current Password *
             </label>
-            <div style={{ position: 'relative' }}>
-              <input
-                type={showDeletePassword ? 'text' : 'password'}
-                placeholder="Enter current password"
-                value={deletePassword}
-                onChange={(e) => setDeletePassword(e.target.value)}
-                required
-                style={{ paddingRight: '42px' }}
-              />
-              <button
-                type="button"
-                onClick={() => setShowDeletePassword(!showDeletePassword)}
-                style={{
-                  position: 'absolute',
-                  right: '8px',
-                  top: '50%',
-                  transform: 'translateY(-50%)',
-                  background: 'none',
-                  border: 'none',
-                  padding: '6px',
-                  cursor: 'pointer',
-                  display: 'flex',
-                  alignItems: 'center',
-                }}
-                aria-label="Toggle password visibility"
-              >
-                {showDeletePassword ? <EyeOff size={16} color={THEME.deepForestCharcoal} /> : <Eye size={16} color={THEME.warmStone} />}
-              </button>
-            </div>
+            <PasswordInput
+              placeholder="Enter current password"
+              value={deletePassword}
+              onChange={(e) => setDeletePassword(e.target.value)}
+              required
+              ariaLabel="Toggle password visibility"
+            />
           </div>
 
           <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px', marginTop: '8px' }}>

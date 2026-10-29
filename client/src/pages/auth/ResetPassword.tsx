@@ -3,7 +3,8 @@ import { useSearchParams, NavLink, useNavigate } from 'react-router-dom';
 import { apiRequest } from '../../api/client';
 import { THEME } from '../../theme';
 import { Button } from '../../components/ui/Button';
-import { KeyRound, Check, Eye, EyeOff } from 'lucide-react';
+import { PasswordInput } from '../../components/ui/PasswordInput';
+import { KeyRound, Check } from 'lucide-react';
 
 export const ResetPassword: React.FC = () => {
   const [searchParams] = useSearchParams();
@@ -12,8 +13,6 @@ export const ResetPassword: React.FC = () => {
 
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
-  const [showNewPassword, setShowNewPassword] = useState(false);
-  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -135,70 +134,26 @@ export const ResetPassword: React.FC = () => {
               <label style={{ fontSize: '12px', fontWeight: 700, display: 'block', marginBottom: '6px', color: THEME.deepForestCharcoal }}>
                 New Password (min 8 chars) *
               </label>
-              <div style={{ position: 'relative' }}>
-                <input
-                  type={showNewPassword ? 'text' : 'password'}
-                  placeholder="Enter new password"
-                  value={newPassword}
-                  onChange={(e) => setNewPassword(e.target.value)}
-                  required
-                  style={{ paddingRight: '42px' }}
-                />
-                <button
-                  type="button"
-                  onClick={() => setShowNewPassword(!showNewPassword)}
-                  style={{
-                    position: 'absolute',
-                    right: '8px',
-                    top: '50%',
-                    transform: 'translateY(-50%)',
-                    background: 'none',
-                    border: 'none',
-                    padding: '6px',
-                    cursor: 'pointer',
-                    display: 'flex',
-                    alignItems: 'center',
-                  }}
-                  aria-label="Toggle new password visibility"
-                >
-                  {showNewPassword ? <EyeOff size={16} color={THEME.deepForestCharcoal} /> : <Eye size={16} color={THEME.warmStone} />}
-                </button>
-              </div>
+              <PasswordInput
+                placeholder="Enter new password"
+                value={newPassword}
+                onChange={(e) => setNewPassword(e.target.value)}
+                required
+                ariaLabel="Toggle new password visibility"
+              />
             </div>
 
             <div>
               <label style={{ fontSize: '12px', fontWeight: 700, display: 'block', marginBottom: '6px', color: THEME.deepForestCharcoal }}>
                 Confirm New Password *
               </label>
-              <div style={{ position: 'relative' }}>
-                <input
-                  type={showConfirmPassword ? 'text' : 'password'}
-                  placeholder="Re-enter new password"
-                  value={confirmPassword}
-                  onChange={(e) => setConfirmPassword(e.target.value)}
-                  required
-                  style={{ paddingRight: '42px' }}
-                />
-                <button
-                  type="button"
-                  onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                  style={{
-                    position: 'absolute',
-                    right: '8px',
-                    top: '50%',
-                    transform: 'translateY(-50%)',
-                    background: 'none',
-                    border: 'none',
-                    padding: '6px',
-                    cursor: 'pointer',
-                    display: 'flex',
-                    alignItems: 'center',
-                  }}
-                  aria-label="Toggle confirm new password visibility"
-                >
-                  {showConfirmPassword ? <EyeOff size={16} color={THEME.deepForestCharcoal} /> : <Eye size={16} color={THEME.warmStone} />}
-                </button>
-              </div>
+              <PasswordInput
+                placeholder="Re-enter new password"
+                value={confirmPassword}
+                onChange={(e) => setConfirmPassword(e.target.value)}
+                required
+                ariaLabel="Toggle confirm new password visibility"
+              />
             </div>
 
             <Button
