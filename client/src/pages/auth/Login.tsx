@@ -3,6 +3,7 @@ import { NavLink, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import { THEME } from '../../theme';
 import { Button } from '../../components/ui/Button';
+import { BiometricLoginButton } from '../../components/ui/BiometricLoginButton';
 import { Eye, EyeOff, Sparkles, LogIn, ArrowRight } from 'lucide-react';
 
 export const Login: React.FC = () => {
@@ -13,18 +14,24 @@ export const Login: React.FC = () => {
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState('');
+  const [unverifiedEmail, setUnverifiedEmail] = useState('');
   const [loading, setLoading] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
+    setUnverifiedEmail('');
     setLoading(true);
 
     try {
       await login(identifier, password);
       navigate('/dashboard');
     } catch (err: any) {
-      setError(err.message || 'Login failed.');
+      const msg = err.message || 'Login failed.';
+      setError(msg);
+      if (msg.toLowerCase().includes('verify')) {
+        setUnverifiedEmail(identifier.includes('@') ? identifier : '');
+      }
     } finally {
       setLoading(false);
     }
@@ -37,7 +44,7 @@ export const Login: React.FC = () => {
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
-        backgroundColor: THEME.warmIvory,
+        backgroundColor: '#F8FAFC',
         padding: '24px',
       }}
     >
@@ -50,8 +57,8 @@ export const Login: React.FC = () => {
           display: 'flex',
           flexDirection: 'column',
           gap: '20px',
-          backgroundColor: THEME.warmIvory,
-          border: `1.5px solid ${THEME.deepForestCharcoal}`,
+          backgroundColor: '#FFFFFF',
+          border: '1px solid #E2E8F0',
           borderRadius: THEME.radius.cardLg,
           boxShadow: THEME.shadow.lifted,
           animation: `studysync-scale-in ${THEME.motion.durationNormal} ${THEME.motion.easeSpring}`,
@@ -64,28 +71,44 @@ export const Login: React.FC = () => {
               width: '48px',
               height: '48px',
               borderRadius: THEME.radius.md,
-              backgroundColor: THEME.emeraldGreen,
+              backgroundColor: 'rgba(2, 132, 199, 0.1)',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
               margin: '0 auto 14px',
-              border: `1.5px solid ${THEME.deepForestCharcoal}`,
-              boxShadow: THEME.shadow.subtle,
+              border: '1px solid rgba(2, 132, 199, 0.3)',
             }}
           >
-            <Sparkles size={24} color={THEME.warmIvory} strokeWidth={2.5} />
+            <Sparkles size={24} color="#0284C7" strokeWidth={2.5} />
           </div>
-          <h1 style={{ fontSize: '24px', fontWeight: 800, color: THEME.deepForestCharcoal }}>
+          <h1 style={{ fontSize: '24px', fontWeight: 800, color: '#0F172A' }}>
             Welcome to StudySync
           </h1>
-          <p style={{ fontSize: '13px', marginTop: '4px', color: THEME.warmStone }}>
+          <p style={{ fontSize: '13px', marginTop: '4px', color: '#64748B' }}>
             Learn together. Teach each other. Achieve more.
           </p>
         </div>
 
         {error && (
           <div className="alert-box-vermilion" style={{ fontSize: '13px' }}>
-            <span style={{ color: THEME.vermilion, fontWeight: 700 }}>[ERROR]</span> {error}
+            <div>
+              <span style={{ color: THEME.vermilion, fontWeight: 700 }}>[ERROR]</span> {error}
+            </div>
+            {error.toLowerCase().includes('verify') && (
+              <NavLink
+                to={`/verify-email?pending=true&email=${encodeURIComponent(unverifiedEmail || identifier)}`}
+                style={{
+                  color: THEME.vermilion,
+                  fontWeight: 700,
+                  fontSize: '12px',
+                  marginTop: '6px',
+                  display: 'inline-block',
+                  textDecoration: 'underline',
+                }}
+              >
+                Click here to verify your student email &rarr;
+              </NavLink>
+            )}
           </div>
         )}
 
@@ -143,31 +166,30 @@ export const Login: React.FC = () => {
             </div>
           </div>
 
-          <Button
-            type="submit"
-            variant="primary"
-            shape="pill"
-            size="lg"
-            disabled={!identifier || !password}
-            loading={loading}
-            leftIcon={<LogIn size={16} color={THEME.warmIvory} />}
-            style={{ width: '100%', marginTop: '6px' }}
-          >
-            Sign In
-          </Button>
+          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '8px', marginTop: '6px' }}>
+            <BiometricLoginButton
+              disabled={!identifier || !password}
+              loading={loading}
+              label="Authenticate & Sign In"
+              error={!!error}
+            />
+            <span style={{ fontSize: '11px', color: THEME.warmStone, fontWeight: 500 }}>
+              Biometric token verification & password encryption enabled
+            </span>
+          </div>
         </form>
 
         <div
           style={{
             textAlign: 'center',
             fontSize: '13px',
-            borderTop: `1px solid ${THEME.warmStone}`,
+            borderTop: '1px solid #E2E8F0',
             paddingTop: '16px',
-            color: THEME.warmStone,
+            color: '#64748B',
           }}
         >
           Don't have a student account?{' '}
-          <NavLink to="/register" style={{ textDecoration: 'underline', color: THEME.emeraldGreen, fontWeight: 700 }}>
+          <NavLink to="/register" style={{ textDecoration: 'underline', color: '#0284C7', fontWeight: 700 }}>
             Register Now
           </NavLink>
         </div>

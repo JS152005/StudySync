@@ -73,14 +73,13 @@ router.get('/', requireAuth, (req: AuthRequest, res): void => {
         ORDER BY r.created_at DESC
       `).all(room_id);
     } else {
-      // General library: user's own resources + their groups' resources + public resources
+      // General library: user's own resources + their active groups' resources (strictly private)
       resources = db.prepare(`
         SELECT r.*, u.full_name as author_name, u.username as author_username, g.name as group_name
         FROM resources r
         JOIN users u ON u.id = r.user_id
         LEFT JOIN study_groups g ON g.id = r.group_id
         WHERE r.user_id = ?
-           OR r.is_public = 1
            OR (r.group_id IS NOT NULL AND r.group_id IN (SELECT group_id FROM group_members WHERE user_id = ? AND status = 'active'))
         ORDER BY r.created_at DESC LIMIT 50
       `).all(currentUserId, currentUserId);
@@ -118,7 +117,7 @@ router.post('/upload', requireAuth, upload.single('file'), (req: AuthRequest, re
       INSERT INTO resources (
         id, user_id, group_id, room_id, title, description, file_type, file_url,
         file_size, mime_type, original_name, is_public, created_at
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0, ?)
     `).run(
       resourceId,
       currentUserId,
@@ -131,7 +130,6 @@ router.post('/upload', requireAuth, upload.single('file'), (req: AuthRequest, re
       file.size,
       file.mimetype,
       file.originalname,
-      is_public ? 1 : 0,
       now
     );
 
@@ -149,10 +147,10 @@ router.post('/upload', requireAuth, upload.single('file'), (req: AuthRequest, re
   }
 });
 
-// 3. CREATE LINK OR NOTE RESOURCE (Without file upload)
+// 3. CREATE LINK OR NOTE RESOURCE (Strictly private)
 router.post('/link', requireAuth, (req: AuthRequest, res): void => {
   try {
-    const { title, description, url, group_id, room_id, is_public, file_type } = req.body;
+    const { title, description, url, group_id, room_id, file_type } = req.body;
     const currentUserId = req.user!.id;
 
     if (!title || !url) {
@@ -167,7 +165,7 @@ router.post('/link', requireAuth, (req: AuthRequest, res): void => {
       INSERT INTO resources (
         id, user_id, group_id, room_id, title, description, file_type, file_url,
         file_size, mime_type, original_name, is_public, created_at
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, 0, 'text/plain', ?, ?, ?)
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, 0, 'text/plain', ?, 0, ?)
     `).run(
       resourceId,
       currentUserId,
@@ -178,7 +176,6 @@ router.post('/link', requireAuth, (req: AuthRequest, res): void => {
       file_type || 'link',
       url.trim(),
       title.trim(),
-      is_public ? 1 : 0,
       now
     );
 
@@ -190,10 +187,12 @@ router.post('/link', requireAuth, (req: AuthRequest, res): void => {
   }
 });
 
-// 4. DOWNLOAD / SERVE FILE SAFELY (Preventing Path Traversal)
+// 4. DOWNLOAD / SERVE FILE SAFELY (Preventing Path Traversal & Enforcing Private Authorization)
 router.get('/download/:filename', requireAuth, (req: AuthRequest, res): void => {
   try {
     const filename = String(req.params.filename);
+    const currentUserId = req.user!.id;
+
     // Sanitize filename to prevent directory traversal
     const safeFilename = path.basename(filename);
     const filePath = path.join(config.uploadsDir, safeFilename);
@@ -203,7 +202,27 @@ router.get('/download/:filename', requireAuth, (req: AuthRequest, res): void => 
       return;
     }
 
-    const resource = db.prepare(`SELECT original_name, mime_type FROM resources WHERE file_url LIKE ?`).get(`%${safeFilename}%`) as any;
+    const resource = db.prepare(`SELECT * FROM resources WHERE file_url LIKE ?`).get(`%${safeFilename}%`) as any;
+
+    if (resource) {
+      const isAuthor = resource.user_id === currentUserId;
+      let hasGroupAccess = false;
+      if (resource.group_id) {
+        const gm = db.prepare('SELECT id FROM group_members WHERE group_id = ? AND user_id = ? AND status = "active"').get(resource.group_id, currentUserId);
+        hasGroupAccess = !!gm;
+      }
+      let hasRoomAccess = false;
+      if (resource.room_id) {
+        const rp = db.prepare('SELECT id FROM room_participants WHERE room_id = ? AND user_id = ?').get(resource.room_id, currentUserId);
+        const host = db.prepare('SELECT id FROM study_rooms WHERE id = ? AND host_id = ?').get(resource.room_id, currentUserId);
+        hasRoomAccess = !!rp || !!host;
+      }
+
+      if (!isAuthor && !hasGroupAccess && !hasRoomAccess) {
+        res.status(403).json({ error: 'You do not have permission to access this private resource.' });
+        return;
+      }
+    }
 
     const downloadName = resource ? resource.original_name : safeFilename;
     const mime = resource ? resource.mime_type : 'application/octet-stream';

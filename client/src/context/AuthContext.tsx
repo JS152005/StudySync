@@ -3,6 +3,7 @@ import { apiRequest, getAuthToken, setAuthToken, removeAuthToken } from '../api/
 
 export interface User {
   id: string;
+  student_id: string;
   email: string;
   username: string;
   full_name: string;
@@ -15,11 +16,17 @@ export interface User {
   availability?: string;
 }
 
+interface RegisterResult {
+  message: string;
+  unverified: boolean;
+  email: string;
+}
+
 interface AuthContextType {
   user: User | null;
   loading: boolean;
   login: (identifier: string, pass: string) => Promise<void>;
-  register: (formData: any) => Promise<void>;
+  register: (formData: any) => Promise<RegisterResult>;
   logout: () => Promise<void>;
   refreshUser: () => Promise<void>;
 }
@@ -61,13 +68,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setUser(data.user);
   };
 
-  const register = async (formData: any) => {
-    const data = await apiRequest<{ token: string; user: User }>('/auth/register', {
+  const register = async (formData: any): Promise<RegisterResult> => {
+    const data = await apiRequest<RegisterResult>('/auth/register', {
       method: 'POST',
       body: JSON.stringify(formData),
     });
-    setAuthToken(data.token);
-    setUser(data.user);
+    return data;
   };
 
   const logout = async () => {

@@ -107,6 +107,10 @@ export function setupSocketHandlers(io: Server) {
       socket.to(`room:${roomId}`).emit('whiteboard_draw', action);
     });
 
+    socket.on('whiteboard_stroke', ({ roomId, stroke }) => {
+      socket.to(`room:${roomId}`).emit('whiteboard_stroke', stroke);
+    });
+
     socket.on('whiteboard_clear', ({ roomId }) => {
       socket.to(`room:${roomId}`).emit('whiteboard_clear');
     });

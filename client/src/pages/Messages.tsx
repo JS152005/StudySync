@@ -119,11 +119,10 @@ export const Messages: React.FC = () => {
       style={{
         display: 'flex',
         height: 'calc(100vh - 140px)',
-        border: `1.5px solid ${THEME.deepForestCharcoal}`,
+        border: '1px solid #E2E8F0',
         borderRadius: THEME.radius.card,
         overflow: 'hidden',
-        backgroundColor: THEME.warmIvory,
-        boxShadow: THEME.shadow.card,
+        backgroundColor: '#FFFFFF',
       }}
     >
       {/* Conversations Sidebar */}
@@ -131,15 +130,15 @@ export const Messages: React.FC = () => {
         className={`chat-sidebar ${mobileConversationOpen ? 'chat-sidebar-hidden-mobile' : ''}`}
         style={{
           width: '320px',
-          borderRight: `1.5px solid ${THEME.deepForestCharcoal}`,
-          backgroundColor: THEME.warmIvory,
+          borderRight: '1px solid #E2E8F0',
+          backgroundColor: '#FFFFFF',
           display: 'flex',
           flexDirection: 'column',
           flexShrink: 0,
         }}
       >
-        <div style={{ padding: '16px 20px', borderBottom: `1.5px solid ${THEME.deepForestCharcoal}` }}>
-          <h2 style={{ fontSize: '16px', fontWeight: 800, color: THEME.deepForestCharcoal }}>
+        <div style={{ padding: '16px 20px', borderBottom: '1px solid #E2E8F0' }}>
+          <h2 style={{ fontSize: '16px', fontWeight: 800, color: '#0F172A' }}>
             Messages & Channels
           </h2>
         </div>
@@ -152,7 +151,7 @@ export const Messages: React.FC = () => {
               fontWeight: 800,
               textTransform: 'uppercase',
               letterSpacing: '0.05em',
-              color: THEME.warmStone,
+              color: '#94A3B8',
               padding: '6px 8px',
             }}
           >
@@ -171,20 +170,20 @@ export const Messages: React.FC = () => {
                   padding: '10px 12px',
                   borderRadius: THEME.radius.md,
                   cursor: 'pointer',
-                  backgroundColor: active ? THEME.emeraldGreen : THEME.warmIvory,
-                  color: active ? THEME.warmIvory : THEME.deepForestCharcoal,
-                  border: `1.5px solid ${active ? THEME.emeraldGreen : 'transparent'}`,
+                  backgroundColor: active ? '#0EA5E9' : 'transparent',
+                  color: active ? '#FFFFFF' : '#F8FAFC',
+                  border: `1px solid ${active ? '#0EA5E9' : 'transparent'}`,
                   transition: `background-color ${THEME.motion.durationFast} ${THEME.motion.easeOut}`,
                 }}
                 className="chat-list-item"
               >
                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                  <Users size={16} color={active ? THEME.warmIvory : THEME.deepForestCharcoal} />
+                  <Users size={16} color={active ? '#FFFFFF' : '#94A3B8'} />
                   <span
                     style={{
                       fontSize: '13.5px',
                       fontWeight: 800,
-                      color: active ? THEME.warmIvory : THEME.deepForestCharcoal,
+                      color: active ? '#FFFFFF' : '#F8FAFC',
                     }}
                   >
                     {g.name}
@@ -195,7 +194,7 @@ export const Messages: React.FC = () => {
                     style={{
                       fontSize: '11.5px',
                       marginTop: '4px',
-                      color: active ? THEME.warmIvory : THEME.warmStone,
+                      color: active ? 'rgba(255, 255, 255, 0.8)' : '#94A3B8',
                       overflow: 'hidden',
                       textOverflow: 'ellipsis',
                       whiteSpace: 'nowrap',
@@ -215,7 +214,7 @@ export const Messages: React.FC = () => {
               fontWeight: 800,
               textTransform: 'uppercase',
               letterSpacing: '0.05em',
-              color: THEME.warmStone,
+              color: '#94A3B8',
               padding: '12px 8px 6px',
             }}
           >
@@ -234,21 +233,21 @@ export const Messages: React.FC = () => {
                   padding: '10px 12px',
                   borderRadius: THEME.radius.md,
                   cursor: 'pointer',
-                  backgroundColor: active ? THEME.emeraldGreen : THEME.warmIvory,
-                  color: active ? THEME.warmIvory : THEME.deepForestCharcoal,
-                  border: `1.5px solid ${active ? THEME.emeraldGreen : 'transparent'}`,
+                  backgroundColor: active ? '#0EA5E9' : 'transparent',
+                  color: active ? '#FFFFFF' : '#F8FAFC',
+                  border: `1px solid ${active ? '#0EA5E9' : 'transparent'}`,
                   transition: `background-color ${THEME.motion.durationFast} ${THEME.motion.easeOut}`,
                 }}
                 className="chat-list-item"
               >
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                    <User size={16} color={active ? THEME.warmIvory : THEME.deepForestCharcoal} />
+                    <User size={16} color={active ? '#FFFFFF' : '#94A3B8'} />
                     <span
                       style={{
                         fontSize: '13.5px',
                         fontWeight: 800,
-                        color: active ? THEME.warmIvory : THEME.deepForestCharcoal,
+                        color: active ? '#FFFFFF' : '#F8FAFC',
                       }}
                     >
                       {d.full_name}
@@ -261,7 +260,7 @@ export const Messages: React.FC = () => {
                     style={{
                       fontSize: '11.5px',
                       marginTop: '4px',
-                      color: active ? THEME.warmIvory : THEME.warmStone,
+                      color: active ? 'rgba(255, 255, 255, 0.8)' : '#94A3B8',
                       overflow: 'hidden',
                       textOverflow: 'ellipsis',
                       whiteSpace: 'nowrap',
@@ -275,7 +274,7 @@ export const Messages: React.FC = () => {
           })}
 
           {directChats.length === 0 && groupChats.length === 0 && (
-            <div style={{ fontSize: '12px', textAlign: 'center', padding: '24px 12px', color: THEME.warmStone }}>
+            <div style={{ fontSize: '12px', textAlign: 'center', padding: '24px 12px', color: '#94A3B8' }}>
               No conversations yet. Join a study group or connect with a classmate!
             </div>
           )}
@@ -285,7 +284,7 @@ export const Messages: React.FC = () => {
       {/* Main Chat Area */}
       <div
         className={`chat-content-area ${!mobileConversationOpen ? 'chat-content-hidden-mobile' : ''}`}
-        style={{ flex: 1, display: 'flex', flexDirection: 'column', backgroundColor: THEME.warmIvory }}
+        style={{ flex: 1, display: 'flex', flexDirection: 'column', backgroundColor: '#F8FAFC' }}
       >
         {activeChat ? (
           <>
@@ -293,11 +292,11 @@ export const Messages: React.FC = () => {
             <div
               style={{
                 padding: '12px 20px',
-                borderBottom: `1.5px solid ${THEME.deepForestCharcoal}`,
+                borderBottom: '1px solid #E2E8F0',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'space-between',
-                backgroundColor: THEME.warmIvory,
+                backgroundColor: '#FFFFFF',
               }}
             >
               <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
@@ -309,14 +308,14 @@ export const Messages: React.FC = () => {
                   style={{ padding: '6px' }}
                   aria-label="Back to conversations"
                 >
-                  <ArrowLeft size={18} color={THEME.deepForestCharcoal} />
+                  <ArrowLeft size={18} color="#0F172A" />
                 </button>
 
                 <div>
-                  <h3 style={{ fontSize: '15px', fontWeight: 800, color: THEME.deepForestCharcoal }}>
+                  <h3 style={{ fontSize: '15px', fontWeight: 800, color: '#0F172A' }}>
                     {activeChat.name}
                   </h3>
-                  <span style={{ fontSize: '11.5px', color: THEME.warmStone }}>
+                  <span style={{ fontSize: '11.5px', color: '#64748B' }}>
                     {activeChat.type === 'direct' ? 'Direct Student Conversation' : 'Study Group Channel'}
                   </span>
                 </div>
@@ -332,6 +331,7 @@ export const Messages: React.FC = () => {
                 display: 'flex',
                 flexDirection: 'column',
                 gap: '12px',
+                backgroundColor: '#F8FAFC',
               }}
             >
               {messages.length === 0 ? (
@@ -356,7 +356,7 @@ export const Messages: React.FC = () => {
                       }}
                     >
                       {!isMine && (
-                        <span style={{ fontSize: '11px', fontWeight: 700, marginBottom: '2px', color: THEME.warmStone }}>
+                        <span style={{ fontSize: '11px', fontWeight: 700, marginBottom: '2px', color: '#64748B' }}>
                           {m.sender_name}
                         </span>
                       )}
@@ -364,20 +364,20 @@ export const Messages: React.FC = () => {
                         style={{
                           padding: '9px 14px',
                           borderRadius: THEME.radius.md,
-                          backgroundColor: isMine ? THEME.emeraldGreen : THEME.warmIvory,
-                          color: isMine ? THEME.warmIvory : THEME.deepForestCharcoal,
-                          border: `1.5px solid ${isMine ? THEME.emeraldGreen : THEME.deepForestCharcoal}`,
+                          backgroundColor: isMine ? '#0284C7' : '#FFFFFF',
+                          color: isMine ? '#FFFFFF' : '#0F172A',
+                          border: `1px solid ${isMine ? 'rgba(2, 132, 199, 0.4)' : '#E2E8F0'}`,
+                          boxShadow: '0 1px 2px rgba(0, 0, 0, 0.04)',
                           fontSize: '13.5px',
                           fontWeight: 500,
                           wordBreak: 'break-word',
-                          boxShadow: THEME.shadow.subtle,
                         }}
                       >
-                        <span style={{ color: isMine ? THEME.warmIvory : THEME.deepForestCharcoal }}>
+                        <span style={{ color: isMine ? '#FFFFFF' : '#0F172A' }}>
                           {m.content}
                         </span>
                       </div>
-                      <span style={{ fontSize: '10.5px', marginTop: '2px', color: THEME.warmStone, fontWeight: 500 }}>
+                      <span style={{ fontSize: '10.5px', marginTop: '2px', color: '#94A3B8', fontWeight: 500 }}>
                         {new Date(m.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                       </span>
                     </div>
@@ -392,10 +392,10 @@ export const Messages: React.FC = () => {
               onSubmit={handleSend}
               style={{
                 padding: '14px 20px',
-                borderTop: `1.5px solid ${THEME.deepForestCharcoal}`,
+                borderTop: '1px solid #E2E8F0',
                 display: 'flex',
                 gap: '10px',
-                backgroundColor: THEME.warmIvory,
+                backgroundColor: '#FFFFFF',
               }}
             >
               <input
@@ -411,7 +411,7 @@ export const Messages: React.FC = () => {
                 shape="pill"
                 disabled={!text.trim()}
                 loading={sending}
-                leftIcon={<Send size={15} color={THEME.warmIvory} />}
+                leftIcon={<Send size={15} color="#FFFFFF" />}
               >
                 Send
               </Button>

@@ -5,7 +5,7 @@ import { THEME } from '../theme';
 import { Button } from '../components/ui/Button';
 import { SegmentedControl, SegmentOption } from '../components/ui/SegmentedControl';
 import { useToast } from '../components/ui/ToastContext';
-import { Save, GraduationCap, BookOpen, Check, User, Sparkles } from 'lucide-react';
+import { Save, GraduationCap, BookOpen, Check, User, Sparkles, Copy } from 'lucide-react';
 
 export const Profile: React.FC = () => {
   const { user, refreshUser } = useAuth();
@@ -113,10 +113,9 @@ export const Profile: React.FC = () => {
           display: 'flex',
           flexDirection: 'column',
           gap: '18px',
-          border: `1.5px solid ${THEME.deepForestCharcoal}`,
-          backgroundColor: THEME.warmIvory,
+          border: '1px solid #E2E8F0',
+          backgroundColor: '#FFFFFF',
           borderRadius: THEME.radius.card,
-          boxShadow: THEME.shadow.card,
         }}
       >
         <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
@@ -125,27 +124,68 @@ export const Profile: React.FC = () => {
               width: '64px',
               height: '64px',
               borderRadius: THEME.radius.full,
-              backgroundColor: THEME.emeraldGreen,
+              backgroundColor: 'rgba(2, 132, 199, 0.1)',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
               fontSize: '22px',
-              color: THEME.warmIvory,
+              color: '#0284C7',
               fontWeight: 800,
-              border: `2px solid ${THEME.deepForestCharcoal}`,
+              border: '1.5px solid rgba(2, 132, 199, 0.3)',
               flexShrink: 0,
-              boxShadow: THEME.shadow.subtle,
             }}
           >
             {user?.full_name ? user.full_name[0].toUpperCase() : 'S'}
           </div>
 
           <div>
-            <div style={{ fontSize: '18px', fontWeight: 800, color: THEME.deepForestCharcoal }}>
+            <div style={{ fontSize: '18px', fontWeight: 800, color: '#0F172A' }}>
               {user?.full_name}
             </div>
-            <div style={{ fontSize: '13px', color: THEME.warmStone }}>@{user?.username} (Student ID)</div>
-            <div style={{ fontSize: '12px', color: THEME.warmStone }}>{user?.email}</div>
+            <div style={{ fontSize: '13px', color: '#64748B' }}>@{user?.username}</div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginTop: '4px' }}>
+              <span style={{ fontSize: '11px', fontWeight: 700, color: '#64748B' }}>PUBLIC STUDENT ID:</span>
+              <span
+                style={{
+                  fontFamily: 'monospace',
+                  fontWeight: 800,
+                  fontSize: '12px',
+                  color: '#0284C7',
+                  backgroundColor: '#F1F5F9',
+                  border: '1px solid #E2E8F0',
+                  padding: '2px 8px',
+                  borderRadius: THEME.radius.sharp,
+                }}
+              >
+                {user?.student_id}
+              </span>
+              <button
+                type="button"
+                onClick={() => {
+                  if (user?.student_id) {
+                    navigator.clipboard.writeText(user.student_id);
+                    toast.success(`Student ID ${user.student_id} copied to clipboard!`);
+                  }
+                }}
+                style={{
+                  fontSize: '11px',
+                  fontWeight: 700,
+                  padding: '2px 8px',
+                  borderRadius: THEME.radius.pill,
+                  border: '1px solid #CBD5E1',
+                  backgroundColor: '#F1F5F9',
+                  color: '#0F172A',
+                  cursor: 'pointer',
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '4px',
+                }}
+              >
+                <Copy size={11} color="#64748B" />
+                <span>Copy</span>
+              </button>
+            </div>
+            <div style={{ fontSize: '12px', color: '#94A3B8', marginTop: '2px' }}>{user?.email}</div>
           </div>
         </div>
 
@@ -273,13 +313,13 @@ export const Profile: React.FC = () => {
           />
         </div>
 
-        <div style={{ display: 'flex', justifyContent: 'flex-end', paddingTop: '10px', borderTop: `1px solid ${THEME.warmStone}` }}>
+        <div style={{ display: 'flex', justifyContent: 'flex-end', paddingTop: '10px', borderTop: '1px solid rgba(255, 255, 255, 0.08)' }}>
           <Button
             type="submit"
             variant="primary"
             shape="pill"
             loading={saving}
-            leftIcon={<Save size={15} color={THEME.warmIvory} />}
+            leftIcon={<Save size={15} color="#FFFFFF" />}
           >
             Save Profile
           </Button>
@@ -293,24 +333,24 @@ export const Profile: React.FC = () => {
           display: 'flex',
           flexDirection: 'column',
           gap: '14px',
-          backgroundColor: THEME.warmIvory,
-          border: `1.5px solid ${THEME.warmStone}`,
+          backgroundColor: '#FFFFFF',
+          border: '1px solid #E2E8F0',
           borderRadius: THEME.radius.card,
         }}
       >
-        <h2 style={{ fontSize: '16px', fontWeight: 800, color: THEME.deepForestCharcoal }}>
+        <h2 style={{ fontSize: '16px', fontWeight: 800, color: '#0F172A' }}>
           Academic Specialties (Teach & Learn)
         </h2>
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))', gap: '14px' }}>
           <div>
             <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '8px' }}>
-              <GraduationCap size={16} color={THEME.emeraldGreen} />
-              <span style={{ fontSize: '13px', fontWeight: 700, color: THEME.deepForestCharcoal }}>
+              <GraduationCap size={16} color="#0284C7" />
+              <span style={{ fontSize: '13px', fontWeight: 700, color: '#0F172A' }}>
                 Topics You Can Teach ({teachTopics.length})
               </span>
             </div>
             {teachTopics.length === 0 ? (
-              <div style={{ fontSize: '12px', color: THEME.warmStone }}>No teaching topics added yet.</div>
+              <div style={{ fontSize: '12px', color: '#94A3B8' }}>No teaching topics added yet.</div>
             ) : (
               <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
                 {teachTopics.map((t) => (
@@ -324,13 +364,13 @@ export const Profile: React.FC = () => {
 
           <div>
             <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '8px' }}>
-              <BookOpen size={16} color={THEME.emeraldGreen} />
-              <span style={{ fontSize: '13px', fontWeight: 700, color: THEME.deepForestCharcoal }}>
+              <BookOpen size={16} color="#0EA5E9" />
+              <span style={{ fontSize: '13px', fontWeight: 700, color: '#F8FAFC' }}>
                 Topics You Need Help With ({learnTopics.length})
               </span>
             </div>
             {learnTopics.length === 0 ? (
-              <div style={{ fontSize: '12px', color: THEME.warmStone }}>No learning topics added yet.</div>
+              <div style={{ fontSize: '12px', color: '#94A3B8' }}>No learning topics added yet.</div>
             ) : (
               <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
                 {learnTopics.map((t) => (

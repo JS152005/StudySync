@@ -6,7 +6,7 @@ import { SegmentedControl, SegmentOption } from '../components/ui/SegmentedContr
 import { Skeleton } from '../components/ui/Skeleton';
 import { EmptyState } from '../components/ui/EmptyState';
 import { useToast } from '../components/ui/ToastContext';
-import { Search, UserPlus, Check, X, Users, UserCheck } from 'lucide-react';
+import { Search, UserPlus, Check, X, Users, UserCheck, Copy } from 'lucide-react';
 
 export const Friends: React.FC = () => {
   const toast = useToast();
@@ -152,8 +152,9 @@ export const Friends: React.FC = () => {
                         alignItems: 'center',
                         justifyContent: 'space-between',
                         padding: '14px',
-                        border: `1.5px solid ${THEME.deepForestCharcoal}`,
+                        border: '1px solid #E2E8F0',
                         borderRadius: THEME.radius.card,
+                        backgroundColor: '#FFFFFF',
                       }}
                     >
                       <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
@@ -162,26 +163,56 @@ export const Friends: React.FC = () => {
                             width: '40px',
                             height: '40px',
                             borderRadius: THEME.radius.full,
-                            backgroundColor: THEME.emeraldGreen,
-                            color: THEME.warmIvory,
+                            backgroundColor: 'rgba(2, 132, 199, 0.1)',
+                            color: '#0284C7',
                             display: 'flex',
                             alignItems: 'center',
                             justifyContent: 'center',
                             fontWeight: 800,
                             fontSize: '14px',
-                            border: `1.5px solid ${THEME.deepForestCharcoal}`,
+                            border: '1px solid rgba(2, 132, 199, 0.3)',
                             flexShrink: 0,
                           }}
                         >
                           {friend.full_name ? friend.full_name[0].toUpperCase() : 'S'}
                         </div>
                         <div>
-                          <div style={{ fontSize: '14px', fontWeight: 800, color: THEME.deepForestCharcoal }}>
+                          <div style={{ fontSize: '14px', fontWeight: 800, color: '#0F172A' }}>
                             {friend.full_name}
                           </div>
-                          <div style={{ fontSize: '12px', color: THEME.warmStone }}>
+                          <div style={{ fontSize: '12px', color: '#64748B' }}>
                             @{friend.username} • {friend.course || 'Student'}
                           </div>
+                          {friend.student_id && (
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginTop: '2px' }}>
+                              <span
+                                style={{
+                                  fontSize: '11px',
+                                  fontFamily: 'monospace',
+                                  fontWeight: 700,
+                                  color: '#0284C7',
+                                  backgroundColor: '#F1F5F9',
+                                  border: '1px solid #E2E8F0',
+                                  padding: '1px 6px',
+                                  borderRadius: THEME.radius.sharp,
+                                }}
+                              >
+                                {friend.student_id}
+                              </span>
+                              <button
+                                type="button"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  navigator.clipboard.writeText(friend.student_id);
+                                  toast.success(`Copied ${friend.student_id}`);
+                                }}
+                                style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}
+                                title="Copy Student ID"
+                              >
+                                <Copy size={11} color="#94A3B8" />
+                              </button>
+                            </div>
+                          )}
                         </div>
                       </div>
 
@@ -207,20 +238,20 @@ export const Friends: React.FC = () => {
               <div
                 className="card"
                 style={{
-                  border: `1.5px solid ${THEME.deepForestCharcoal}`,
-                  backgroundColor: THEME.warmIvory,
+                  border: '1px solid #E2E8F0',
+                  backgroundColor: '#FFFFFF',
                   borderRadius: THEME.radius.card,
                 }}
               >
                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '14px' }}>
-                  <UserCheck size={18} color={THEME.emeraldGreen} />
-                  <h2 style={{ fontSize: '16px', fontWeight: 800, color: THEME.deepForestCharcoal }}>
+                  <UserCheck size={18} color="#0284C7" />
+                  <h2 style={{ fontSize: '16px', fontWeight: 800, color: '#0F172A' }}>
                     Incoming Requests ({incoming.length})
                   </h2>
                 </div>
 
                 {incoming.length === 0 ? (
-                  <div style={{ fontSize: '13px', color: THEME.warmStone, fontStyle: 'italic' }}>
+                  <div style={{ fontSize: '13px', color: '#64748B', fontStyle: 'italic' }}>
                     No pending incoming requests.
                   </div>
                 ) : (
@@ -233,18 +264,18 @@ export const Friends: React.FC = () => {
                           alignItems: 'center',
                           justifyContent: 'space-between',
                           padding: '12px 16px',
-                          backgroundColor: THEME.warmIvory,
+                          backgroundColor: '#F8FAFC',
                           borderRadius: THEME.radius.md,
-                          border: `1.5px solid ${THEME.deepForestCharcoal}`,
+                          border: '1px solid #E2E8F0',
                           flexWrap: 'wrap',
                           gap: '10px',
                         }}
                       >
                         <div>
-                          <div style={{ fontSize: '14.5px', fontWeight: 800, color: THEME.deepForestCharcoal }}>
+                          <div style={{ fontSize: '14.5px', fontWeight: 800, color: '#0F172A' }}>
                             {req.full_name}
                           </div>
-                          <div style={{ fontSize: '12px', color: THEME.warmStone }}>
+                          <div style={{ fontSize: '12px', color: '#64748B' }}>
                             @{req.username} • {req.course || 'Student'}
                           </div>
                         </div>
@@ -255,7 +286,7 @@ export const Friends: React.FC = () => {
                             size="sm"
                             shape="pill"
                             onClick={() => handleRespond(req.id, 'accept')}
-                            leftIcon={<Check size={13} color={THEME.warmIvory} />}
+                            leftIcon={<Check size={13} color="#FFFFFF" />}
                           >
                             Accept
                           </Button>
@@ -264,7 +295,7 @@ export const Friends: React.FC = () => {
                             size="sm"
                             shape="pill"
                             onClick={() => handleRespond(req.id, 'decline')}
-                            leftIcon={<X size={13} color={THEME.deepForestCharcoal} />}
+                            leftIcon={<X size={13} color="#0F172A" />}
                           >
                             Decline
                           </Button>
@@ -280,12 +311,12 @@ export const Friends: React.FC = () => {
                 <div
                   className="card-secondary"
                   style={{
-                    border: `1.5px solid ${THEME.warmStone}`,
-                    backgroundColor: THEME.warmIvory,
+                    border: '1px solid #E2E8F0',
+                    backgroundColor: '#FFFFFF',
                     borderRadius: THEME.radius.card,
                   }}
                 >
-                  <h2 style={{ fontSize: '15px', fontWeight: 800, marginBottom: '12px', color: THEME.deepForestCharcoal }}>
+                  <h2 style={{ fontSize: '15px', fontWeight: 800, marginBottom: '12px', color: '#0F172A' }}>
                     Pending Sent Invitations ({outgoing.length})
                   </h2>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
@@ -297,16 +328,16 @@ export const Friends: React.FC = () => {
                           alignItems: 'center',
                           justifyContent: 'space-between',
                           padding: '10px 14px',
-                          backgroundColor: THEME.warmIvory,
+                          backgroundColor: '#F8FAFC',
                           borderRadius: THEME.radius.md,
-                          border: `1px solid ${THEME.warmStone}`,
+                          border: '1px solid #E2E8F0',
                         }}
                       >
                         <div>
-                          <div style={{ fontSize: '13.5px', fontWeight: 800, color: THEME.deepForestCharcoal }}>
+                          <div style={{ fontSize: '13.5px', fontWeight: 800, color: '#0F172A' }}>
                             {req.full_name}
                           </div>
-                          <div style={{ fontSize: '11px', color: THEME.warmStone }}>@{req.username}</div>
+                          <div style={{ fontSize: '11px', color: '#64748B' }}>@{req.username}</div>
                         </div>
                         <span className="badge-stone">Pending</span>
                       </div>
@@ -323,7 +354,7 @@ export const Friends: React.FC = () => {
               <form onSubmit={handleSearch} style={{ display: 'flex', gap: '10px' }}>
                 <input
                   type="text"
-                  placeholder="Search by full name, username, course, or college..."
+                  placeholder="Search by Student ID (e.g. STU-...), name, username, course..."
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                   style={{ flex: 1 }}
@@ -333,7 +364,7 @@ export const Friends: React.FC = () => {
                   variant="primary"
                   shape="pill"
                   loading={searching}
-                  leftIcon={<Search size={15} color={THEME.warmIvory} />}
+                  leftIcon={<Search size={15} color="#FFFFFF" />}
                 >
                   Search
                 </Button>
@@ -350,18 +381,49 @@ export const Friends: React.FC = () => {
                         alignItems: 'center',
                         justifyContent: 'space-between',
                         padding: '14px',
-                        border: `1.5px solid ${THEME.deepForestCharcoal}`,
+                        border: '1px solid #E2E8F0',
                         borderRadius: THEME.radius.card,
+                        backgroundColor: '#FFFFFF',
                       }}
                     >
                       <div>
-                        <div style={{ fontSize: '14px', fontWeight: 800, color: THEME.deepForestCharcoal }}>
+                        <div style={{ fontSize: '14px', fontWeight: 800, color: '#0F172A' }}>
                           {st.full_name}
                         </div>
-                        <div style={{ fontSize: '12px', color: THEME.warmStone }}>
+                        <div style={{ fontSize: '12px', color: '#64748B' }}>
                           @{st.username} • {st.course || 'Student'}
                         </div>
-                        {st.college && <div style={{ fontSize: '11px', color: THEME.warmStone }}>{st.college}</div>}
+                        {st.student_id && (
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginTop: '2px' }}>
+                            <span
+                              style={{
+                                fontSize: '11px',
+                                fontFamily: 'monospace',
+                                fontWeight: 700,
+                                color: '#0284C7',
+                                backgroundColor: '#F1F5F9',
+                                border: '1px solid #E2E8F0',
+                                padding: '1px 6px',
+                                borderRadius: THEME.radius.sharp,
+                              }}
+                            >
+                              {st.student_id}
+                            </span>
+                            <button
+                              type="button"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                navigator.clipboard.writeText(st.student_id);
+                                toast.success(`Copied ${st.student_id}`);
+                              }}
+                              style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}
+                              title="Copy Student ID"
+                            >
+                              <Copy size={11} color="#94A3B8" />
+                            </button>
+                          </div>
+                        )}
+                        {st.college && <div style={{ fontSize: '11px', color: '#94A3B8', marginTop: '2px' }}>{st.college}</div>}
                       </div>
 
                       <Button
@@ -369,7 +431,7 @@ export const Friends: React.FC = () => {
                         size="sm"
                         shape="pill"
                         onClick={() => handleSendRequest(st.id)}
-                        leftIcon={<UserPlus size={13} color={THEME.warmIvory} />}
+                        leftIcon={<UserPlus size={13} color="#FFFFFF" />}
                       >
                         Connect
                       </Button>

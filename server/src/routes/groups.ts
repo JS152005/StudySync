@@ -6,7 +6,7 @@ import { sendEmail, createGroupInvitationEmail } from '../services/mailer.js';
 
 const router = Router();
 
-// 1. LIST USER GROUPS & PUBLIC GROUPS
+// 1. LIST USER GROUPS (Private only - no public discovery)
 router.get('/', requireAuth, (req: AuthRequest, res): void => {
   try {
     const currentUserId = req.user!.id;
@@ -20,26 +20,18 @@ router.get('/', requireAuth, (req: AuthRequest, res): void => {
       ORDER BY g.updated_at DESC
     `).all(currentUserId);
 
-    const publicGroups = db.prepare(`
-      SELECT g.*,
-             (SELECT COUNT(*) FROM group_members WHERE group_id = g.id AND status = 'active') as member_count
-      FROM study_groups g
-      WHERE g.is_private = 0
-        AND g.id NOT IN (SELECT group_id FROM group_members WHERE user_id = ?)
-      ORDER BY g.created_at DESC LIMIT 20
-    `).all(currentUserId);
-
-    res.json({ myGroups, publicGroups });
+    // Platform is strictly private; public groups exploration is eliminated
+    res.json({ myGroups, publicGroups: [] });
   } catch (err: any) {
     console.error('[GROUPS LIST ERROR]', err);
     res.status(500).json({ error: 'Failed to fetch groups.' });
   }
 });
 
-// 2. CREATE STUDY GROUP
+// 2. CREATE STUDY GROUP (Always private with unique invite code)
 router.post('/', requireAuth, (req: AuthRequest, res): void => {
   try {
-    const { name, description, subject, course, is_private } = req.body;
+    const { name, description, subject, course } = req.body;
     const currentUserId = req.user!.id;
 
     if (!name || name.trim().length === 0) {
@@ -54,14 +46,13 @@ router.post('/', requireAuth, (req: AuthRequest, res): void => {
     const createTx = db.transaction(() => {
       db.prepare(`
         INSERT INTO study_groups (id, name, description, subject, course, is_private, invite_code, created_by, created_at, updated_at)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        VALUES (?, ?, ?, ?, ?, 1, ?, ?, ?, ?)
       `).run(
         groupId,
         name.trim(),
         description?.trim() || '',
         subject?.trim() || '',
         course?.trim() || '',
-        is_private ? 1 : 0,
         inviteCode,
         currentUserId,
         now,
@@ -114,7 +105,7 @@ router.get('/:id', requireAuth, (req: AuthRequest, res): void => {
       SELECT role, status FROM group_members WHERE group_id = ? AND user_id = ?
     `).get(id, currentUserId) as any;
 
-    if (group.is_private && (!membership || membership.status !== 'active')) {
+    if (!membership || membership.status !== 'active') {
       res.status(403).json({ error: 'This is a private study group. You must be an approved member to view details.' });
       return;
     }
@@ -156,21 +147,21 @@ router.get('/:id', requireAuth, (req: AuthRequest, res): void => {
   }
 });
 
-// 4. JOIN GROUP (by ID or invite code)
+// 4. JOIN PRIVATE GROUP (Strictly by invite code)
 router.post('/join', requireAuth, (req: AuthRequest, res): void => {
   try {
-    const { group_id, invite_code } = req.body;
+    const { invite_code } = req.body;
     const currentUserId = req.user!.id;
 
-    let group: any;
-    if (invite_code) {
-      group = db.prepare(`SELECT * FROM study_groups WHERE invite_code = ?`).get(invite_code.trim().toUpperCase());
-    } else if (group_id) {
-      group = db.prepare(`SELECT * FROM study_groups WHERE id = ?`).get(group_id);
+    if (!invite_code || !invite_code.trim()) {
+      res.status(400).json({ error: 'Private group invite code is required.' });
+      return;
     }
 
+    const group = db.prepare(`SELECT * FROM study_groups WHERE UPPER(invite_code) = ?`).get(invite_code.trim().toUpperCase()) as any;
+
     if (!group) {
-      res.status(404).json({ error: 'Study group not found with provided code or ID.' });
+      res.status(404).json({ error: 'Study group not found with provided invite code.' });
       return;
     }
 

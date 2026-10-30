@@ -8,13 +8,13 @@ const router = Router();
 // 1. GET PUBLIC PROFILE
 router.get('/profile/:username', requireAuth, (req: AuthRequest, res): void => {
   try {
-    const username = String(req.params.username);
+    const username = String(req.params.username).trim().toLowerCase();
     const currentUserId = req.user!.id;
 
     const profile = db.prepare(`
-      SELECT id, username, full_name, course, college, academic_year, bio, avatar_url, availability, privacy_email, email, created_at
-      FROM users WHERE username = ? AND is_active = 1
-    `).get(username.toLowerCase()) as any;
+      SELECT id, student_id, username, full_name, course, college, academic_year, bio, avatar_url, availability, privacy_email, email, created_at
+      FROM users WHERE (LOWER(username) = ? OR LOWER(student_id) = ?) AND is_active = 1
+    `).get(username, username) as any;
 
     if (!profile) {
       res.status(404).json({ error: 'Student profile not found.' });
@@ -101,7 +101,7 @@ router.put('/profile', requireAuth, (req: AuthRequest, res): void => {
     );
 
     const updated = db.prepare(`
-      SELECT id, email, username, full_name, course, college, academic_year, bio, avatar_url, availability, privacy_email, is_verified
+      SELECT id, student_id, email, username, full_name, course, college, academic_year, bio, avatar_url, availability, privacy_email, is_verified
       FROM users WHERE id = ?
     `).get(user.id);
 
@@ -121,7 +121,7 @@ router.get('/search', requireAuth, (req: AuthRequest, res): void => {
     if (!query) {
       // Return recent or recommended students
       const students = db.prepare(`
-        SELECT id, username, full_name, course, college, academic_year, bio, avatar_url, availability
+        SELECT id, student_id, username, full_name, course, college, academic_year, bio, avatar_url, availability
         FROM users WHERE id != ? AND is_active = 1
         ORDER BY created_at DESC LIMIT 20
       `).all(currentUserId);
@@ -131,12 +131,12 @@ router.get('/search', requireAuth, (req: AuthRequest, res): void => {
 
     const pattern = `%${query}%`;
     const students = db.prepare(`
-      SELECT id, username, full_name, course, college, academic_year, bio, avatar_url, availability
+      SELECT id, student_id, username, full_name, course, college, academic_year, bio, avatar_url, availability
       FROM users
       WHERE id != ? AND is_active = 1
-        AND (LOWER(username) LIKE ? OR LOWER(full_name) LIKE ? OR LOWER(course) LIKE ? OR LOWER(college) LIKE ?)
+        AND (LOWER(username) LIKE ? OR LOWER(full_name) LIKE ? OR LOWER(course) LIKE ? OR LOWER(college) LIKE ? OR LOWER(student_id) LIKE ?)
       ORDER BY username ASC LIMIT 30
-    `).all(currentUserId, pattern, pattern, pattern, pattern);
+    `).all(currentUserId, pattern, pattern, pattern, pattern, pattern);
 
     res.json({ students });
   } catch (err: any) {
@@ -151,7 +151,7 @@ router.get('/friends', requireAuth, (req: AuthRequest, res): void => {
     const currentUserId = req.user!.id;
     const friends = db.prepare(`
       SELECT f.id as friendship_id, f.created_at as connected_at,
-             u.id, u.username, u.full_name, u.course, u.college, u.academic_year, u.avatar_url, u.availability
+             u.id, u.student_id, u.username, u.full_name, u.course, u.college, u.academic_year, u.avatar_url, u.availability
       FROM friendships f
       JOIN users u ON (u.id = CASE WHEN f.user_id = ? THEN f.friend_id ELSE f.user_id END)
       WHERE (f.user_id = ? OR f.friend_id = ?) AND f.status = 'accepted' AND u.is_active = 1
@@ -171,7 +171,7 @@ router.get('/friend-requests', requireAuth, (req: AuthRequest, res): void => {
     const currentUserId = req.user!.id;
 
     const incoming = db.prepare(`
-      SELECT f.id, f.user_id, f.created_at, u.username, u.full_name, u.course, u.college, u.avatar_url
+      SELECT f.id, f.user_id, f.created_at, u.student_id, u.username, u.full_name, u.course, u.college, u.avatar_url
       FROM friendships f
       JOIN users u ON u.id = f.user_id
       WHERE f.friend_id = ? AND f.status = 'pending' AND u.is_active = 1
@@ -179,7 +179,7 @@ router.get('/friend-requests', requireAuth, (req: AuthRequest, res): void => {
     `).all(currentUserId);
 
     const outgoing = db.prepare(`
-      SELECT f.id, f.friend_id, f.created_at, u.username, u.full_name, u.course, u.college, u.avatar_url
+      SELECT f.id, f.friend_id, f.created_at, u.student_id, u.username, u.full_name, u.course, u.college, u.avatar_url
       FROM friendships f
       JOIN users u ON u.id = f.friend_id
       WHERE f.user_id = ? AND f.status = 'pending' AND u.is_active = 1
@@ -196,8 +196,18 @@ router.get('/friend-requests', requireAuth, (req: AuthRequest, res): void => {
 // 6. SEND FRIEND REQUEST
 router.post('/friend-requests', requireAuth, (req: AuthRequest, res): void => {
   try {
-    const { target_user_id } = req.body;
+    let { target_user_id, student_id } = req.body;
     const currentUserId = req.user!.id;
+
+    if (!target_user_id && student_id) {
+      const match = db.prepare('SELECT id FROM users WHERE LOWER(student_id) = ? AND is_active = 1').get(student_id.trim().toLowerCase()) as { id: string } | undefined;
+      if (match) {
+        target_user_id = match.id;
+      } else {
+        res.status(404).json({ error: `No student found with ID ${student_id}.` });
+        return;
+      }
+    }
 
     if (!target_user_id || target_user_id === currentUserId) {
       res.status(400).json({ error: 'Invalid user target for friend request.' });

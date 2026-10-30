@@ -22,6 +22,7 @@ import syllabusRouter from './routes/syllabus.js';
 import focusRouter from './routes/focus.js';
 import examsRouter from './routes/exams.js';
 import resourcesRouter from './routes/resources.js';
+import communityRouter from './routes/community.js';
 
 // 1. Initialize SQLite Database
 initDatabase();
@@ -92,6 +93,7 @@ app.use('/api/syllabus', syllabusRouter);
 app.use('/api/focus', focusRouter);
 app.use('/api/exams', examsRouter);
 app.use('/api/resources', resourcesRouter);
+app.use('/api/community', communityRouter);
 
 // Health check endpoint
 app.get('/api/health', (_req, res) => {

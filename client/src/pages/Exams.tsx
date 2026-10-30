@@ -216,10 +216,9 @@ export const Exams: React.FC = () => {
                     flexDirection: 'column',
                     justifyContent: 'space-between',
                     gap: '14px',
-                    border: `1.5px solid ${isUrgent ? THEME.vermilion : THEME.deepForestCharcoal}`,
-                    backgroundColor: THEME.warmIvory,
+                    border: `1px solid ${isUrgent ? 'rgba(244, 63, 94, 0.6)' : '#E2E8F0'}`,
+                    backgroundColor: '#FFFFFF',
                     borderRadius: THEME.radius.card,
-                    boxShadow: isUrgent ? THEME.shadow.lifted : THEME.shadow.card,
                   }}
                 >
                   <div>
@@ -232,7 +231,7 @@ export const Exams: React.FC = () => {
                         onClick={() => setDeletingExamId(ex.id)}
                         aria-label="Delete exam"
                       >
-                        <Trash2 size={13} color={THEME.warmStone} />
+                        <Trash2 size={13} color="#94A3B8" />
                       </Button>
                     </div>
 
@@ -241,12 +240,12 @@ export const Exams: React.FC = () => {
                         fontSize: '16.5px',
                         fontWeight: 800,
                         marginBottom: '4px',
-                        color: THEME.deepForestCharcoal,
+                        color: '#0F172A',
                       }}
                     >
                       {ex.exam_name}
                     </h3>
-                    <div style={{ fontSize: '12.5px', marginBottom: '10px', color: THEME.warmStone }}>
+                    <div style={{ fontSize: '12.5px', marginBottom: '10px', color: '#64748B' }}>
                       Date: {new Date(ex.exam_date).toLocaleDateString()}
                     </div>
 
@@ -254,21 +253,22 @@ export const Exams: React.FC = () => {
                     <div
                       style={{
                         padding: '10px 14px',
-                        backgroundColor: THEME.warmIvory,
+                        backgroundColor: '#F8FAFC',
                         borderRadius: THEME.radius.md,
-                        border: `1.5px solid ${isUrgent ? THEME.vermilion : THEME.deepForestCharcoal}`,
+                        border: `1px solid ${isUrgent ? 'rgba(244, 63, 94, 0.5)' : '#E2E8F0'}`,
                         display: 'flex',
                         alignItems: 'center',
                         justifyContent: 'space-between',
                       }}
                     >
-                      <span style={{ fontSize: '12px', fontWeight: 700, color: THEME.warmStone }}>Countdown:</span>
+                      <span style={{ fontSize: '12px', fontWeight: 700, color: '#94A3B8' }}>Countdown:</span>
                       <span
                         style={{
                           fontSize: '15px',
                           fontWeight: 800,
-                          color: isUrgent ? THEME.vermilion : THEME.deepForestCharcoal,
-                          fontFamily: 'var(--font-serif)',
+                          color: isUrgent ? '#F43F5E' : '#38BDF8',
+                          fontVariantNumeric: 'tabular-nums',
+                          fontFamily: 'monospace',
                         }}
                       >
                         {daysLeft > 0 ? `${daysLeft} Days Left` : daysLeft === 0 ? 'Today!' : 'Completed'}
@@ -276,7 +276,7 @@ export const Exams: React.FC = () => {
                     </div>
 
                     {ex.notes && (
-                      <div style={{ fontSize: '12px', marginTop: '8px', fontStyle: 'italic', color: THEME.warmStone }}>
+                      <div style={{ fontSize: '12px', marginTop: '8px', fontStyle: 'italic', color: '#94A3B8' }}>
                         {ex.notes}
                       </div>
                     )}
@@ -286,11 +286,12 @@ export const Exams: React.FC = () => {
                     style={{
                       fontSize: '11.5px',
                       fontWeight: 600,
-                      borderTop: `1px solid ${THEME.warmStone}`,
+                      borderTop: '1px solid rgba(255, 255, 255, 0.08)',
                       paddingTop: '8px',
-                      color: THEME.warmStone,
+                      color: '#94A3B8',
                       display: 'flex',
                       justifyContent: 'space-between',
+                      fontVariantNumeric: 'tabular-nums',
                     }}
                   >
                     <span>Tasks Completed</span>
@@ -310,13 +311,13 @@ export const Exams: React.FC = () => {
           display: 'flex',
           flexDirection: 'column',
           gap: '14px',
-          border: `1.5px solid ${THEME.deepForestCharcoal}`,
-          backgroundColor: THEME.warmIvory,
+          border: '1px solid #E2E8F0',
+          backgroundColor: '#FFFFFF',
           borderRadius: THEME.radius.card,
         }}
       >
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '10px' }}>
-          <h2 style={{ fontSize: '16.5px', fontWeight: 800, color: THEME.deepForestCharcoal }}>
+          <h2 style={{ fontSize: '16.5px', fontWeight: 800, color: '#0F172A' }}>
             Revision Tasks Checklist ({tasks.length})
           </h2>
           <Button
@@ -324,7 +325,7 @@ export const Exams: React.FC = () => {
             size="sm"
             shape="pill"
             onClick={() => setShowTaskModal(true)}
-            leftIcon={<Plus size={14} color={THEME.deepForestCharcoal} />}
+            leftIcon={<Plus size={14} color="#0F172A" />}
           >
             Add Study Task
           </Button>
@@ -348,9 +349,9 @@ export const Exams: React.FC = () => {
                     alignItems: 'center',
                     justifyContent: 'space-between',
                     padding: '10px 14px',
-                    backgroundColor: THEME.warmIvory,
+                    backgroundColor: '#F8FAFC',
                     borderRadius: THEME.radius.md,
-                    border: `1px solid ${isDone ? THEME.emeraldGreen : THEME.deepForestCharcoal}`,
+                    border: `1px solid ${isDone ? 'rgba(16, 185, 129, 0.3)' : '#E2E8F0'}`,
                     transition: `border-color ${THEME.motion.durationFast} ${THEME.motion.easeOut}`,
                   }}
                 >
@@ -378,9 +379,9 @@ export const Exams: React.FC = () => {
                       }}
                     >
                       {isDone ? (
-                        <CheckCircle size={20} color={THEME.emeraldGreen} />
+                        <CheckCircle size={20} color="#10B981" />
                       ) : (
-                        <Circle size={20} color={THEME.warmStone} />
+                        <Circle size={20} color="#94A3B8" />
                       )}
                     </button>
                     <div>
@@ -388,16 +389,16 @@ export const Exams: React.FC = () => {
                         style={{
                           fontSize: '13.5px',
                           fontWeight: 700,
-                          color: THEME.deepForestCharcoal,
+                          color: '#F8FAFC',
                           textDecoration: isDone ? 'line-through' : 'none',
-                          opacity: isDone ? 0.75 : 1,
+                          opacity: isDone ? 0.6 : 1,
                         }}
                       >
                         {task.title}
                       </div>
                       {task.due_date && (
-                        <div style={{ fontSize: '11px', color: THEME.warmStone, display: 'flex', alignItems: 'center', gap: '4px', marginTop: '2px' }}>
-                          <Clock size={11} color={THEME.warmStone} />
+                        <div style={{ fontSize: '11px', color: '#94A3B8', display: 'flex', alignItems: 'center', gap: '4px', marginTop: '2px' }}>
+                          <Clock size={11} color="#94A3B8" />
                           <span>Due: {new Date(task.due_date).toLocaleDateString()}</span>
                         </div>
                       )}
@@ -414,7 +415,7 @@ export const Exams: React.FC = () => {
                       onClick={() => handleDeleteTask(task.id)}
                       aria-label="Delete task"
                     >
-                      <Trash2 size={13} color={THEME.warmStone} />
+                      <Trash2 size={13} color="#94A3B8" />
                     </Button>
                   </div>
                 </div>

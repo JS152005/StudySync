@@ -64,45 +64,32 @@ export const FloatingActionButton: React.FC<FloatingActionButtonProps> = ({
       {/* Expanded Actions Stack */}
       {isSpeedDial && open && (
         <div
+          className="orb-button-stack"
           style={{
-            display: 'flex',
-            flexDirection: 'column',
-            gap: '10px',
-            alignItems: position === 'bottom-right' ? 'flex-end' : 'flex-start',
             pointerEvents: 'auto',
-            animation: `studysync-slide-up ${THEME.motion.durationFast} ${THEME.motion.easeSpring}`,
+            alignItems: position === 'bottom-right' ? 'flex-end' : 'flex-start',
+            gap: '14px',
+            marginBottom: '4px',
           }}
         >
           {actions.map((act) => {
             const isVermilion = act.variant === 'vermilion';
+            const orbColorClass = isVermilion ? 'orb-vermilion' : 'orb-emerald';
             return (
               <div
                 key={act.id}
+                className="orb-wrapper"
                 style={{
                   display: 'flex',
                   alignItems: 'center',
-                  gap: '10px',
-                  flexDirection: position === 'bottom-right' ? 'row' : 'row-reverse',
                 }}
               >
-                {/* Pill Tooltip/Label */}
-                <span
-                  style={{
-                    backgroundColor: THEME.warmIvory,
-                    color: THEME.deepForestCharcoal,
-                    border: `1.5px solid ${THEME.deepForestCharcoal}`,
-                    borderRadius: THEME.radius.pill,
-                    padding: '4px 12px',
-                    fontSize: '12px',
-                    fontWeight: 700,
-                    boxShadow: THEME.shadow.lifted,
-                    whiteSpace: 'nowrap',
-                  }}
-                >
+                {/* Blur-to-Focus Flyout Label */}
+                <span className="orb-flyout-label">
                   {act.label}
                 </span>
 
-                {/* Sub-action Button */}
+                {/* Glowing Orb Button */}
                 <button
                   type="button"
                   onClick={() => {
@@ -110,21 +97,7 @@ export const FloatingActionButton: React.FC<FloatingActionButtonProps> = ({
                     setOpen(false);
                   }}
                   aria-label={act.label}
-                  style={{
-                    width: '42px',
-                    height: '42px',
-                    borderRadius: THEME.radius.full,
-                    backgroundColor: isVermilion ? THEME.vermilion : THEME.emeraldGreen,
-                    color: THEME.warmIvory,
-                    border: `1.5px solid ${THEME.deepForestCharcoal}`,
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    boxShadow: THEME.shadow.lifted,
-                    cursor: 'pointer',
-                    transition: `transform ${THEME.motion.durationFast} ${THEME.motion.easeSpring}`,
-                  }}
-                  className="fab-item-button"
+                  className={`orb-action-btn ${orbColorClass}`}
                 >
                   {act.icon}
                 </button>
@@ -142,30 +115,21 @@ export const FloatingActionButton: React.FC<FloatingActionButtonProps> = ({
           aria-label={ariaLabel}
           aria-expanded={isSpeedDial ? open : undefined}
           title={mainLabel}
+          className="orb-action-btn orb-emerald"
           style={{
-            width: '52px',
-            height: '52px',
-            borderRadius: THEME.radius.full,
-            backgroundColor: THEME.emeraldGreen,
-            color: THEME.warmIvory,
-            border: `2px solid ${THEME.deepForestCharcoal}`,
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            boxShadow: THEME.shadow.lifted,
-            cursor: 'pointer',
-            transition: `transform ${THEME.motion.durationFast} ${THEME.motion.easeSpring}, background-color ${THEME.motion.durationFast} ${THEME.motion.easeOut}`,
+            width: '54px',
+            height: '54px',
+            boxShadow: open
+              ? 'inset 0 0 25px 4px rgba(0, 107, 79, 0.7), 0 0 35px 6px rgba(0, 107, 79, 0.5)'
+              : 'inset 0 0 18px 2px rgba(0, 107, 79, 0.4), 0 6px 24px rgba(0, 107, 79, 0.35)',
+            transform: open ? 'rotate(90deg)' : 'none',
+            transition: 'all 0.35s cubic-bezier(0.16, 1, 0.3, 1)',
           }}
-          className="fab-main-button"
         >
-          {isSpeedDial ? (
-            open ? (
-              <X size={24} color={THEME.warmIvory} strokeWidth={2.5} />
-            ) : (
-              mainIcon || <Plus size={24} color={THEME.warmIvory} strokeWidth={2.5} />
-            )
+          {isSpeedDial && open ? (
+            <X size={24} color="#FFFFFF" strokeWidth={2.4} />
           ) : (
-            mainIcon || <Plus size={24} color={THEME.warmIvory} strokeWidth={2.5} />
+            mainIcon || <Plus size={24} color="#FFFFFF" strokeWidth={2.4} />
           )}
         </button>
       </div>

@@ -7,6 +7,7 @@ import { THEME } from './theme';
 
 // Pages
 import { Dashboard } from './pages/Dashboard';
+import { Community } from './pages/Community';
 import { Friends } from './pages/Friends';
 import { Messages } from './pages/Messages';
 import { Groups } from './pages/Groups';
@@ -111,6 +112,7 @@ export const App: React.FC = () => {
             >
               <Route path="/" element={<Navigate to="/dashboard" replace />} />
               <Route path="/dashboard" element={<Dashboard />} />
+              <Route path="/community" element={<Navigate to="/groups" replace />} />
               <Route path="/friends" element={<Friends />} />
               <Route path="/messages" element={<Messages />} />
               <Route path="/groups" element={<Groups />} />

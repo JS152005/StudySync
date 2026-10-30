@@ -1,11 +1,11 @@
 import { Router } from 'express';
 import crypto from 'crypto';
-import { db } from '../db/index.js';
+import { db, generateRoomInviteCode } from '../db/index.js';
 import { requireAuth, AuthRequest } from '../middleware/auth.js';
 
 const router = Router();
 
-// 1. LIST ACTIVE ROOMS
+// 1. LIST ACTIVE PRIVATE ROOMS (Only rooms user hosts, belongs to via group, or is participating in)
 router.get('/', requireAuth, (req: AuthRequest, res): void => {
   try {
     const currentUserId = req.user!.id;
@@ -18,9 +18,13 @@ router.get('/', requireAuth, (req: AuthRequest, res): void => {
       JOIN users u ON u.id = r.host_id
       LEFT JOIN study_groups g ON g.id = r.group_id
       WHERE r.is_active = 1
-        AND (r.group_id IS NULL OR r.group_id IN (SELECT group_id FROM group_members WHERE user_id = ? AND status = 'active'))
-      ORDER BY r.created_at DESC LIMIT 20
-    `).all(currentUserId);
+        AND (
+          r.host_id = ?
+          OR (r.group_id IS NOT NULL AND r.group_id IN (SELECT group_id FROM group_members WHERE user_id = ? AND status = 'active'))
+          OR r.id IN (SELECT room_id FROM room_participants WHERE user_id = ? AND left_at IS NULL)
+        )
+      ORDER BY r.created_at DESC LIMIT 30
+    `).all(currentUserId, currentUserId, currentUserId);
 
     res.json({ rooms });
   } catch (err: any) {
@@ -29,7 +33,7 @@ router.get('/', requireAuth, (req: AuthRequest, res): void => {
   }
 });
 
-// 2. CREATE STUDY ROOM
+// 2. CREATE PRIVATE STUDY ROOM
 router.post('/', requireAuth, (req: AuthRequest, res): void => {
   try {
     const { name, subject, topic, group_id, teach_mode } = req.body;
@@ -54,10 +58,18 @@ router.post('/', requireAuth, (req: AuthRequest, res): void => {
     const roomId = crypto.randomUUID();
     const now = new Date().toISOString();
 
+    // Generate unique private room invite code
+    let inviteCode = generateRoomInviteCode();
+    let existingCode = db.prepare('SELECT id FROM study_rooms WHERE invite_code = ?').get(inviteCode);
+    while (existingCode) {
+      inviteCode = generateRoomInviteCode();
+      existingCode = db.prepare('SELECT id FROM study_rooms WHERE invite_code = ?').get(inviteCode);
+    }
+
     db.transaction(() => {
       db.prepare(`
-        INSERT INTO study_rooms (id, name, subject, topic, group_id, host_id, is_active, teach_mode, created_at)
-        VALUES (?, ?, ?, ?, ?, ?, 1, ?, ?)
+        INSERT INTO study_rooms (id, name, subject, topic, group_id, host_id, invite_code, is_active, teach_mode, created_at)
+        VALUES (?, ?, ?, ?, ?, ?, ?, 1, ?, ?)
       `).run(
         roomId,
         name.trim(),
@@ -65,6 +77,7 @@ router.post('/', requireAuth, (req: AuthRequest, res): void => {
         topic?.trim() || '',
         group_id || null,
         currentUserId,
+        inviteCode,
         teach_mode ? 1 : 0,
         now
       );
@@ -83,18 +96,69 @@ router.post('/', requireAuth, (req: AuthRequest, res): void => {
     })();
 
     const room = db.prepare(`SELECT * FROM study_rooms WHERE id = ?`).get(roomId);
-    res.status(201).json({ message: 'Study room created successfully.', room });
+    res.status(201).json({ message: 'Private study room created successfully.', room });
   } catch (err: any) {
     console.error('[CREATE ROOM ERROR]', err);
     res.status(500).json({ error: 'Failed to create room.' });
   }
 });
 
-// 3. GET ROOM DETAILS
+// 3. JOIN PRIVATE ROOM BY INVITE CODE
+router.post('/join-by-code', requireAuth, (req: AuthRequest, res): void => {
+  try {
+    const { invite_code } = req.body;
+    const currentUserId = req.user!.id;
+
+    if (!invite_code || !invite_code.trim()) {
+      res.status(400).json({ error: 'Private room invite code is required.' });
+      return;
+    }
+
+    const cleanCode = invite_code.trim().toUpperCase();
+    const room = db.prepare('SELECT * FROM study_rooms WHERE UPPER(invite_code) = ? AND is_active = 1').get(cleanCode) as any;
+
+    if (!room) {
+      res.status(404).json({ error: 'No active private study room found with this invite code.' });
+      return;
+    }
+
+    // If room is attached to a private group, check group membership
+    if (room.group_id) {
+      const member = db.prepare(`
+        SELECT id FROM group_members WHERE group_id = ? AND user_id = ? AND status = 'active'
+      `).get(room.group_id, currentUserId);
+
+      if (!member) {
+        res.status(403).json({ error: 'This study room belongs to a private group. You must join the group first.' });
+        return;
+      }
+    }
+
+    const now = new Date().toISOString();
+    const existing = db.prepare(`
+      SELECT id FROM room_participants WHERE room_id = ? AND user_id = ? AND left_at IS NULL
+    `).get(room.id, currentUserId);
+
+    if (!existing) {
+      db.prepare(`
+        INSERT INTO room_participants (id, room_id, user_id, is_hand_raised, joined_at)
+        VALUES (?, ?, ?, 0, ?)
+      `).run(crypto.randomUUID(), room.id, currentUserId, now);
+    }
+
+    res.json({ message: 'Joined private room.', roomId: room.id, room });
+  } catch (err: any) {
+    console.error('[JOIN BY CODE ERROR]', err);
+    res.status(500).json({ error: 'Failed to join private room.' });
+  }
+});
+
+// 4. GET ROOM DETAILS (Strictly private: only host, group members, active participants, or with invite code)
 router.get('/:id', requireAuth, (req: AuthRequest, res): void => {
   try {
     const { id } = req.params;
     const currentUserId = req.user!.id;
+    const providedCode = ((req.query.code || '') as string).trim().toUpperCase();
 
     const room = db.prepare(`
       SELECT r.*, u.full_name as host_name, u.username as host_username, u.avatar_url as host_avatar,
@@ -110,15 +174,28 @@ router.get('/:id', requireAuth, (req: AuthRequest, res): void => {
       return;
     }
 
+    const isHost = room.host_id === currentUserId;
+    let isMember = false;
+
     if (room.group_id) {
       const member = db.prepare(`
         SELECT id FROM group_members WHERE group_id = ? AND user_id = ? AND status = 'active'
       `).get(room.group_id, currentUserId);
+      isMember = !!member;
+    }
 
-      if (!member) {
-        res.status(403).json({ error: 'This study room is restricted to group members.' });
-        return;
-      }
+    const isParticipant = db.prepare(`
+      SELECT id FROM room_participants WHERE room_id = ? AND user_id = ?
+    `).get(id, currentUserId);
+
+    const hasCodeMatch = providedCode && room.invite_code && providedCode === room.invite_code.toUpperCase();
+
+    if (!isHost && !isMember && !isParticipant && !hasCodeMatch) {
+      res.status(403).json({
+        error: 'This study room is private. An invitation code or group membership is required.',
+        is_private: true,
+      });
+      return;
     }
 
     const participants = db.prepare(`
@@ -141,7 +218,7 @@ router.get('/:id', requireAuth, (req: AuthRequest, res): void => {
 
     res.json({
       room,
-      isHost: room.host_id === currentUserId,
+      isHost,
       participants,
       doubts,
     });
@@ -151,15 +228,40 @@ router.get('/:id', requireAuth, (req: AuthRequest, res): void => {
   }
 });
 
-// 4. JOIN ROOM
+// 5. JOIN ROOM (Private check)
 router.post('/:id/join', requireAuth, (req: AuthRequest, res): void => {
   try {
     const { id } = req.params;
     const currentUserId = req.user!.id;
+    const providedCode = ((req.body?.invite_code || req.query?.code || '') as string).trim().toUpperCase();
 
     const room = db.prepare(`SELECT * FROM study_rooms WHERE id = ? AND is_active = 1`).get(id) as any;
     if (!room) {
       res.status(404).json({ error: 'Study room is not active or does not exist.' });
+      return;
+    }
+
+    const isHost = room.host_id === currentUserId;
+    let isMember = false;
+
+    if (room.group_id) {
+      const member = db.prepare(`
+        SELECT id FROM group_members WHERE group_id = ? AND user_id = ? AND status = 'active'
+      `).get(room.group_id, currentUserId);
+      isMember = !!member;
+    }
+
+    const isParticipant = db.prepare(`
+      SELECT id FROM room_participants WHERE room_id = ? AND user_id = ?
+    `).get(id, currentUserId);
+
+    const hasCodeMatch = providedCode && room.invite_code && providedCode === room.invite_code.toUpperCase();
+
+    if (!isHost && !isMember && !isParticipant && !hasCodeMatch) {
+      res.status(403).json({
+        error: 'This study room is private. Valid invite code or group membership required to join.',
+        is_private: true,
+      });
       return;
     }
 
@@ -175,14 +277,14 @@ router.post('/:id/join', requireAuth, (req: AuthRequest, res): void => {
       `).run(crypto.randomUUID(), id, currentUserId, now);
     }
 
-    res.json({ message: 'Joined room successfully.' });
+    res.json({ message: 'Joined private room successfully.' });
   } catch (err: any) {
     console.error('[JOIN ROOM ERROR]', err);
     res.status(500).json({ error: 'Failed to join room.' });
   }
 });
 
-// 5. LEAVE ROOM
+// 6. LEAVE ROOM
 router.post('/:id/leave', requireAuth, (req: AuthRequest, res): void => {
   try {
     const { id } = req.params;
@@ -200,7 +302,7 @@ router.post('/:id/leave', requireAuth, (req: AuthRequest, res): void => {
   }
 });
 
-// 6. END ROOM (Host only)
+// 7. END ROOM (Host only)
 router.post('/:id/end', requireAuth, (req: AuthRequest, res): void => {
   try {
     const { id } = req.params;
@@ -223,14 +325,14 @@ router.post('/:id/end', requireAuth, (req: AuthRequest, res): void => {
       db.prepare(`UPDATE room_participants SET left_at = ? WHERE room_id = ? AND left_at IS NULL`).run(now, id);
     })();
 
-    res.json({ message: 'Room ended successfully.' });
+    res.json({ message: 'Study room session ended.' });
   } catch (err: any) {
     console.error('[END ROOM ERROR]', err);
     res.status(500).json({ error: 'Failed to end room.' });
   }
 });
 
-// 7. RAISE / LOWER HAND
+// 8. TOGGLE HAND RAISE
 router.post('/:id/hand', requireAuth, (req: AuthRequest, res): void => {
   try {
     const { id } = req.params;
@@ -241,49 +343,47 @@ router.post('/:id/hand', requireAuth, (req: AuthRequest, res): void => {
     `).get(id, currentUserId) as any;
 
     if (!participant) {
-      res.status(400).json({ error: 'You are not in this room.' });
+      res.status(404).json({ error: 'You are not an active participant in this room.' });
       return;
     }
 
     const newHandState = participant.is_hand_raised === 1 ? 0 : 1;
     db.prepare(`UPDATE room_participants SET is_hand_raised = ? WHERE id = ?`).run(newHandState, participant.id);
 
-    res.json({ isHandRaised: newHandState === 1 });
+    res.json({ message: 'Hand status toggled.', isHandRaised: newHandState });
   } catch (err: any) {
-    console.error('[HAND ERROR]', err);
-    res.status(500).json({ error: 'Failed to update hand state.' });
+    console.error('[TOGGLE HAND ERROR]', err);
+    res.status(500).json({ error: 'Failed to toggle hand.' });
   }
 });
 
-// 8. GET WHITEBOARD DATA
+// 9. GET WHITEBOARD STATE
 router.get('/:id/whiteboard', requireAuth, (req: AuthRequest, res): void => {
   try {
     const { id } = req.params;
-    const session = db.prepare(`SELECT canvas_data, updated_at FROM whiteboard_sessions WHERE room_id = ?`).get(id) as any;
 
-    res.json({ canvasData: session ? session.canvas_data : '[]' });
+    const session = db.prepare(`SELECT canvas_data FROM whiteboard_sessions WHERE room_id = ?`).get(id) as any;
+    res.json({ canvasData: session?.canvas_data || '[]' });
   } catch (err: any) {
     console.error('[GET WHITEBOARD ERROR]', err);
-    res.status(500).json({ error: 'Failed to load whiteboard.' });
+    res.status(500).json({ error: 'Failed to fetch whiteboard.' });
   }
 });
 
-// 9. SAVE WHITEBOARD DATA
+// 10. SAVE WHITEBOARD STATE
 router.put('/:id/whiteboard', requireAuth, (req: AuthRequest, res): void => {
   try {
     const { id } = req.params;
     const { canvasData } = req.body;
     const now = new Date().toISOString();
 
-    const dataString = typeof canvasData === 'string' ? canvasData : JSON.stringify(canvasData || []);
-
     db.prepare(`
       INSERT INTO whiteboard_sessions (id, room_id, canvas_data, updated_at)
       VALUES (?, ?, ?, ?)
       ON CONFLICT(room_id) DO UPDATE SET canvas_data = excluded.canvas_data, updated_at = excluded.updated_at
-    `).run(crypto.randomUUID(), id, dataString, now);
+    `).run(crypto.randomUUID(), id, canvasData || '[]', now);
 
-    res.json({ message: 'Whiteboard saved.' });
+    res.json({ message: 'Whiteboard saved successfully.' });
   } catch (err: any) {
     console.error('[SAVE WHITEBOARD ERROR]', err);
     res.status(500).json({ error: 'Failed to save whiteboard.' });

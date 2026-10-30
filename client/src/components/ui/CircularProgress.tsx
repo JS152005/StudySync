@@ -15,8 +15,8 @@ export const CircularProgress: React.FC<CircularProgressProps> = ({
   value,
   size = 180,
   strokeWidth = 10,
-  color = THEME.emeraldGreen,
-  trackColor = 'rgba(116, 111, 100, 0.25)',
+  color = THEME.accent,
+  trackColor = 'rgba(255, 255, 255, 0.08)',
   children,
   ariaLabel = 'Progress indicator',
 }) => {

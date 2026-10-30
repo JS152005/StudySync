@@ -120,14 +120,14 @@ export const Settings: React.FC = () => {
           display: 'flex',
           flexDirection: 'column',
           gap: '16px',
-          border: `1.5px solid ${THEME.deepForestCharcoal}`,
-          backgroundColor: THEME.warmIvory,
+          border: '1px solid #E2E8F0',
+          backgroundColor: '#FFFFFF',
           borderRadius: THEME.radius.card,
         }}
       >
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-          <Sparkles size={18} color={THEME.emeraldGreen} />
-          <h2 style={{ fontSize: '16px', fontWeight: 800, color: THEME.deepForestCharcoal }}>
+          <Sparkles size={18} color="#0284C7" />
+          <h2 style={{ fontSize: '16px', fontWeight: 800, color: '#0F172A' }}>
             Study Experience & Motion Preferences
           </h2>
         </div>
@@ -175,20 +175,20 @@ export const Settings: React.FC = () => {
           display: 'flex',
           flexDirection: 'column',
           gap: '12px',
-          border: `1.5px solid ${THEME.deepForestCharcoal}`,
-          backgroundColor: THEME.warmIvory,
+          border: '1px solid #E2E8F0',
+          backgroundColor: '#FFFFFF',
           borderRadius: THEME.radius.card,
         }}
       >
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '10px' }}>
           <div>
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <Mail size={18} color={THEME.emeraldGreen} />
-              <h2 style={{ fontSize: '16px', fontWeight: 800, color: THEME.deepForestCharcoal }}>
+              <Mail size={18} color="#0284C7" />
+              <h2 style={{ fontSize: '16px', fontWeight: 800, color: '#0F172A' }}>
                 Email Verification Status
               </h2>
             </div>
-            <div style={{ fontSize: '13px', marginTop: '4px', color: THEME.deepForestCharcoal }}>
+            <div style={{ fontSize: '13px', marginTop: '4px', color: '#0F172A' }}>
               Primary Address: <strong>{user?.email}</strong>
             </div>
           </div>
@@ -200,7 +200,7 @@ export const Settings: React.FC = () => {
 
         {user?.is_verified === 0 && (
           <div style={{ marginTop: '8px' }}>
-            <p style={{ fontSize: '12px', marginBottom: '10px', color: THEME.warmStone }}>
+            <p style={{ fontSize: '12px', marginBottom: '10px', color: '#64748B' }}>
               Your account is unverified. Verification ensures uninterrupted access to study rooms and file sharing.
             </p>
             <Button
@@ -213,7 +213,7 @@ export const Settings: React.FC = () => {
               Resend Verification Email
             </Button>
             {emailMsg && (
-              <div style={{ fontSize: '12px', marginTop: '8px', color: THEME.emeraldGreen, fontWeight: 700 }}>
+              <div style={{ fontSize: '12px', marginTop: '8px', color: '#10B981', fontWeight: 700 }}>
                 {emailMsg}
               </div>
             )}
@@ -229,33 +229,33 @@ export const Settings: React.FC = () => {
           display: 'flex',
           flexDirection: 'column',
           gap: '14px',
-          border: `1.5px solid ${THEME.deepForestCharcoal}`,
-          backgroundColor: THEME.warmIvory,
+          border: '1px solid #E2E8F0',
+          backgroundColor: '#FFFFFF',
           borderRadius: THEME.radius.card,
         }}
       >
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-          <KeyRound size={18} color={THEME.emeraldGreen} />
-          <h2 style={{ fontSize: '16px', fontWeight: 800, color: THEME.deepForestCharcoal }}>
+          <KeyRound size={18} color="#0284C7" />
+          <h2 style={{ fontSize: '16px', fontWeight: 800, color: '#0F172A' }}>
             Change Password
           </h2>
         </div>
 
         {passwordMsg && (
           <div className="alert-box-emerald" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <Check size={16} color={THEME.emeraldGreen} />
-            <span style={{ color: THEME.deepForestCharcoal }}>{passwordMsg}</span>
+            <Check size={16} color="#10B981" />
+            <span style={{ color: '#F8FAFC' }}>{passwordMsg}</span>
           </div>
         )}
 
         {passwordError && (
           <div className="alert-box-vermilion">
-            <span style={{ color: THEME.vermilion, fontWeight: 700 }}>[ERROR]</span> {passwordError}
+            <span style={{ color: '#F43F5E', fontWeight: 700 }}>[ERROR]</span> {passwordError}
           </div>
         )}
 
         <div>
-          <label style={{ fontSize: '12px', fontWeight: 700, display: 'block', marginBottom: '4px', color: THEME.deepForestCharcoal }}>
+          <label style={{ fontSize: '12px', fontWeight: 700, display: 'block', marginBottom: '4px', color: '#F8FAFC' }}>
             Current Password *
           </label>
           <input
@@ -309,18 +309,18 @@ export const Settings: React.FC = () => {
           display: 'flex',
           flexDirection: 'column',
           gap: '12px',
-          border: `1.5px solid ${THEME.vermilion}`,
-          backgroundColor: THEME.warmIvory,
+          border: '1px solid rgba(244, 63, 94, 0.4)',
+          backgroundColor: '#FFF1F2',
           borderRadius: THEME.radius.card,
         }}
       >
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-          <Shield size={18} color={THEME.vermilion} />
-          <h2 style={{ fontSize: '16px', fontWeight: 800, color: THEME.deepForestCharcoal }}>
+          <Shield size={18} color="#F43F5E" />
+          <h2 style={{ fontSize: '16px', fontWeight: 800, color: '#E11D48' }}>
             Danger Zone: Account Deactivation
           </h2>
         </div>
-        <p style={{ fontSize: '13px', color: THEME.warmStone }}>
+        <p style={{ fontSize: '13px', color: '#64748B' }}>
           Deactivating your account will invalidate your active study sessions and hide your profile from peers.
         </p>
 
@@ -330,7 +330,7 @@ export const Settings: React.FC = () => {
             size="sm"
             shape="pill"
             onClick={() => setShowDeleteModal(true)}
-            leftIcon={<Trash2 size={14} color={THEME.warmIvory} />}
+            leftIcon={<Trash2 size={14} color="#FFFFFF" />}
           >
             Deactivate Account
           </Button>

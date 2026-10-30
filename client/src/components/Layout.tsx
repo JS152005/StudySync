@@ -3,6 +3,7 @@ import { NavLink, Outlet, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { THEME } from '../theme';
 import { FloatingActionButton, FABAction } from './ui/FloatingActionButton';
+import { triggerSparks } from './ui/SparkEffect';
 import {
   LayoutDashboard,
   Users,
@@ -20,7 +21,7 @@ import {
   Menu,
   X,
   Sparkles,
-  Plus,
+  Search,
 } from 'lucide-react';
 
 export const Layout: React.FC = () => {
@@ -57,147 +58,64 @@ export const Layout: React.FC = () => {
     {
       id: 'quick-room',
       label: 'Create Study Room',
-      icon: <Video size={18} color={THEME.warmIvory} />,
+      icon: <Video size={18} color="#FFFFFF" />,
       onClick: () => navigate('/rooms?action=create'),
       variant: 'primary',
     },
     {
       id: 'quick-focus',
       label: 'Start Focus Session',
-      icon: <Timer size={18} color={THEME.warmIvory} />,
+      icon: <Timer size={18} color="#FFFFFF" />,
       onClick: () => navigate('/focus?action=create'),
       variant: 'primary',
     },
     {
       id: 'quick-syllabus',
       label: 'New Syllabus Board',
-      icon: <ListTodo size={18} color={THEME.warmIvory} />,
+      icon: <ListTodo size={18} color="#FFFFFF" />,
       onClick: () => navigate('/syllabus?action=create'),
       variant: 'primary',
     },
   ];
 
   return (
-    <div style={{ display: 'flex', minHeight: '100vh', width: '100%', backgroundColor: THEME.warmIvory }}>
-      {/* Desktop Left Navigation / Sidebar */}
+    <div style={{ display: 'flex', minHeight: '100vh', width: '100%', backgroundColor: '#F8FAFC' }}>
+      {/* Desktop Floating Left Navigation Rail */}
       <aside
-        style={{
-          width: '264px',
-          backgroundColor: THEME.warmIvory,
-          borderRight: `1.5px solid ${THEME.deepForestCharcoal}`,
-          display: 'flex',
-          flexDirection: 'column',
-          position: 'sticky',
-          top: 0,
-          height: '100vh',
-          zIndex: 100,
-          boxShadow: THEME.shadow.subtle,
-        }}
-        className="desktop-sidebar"
+        className="floating-nav-rail desktop-sidebar"
         aria-label="Main Navigation"
       >
-        {/* Brand Header */}
-        <div
-          style={{
-            padding: '20px 20px',
-            borderBottom: `1.5px solid ${THEME.deepForestCharcoal}`,
-            display: 'flex',
-            alignItems: 'center',
-            gap: '12px',
-          }}
+        {/* Brand Header Emblem */}
+        <NavLink
+          to="/dashboard"
+          className="floating-nav-emblem"
+          aria-label="StudySync Dashboard"
+          onClick={(e) => triggerSparks(e, 'azure', 12)}
         >
-          <div
-            style={{
-              width: '38px',
-              height: '38px',
-              borderRadius: THEME.radius.md,
-              backgroundColor: THEME.emeraldGreen,
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              border: `1.5px solid ${THEME.deepForestCharcoal}`,
-              boxShadow: THEME.shadow.subtle,
-            }}
-          >
-            <Sparkles size={20} color={THEME.warmIvory} strokeWidth={2.5} />
-          </div>
-          <div>
-            <div
-              style={{
-                fontSize: '19px',
-                fontWeight: 800,
-                color: THEME.deepForestCharcoal,
-                fontFamily: 'var(--font-serif)',
-                letterSpacing: '-0.02em',
-                lineHeight: 1.1,
-              }}
-            >
-              StudySync
-            </div>
-            <div
-              style={{
-                fontSize: '10.5px',
-                fontWeight: 700,
-                color: THEME.warmStone,
-                textTransform: 'uppercase',
-                letterSpacing: '0.06em',
-                marginTop: '2px',
-              }}
-            >
-              Academic Workspace
-            </div>
-          </div>
-        </div>
+          <Sparkles size={22} color="#FFFFFF" strokeWidth={2.4} />
+          <span className="floating-nav-tooltip">StudySync Hub</span>
+        </NavLink>
 
-        {/* Navigation Links */}
-        <nav
-          style={{
-            flex: 1,
-            overflowY: 'auto',
-            padding: '16px 12px',
-            display: 'flex',
-            flexDirection: 'column',
-            gap: '4px',
-          }}
-        >
+        <div className="floating-nav-divider" />
+
+        {/* Navigation Links with Active Tile & Tooltips */}
+        <nav className="floating-nav-scroll">
           {navItems.map((item) => {
             const Icon = item.icon;
             return (
               <NavLink
                 key={item.to}
                 to={item.to}
-                className={({ isActive }) => (isActive ? 'nav-link-active' : 'nav-link')}
-                style={({ isActive }) => ({
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '12px',
-                  padding: '9px 12px',
-                  borderRadius: THEME.radius.md,
-                  fontSize: '13.5px',
-                  fontWeight: isActive ? 700 : 600,
-                  textDecoration: 'none',
-                  backgroundColor: isActive ? THEME.emeraldGreen : 'transparent',
-                  color: isActive ? THEME.warmIvory : THEME.deepForestCharcoal,
-                  border: isActive ? `1.5px solid ${THEME.emeraldGreen}` : '1.5px solid transparent',
-                  transition: `all ${THEME.motion.durationFast} ${THEME.motion.easeOut}`,
-                  position: 'relative',
-                })}
+                className={({ isActive }) =>
+                  `floating-nav-tile ${isActive ? 'active' : ''}`
+                }
+                aria-label={item.label}
               >
                 {({ isActive }) => (
                   <>
-                    <Icon size={17} color={isActive ? THEME.warmIvory : THEME.deepForestCharcoal} strokeWidth={2} />
-                    <span style={{ color: isActive ? THEME.warmIvory : THEME.deepForestCharcoal }}>{item.label}</span>
-                    {isActive && (
-                      <span
-                        style={{
-                          marginLeft: 'auto',
-                          width: '6px',
-                          height: '6px',
-                          borderRadius: THEME.radius.full,
-                          backgroundColor: THEME.warmIvory,
-                        }}
-                      />
-                    )}
+                    {isActive && <span className="floating-active-pip" />}
+                    <Icon size={19} strokeWidth={isActive ? 2.4 : 1.8} />
+                    <span className="floating-nav-tooltip">{item.label}</span>
                   </>
                 )}
               </NavLink>
@@ -205,98 +123,64 @@ export const Layout: React.FC = () => {
           })}
         </nav>
 
-        {/* User Footer Card */}
-        <div
-          style={{
-            padding: '12px 14px',
-            borderTop: `1.5px solid ${THEME.deepForestCharcoal}`,
-            backgroundColor: THEME.warmIvory,
-            margin: '12px',
-            borderRadius: THEME.radius.card,
-            border: `1.5px solid ${THEME.deepForestCharcoal}`,
-            boxShadow: THEME.shadow.subtle,
-          }}
-        >
-          <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '10px' }}>
+        {/* Footer Actions: Profile & Logout */}
+        <div className="floating-nav-footer">
+          <NavLink
+            to="/profile"
+            className="floating-nav-tile"
+            aria-label="User Profile"
+          >
             <div
               style={{
-                width: '36px',
-                height: '36px',
-                borderRadius: THEME.radius.full,
-                backgroundColor: THEME.emeraldGreen,
+                width: '34px',
+                height: '34px',
+                borderRadius: '50%',
+                backgroundColor: '#F1F5F9',
+                border: '1.5px solid #0284C7',
+                color: '#0284C7',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
-                color: THEME.warmIvory,
                 fontWeight: 800,
-                fontSize: '13.5px',
-                border: `1.5px solid ${THEME.deepForestCharcoal}`,
-                flexShrink: 0,
+                fontSize: '13px',
                 position: 'relative',
               }}
             >
               {user?.full_name ? user.full_name[0].toUpperCase() : 'S'}
-              {/* Online Pulse Indicator */}
               <span
                 className="live-pulse-dot"
                 style={{
                   position: 'absolute',
                   bottom: '-1px',
                   right: '-1px',
-                  border: `1.5px solid ${THEME.warmIvory}`,
+                  border: `1.5px solid #FFFFFF`,
                 }}
               />
             </div>
-            <div style={{ overflow: 'hidden', flex: 1 }}>
-              <div
-                style={{
-                  fontSize: '13px',
-                  fontWeight: 700,
-                  color: THEME.deepForestCharcoal,
-                  whiteSpace: 'nowrap',
-                  textOverflow: 'ellipsis',
-                  overflow: 'hidden',
-                }}
-              >
-                {user?.full_name}
-              </div>
-              <div
-                style={{
-                  fontSize: '11px',
-                  fontWeight: 600,
-                  color: THEME.warmStone,
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '4px',
-                }}
-              >
-                <span>@{user?.username}</span>
-                <span>•</span>
-                <span style={{ color: THEME.emeraldGreen }}>Active</span>
-              </div>
-            </div>
-          </div>
+            <span className="floating-nav-tooltip">{user?.full_name || 'Profile'}</span>
+          </NavLink>
 
           <button
             type="button"
             onClick={handleLogout}
-            className="btn-secondary"
-            style={{ width: '100%', padding: '6px 10px', fontSize: '12px' }}
+            className="floating-nav-tile"
+            aria-label="Sign Out"
+            style={{ border: 'none', background: 'transparent' }}
           >
-            <LogOut size={13} color={THEME.deepForestCharcoal} />
-            <span>Sign Out</span>
+            <LogOut size={18} color="#64748B" />
+            <span className="floating-nav-tooltip">Sign Out</span>
           </button>
         </div>
       </aside>
 
-      {/* Main Container */}
-      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minWidth: 0, backgroundColor: THEME.warmIvory }}>
+      {/* Main Container with intentional offset ensuring zero overlap */}
+      <div className="app-content-wrapper" style={{ display: 'flex', flexDirection: 'column', minWidth: 0, backgroundColor: '#F8FAFC' }}>
         {/* Top Header Bar */}
         <header
           style={{
-            height: '62px',
-            backgroundColor: THEME.warmIvory,
-            borderBottom: `1.5px solid ${THEME.deepForestCharcoal}`,
+            height: '58px',
+            backgroundColor: '#FFFFFF',
+            borderBottom: '1px solid #E2E8F0',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'space-between',
@@ -304,7 +188,7 @@ export const Layout: React.FC = () => {
             position: 'sticky',
             top: 0,
             zIndex: 90,
-            boxShadow: THEME.shadow.subtle,
+            boxShadow: '0 1px 2px rgba(0, 0, 0, 0.03)',
           }}
         >
           <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
@@ -317,18 +201,18 @@ export const Layout: React.FC = () => {
               aria-label="Toggle Navigation Drawer"
             >
               {mobileMenuOpen ? (
-                <X size={18} color={THEME.deepForestCharcoal} />
+                <X size={18} color="#0F172A" />
               ) : (
-                <Menu size={18} color={THEME.deepForestCharcoal} />
+                <Menu size={18} color="#0F172A" />
               )}
             </button>
 
-            <div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
               <span
                 style={{
-                  fontSize: '14.5px',
+                  fontSize: '14px',
                   fontWeight: 700,
-                  color: THEME.deepForestCharcoal,
+                  color: '#0F172A',
                   letterSpacing: '-0.01em',
                 }}
               >
@@ -337,15 +221,18 @@ export const Layout: React.FC = () => {
               {user?.college && (
                 <span
                   style={{
-                    fontSize: '11px',
-                    color: THEME.warmStone,
-                    marginLeft: '8px',
-                    fontWeight: 500,
+                    fontSize: '11.5px',
+                    color: '#64748B',
+                    fontWeight: 600,
                     display: 'inline-block',
+                    padding: '2px 8px',
+                    borderRadius: '6px',
+                    backgroundColor: '#F1F5F9',
+                    border: '1px solid #E2E8F0',
                   }}
                   className="hide-on-mobile"
                 >
-                  ({user.college})
+                  {user.college}
                 </span>
               )}
             </div>
@@ -359,18 +246,23 @@ export const Layout: React.FC = () => {
               </NavLink>
             )}
 
-            <NavLink
-              to="/rooms"
+            <button
+              type="button"
+              onClick={(e) => {
+                triggerSparks(e, 'azure', 10);
+                navigate('/rooms');
+              }}
               className="btn-primary"
               style={{
-                padding: '7px 14px',
+                padding: '6px 14px',
                 fontSize: '12.5px',
                 borderRadius: THEME.radius.pill,
+                gap: '6px',
               }}
             >
-              <Video size={15} color={THEME.warmIvory} />
+              <Video size={14} color="#FFFFFF" />
               <span>Join Room</span>
-            </NavLink>
+            </button>
           </div>
         </header>
 
@@ -380,9 +272,9 @@ export const Layout: React.FC = () => {
             style={{
               position: 'fixed',
               inset: 0,
-              backgroundColor: 'rgba(38, 53, 47, 0.6)',
+              backgroundColor: 'rgba(15, 23, 42, 0.45)',
+              backdropFilter: 'blur(6px)',
               zIndex: 998,
-              backdropFilter: 'blur(2px)',
             }}
             onClick={() => setMobileMenuOpen(false)}
           >
@@ -392,16 +284,16 @@ export const Layout: React.FC = () => {
                 top: 0,
                 left: 0,
                 bottom: 0,
-                width: '80%',
+                width: '82%',
                 maxWidth: '300px',
-                backgroundColor: THEME.warmIvory,
-                borderRight: `2px solid ${THEME.deepForestCharcoal}`,
+                backgroundColor: '#FFFFFF',
+                borderRight: '1px solid #E2E8F0',
                 zIndex: 999,
                 padding: '20px 16px',
                 overflowY: 'auto',
                 display: 'flex',
                 flexDirection: 'column',
-                gap: '8px',
+                gap: '6px',
                 boxShadow: THEME.shadow.modal,
                 animation: `studysync-slide-in-right ${THEME.motion.durationNormal} ${THEME.motion.easeOut}`,
               }}
@@ -413,12 +305,27 @@ export const Layout: React.FC = () => {
                   alignItems: 'center',
                   justifyContent: 'space-between',
                   paddingBottom: '14px',
-                  borderBottom: `1.5px solid ${THEME.deepForestCharcoal}`,
+                  borderBottom: '1px solid #E2E8F0',
                   marginBottom: '10px',
                 }}
               >
-                <div style={{ fontSize: '18px', fontWeight: 800, fontFamily: 'var(--font-serif)' }}>
-                  StudySync
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <div
+                    style={{
+                      width: '28px',
+                      height: '28px',
+                      borderRadius: '8px',
+                      backgroundColor: '#0284C7',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                    }}
+                  >
+                    <Sparkles size={16} color="#FFFFFF" />
+                  </div>
+                  <span style={{ fontSize: '16px', fontWeight: 800, color: '#0F172A' }}>
+                    StudySync
+                  </span>
                 </div>
                 <button
                   type="button"
@@ -427,7 +334,7 @@ export const Layout: React.FC = () => {
                   style={{ padding: '4px' }}
                   aria-label="Close navigation"
                 >
-                  <X size={18} color={THEME.deepForestCharcoal} />
+                  <X size={18} color="#64748B" />
                 </button>
               </div>
 
@@ -442,20 +349,21 @@ export const Layout: React.FC = () => {
                       display: 'flex',
                       alignItems: 'center',
                       gap: '12px',
-                      padding: '11px 14px',
+                      padding: '10px 14px',
                       borderRadius: THEME.radius.md,
-                      fontSize: '14px',
-                      fontWeight: 700,
+                      fontSize: '13.5px',
+                      fontWeight: isActive ? 700 : 500,
                       textDecoration: 'none',
-                      backgroundColor: isActive ? THEME.emeraldGreen : THEME.warmIvory,
-                      color: isActive ? THEME.warmIvory : THEME.deepForestCharcoal,
-                      border: `1.5px solid ${isActive ? THEME.emeraldGreen : THEME.deepForestCharcoal}`,
+                      backgroundColor: isActive ? '#0284C7' : 'transparent',
+                      color: isActive ? '#FFFFFF' : '#475569',
+                      border: `1px solid ${isActive ? '#0284C7' : 'transparent'}`,
+                      transition: 'all 0.15s ease',
                     })}
                   >
                     {({ isActive }) => (
                       <>
-                        <Icon size={17} color={isActive ? THEME.warmIvory : THEME.deepForestCharcoal} />
-                        <span style={{ color: isActive ? THEME.warmIvory : THEME.deepForestCharcoal }}>
+                        <Icon size={17} color={isActive ? '#FFFFFF' : '#64748B'} />
+                        <span style={{ color: isActive ? '#FFFFFF' : '#475569' }}>
                           {item.label}
                         </span>
                       </>
@@ -467,11 +375,11 @@ export const Layout: React.FC = () => {
               <button
                 type="button"
                 onClick={handleLogout}
-                className="btn-primary"
-                style={{ marginTop: 'auto', width: '100%', padding: '11px' }}
+                className="btn-secondary"
+                style={{ marginTop: 'auto', width: '100%', padding: '10px', gap: '8px' }}
               >
-                <LogOut size={16} color={THEME.warmIvory} />
-                <span style={{ color: THEME.warmIvory }}>Sign Out</span>
+                <LogOut size={16} color="#64748B" />
+                <span>Sign Out</span>
               </button>
             </div>
           </div>
@@ -481,9 +389,9 @@ export const Layout: React.FC = () => {
         <main
           style={{
             flex: 1,
-            padding: '28px',
-            backgroundColor: THEME.warmIvory,
-            maxWidth: '1400px',
+            padding: '24px 28px',
+            backgroundColor: '#F8FAFC',
+            maxWidth: '1440px',
             width: '100%',
             margin: '0 auto',
             animation: `studysync-fade-in ${THEME.motion.durationNormal} ${THEME.motion.easeOut}`,
@@ -497,10 +405,6 @@ export const Layout: React.FC = () => {
       </div>
 
       <style>{`
-        .nav-link:hover {
-          background-color: rgba(38, 53, 47, 0.06) !important;
-          color: var(--color-deep-forest-charcoal) !important;
-        }
         @media (max-width: 900px) {
           .desktop-sidebar {
             display: none !important;

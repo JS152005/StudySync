@@ -66,6 +66,11 @@ export const Modal: React.FC<ModalProps> = ({
         style={{
           maxWidth,
           position: 'relative',
+          backgroundColor: '#FFFFFF',
+          border: '1px solid #E2E8F0',
+          borderRadius: THEME.radius.cardLg,
+          boxShadow: THEME.shadow.modal,
+          color: THEME.textPrimary,
         }}
       >
         {/* Header */}
@@ -75,23 +80,25 @@ export const Modal: React.FC<ModalProps> = ({
             alignItems: 'flex-start',
             justifyContent: 'space-between',
             gap: '16px',
-            marginBottom: description ? '6px' : '18px',
+            marginBottom: description ? '8px' : '20px',
+            paddingBottom: '14px',
+            borderBottom: '1px solid #E2E8F0',
           }}
         >
           {title && (
             <div style={{ flex: 1 }}>
               <h2
                 style={{
-                  fontSize: '19px',
-                  fontWeight: 800,
-                  color: THEME.deepForestCharcoal,
-                  fontFamily: 'var(--font-serif)',
+                  fontSize: '18px',
+                  fontWeight: 700,
+                  color: THEME.textPrimary,
+                  letterSpacing: '-0.02em',
                 }}
               >
                 {title}
               </h2>
               {description && (
-                <p style={{ fontSize: '13px', color: THEME.warmStone, marginTop: '4px' }}>
+                <p style={{ fontSize: '13px', color: THEME.textSecondary, marginTop: '4px' }}>
                   {description}
                 </p>
               )}
@@ -106,12 +113,12 @@ export const Modal: React.FC<ModalProps> = ({
             style={{
               padding: '6px',
               borderRadius: THEME.radius.full,
-              color: THEME.deepForestCharcoal,
+              color: THEME.textSecondary,
               border: 'none',
               marginLeft: 'auto',
             }}
           >
-            <X size={18} color={THEME.deepForestCharcoal} />
+            <X size={18} color={THEME.textSecondary} />
           </button>
         </div>
 

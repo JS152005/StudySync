@@ -191,9 +191,13 @@ router.get('/dashboard-summary', requireAuth, (req: AuthRequest, res): void => {
       FROM study_rooms r
       JOIN users u ON u.id = r.host_id
       WHERE r.is_active = 1
-        AND (r.group_id IS NULL OR r.group_id IN (SELECT group_id FROM group_members WHERE user_id = ? AND status = 'active'))
+        AND (
+          r.host_id = ?
+          OR (r.group_id IS NOT NULL AND r.group_id IN (SELECT group_id FROM group_members WHERE user_id = ? AND status = 'active'))
+          OR r.id IN (SELECT room_id FROM room_participants WHERE user_id = ? AND left_at IS NULL)
+        )
       LIMIT 3
-    `).all(currentUserId);
+    `).all(currentUserId, currentUserId, currentUserId);
 
     const openDoubtsCount = db.prepare(`
       SELECT COUNT(*) as count FROM doubts WHERE author_id = ? AND status != 'solved'

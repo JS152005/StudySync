@@ -60,7 +60,7 @@ export const ResetPassword: React.FC = () => {
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
-        backgroundColor: THEME.warmIvory,
+        backgroundColor: '#F8FAFC',
         padding: '24px',
       }}
     >
@@ -73,8 +73,8 @@ export const ResetPassword: React.FC = () => {
           display: 'flex',
           flexDirection: 'column',
           gap: '20px',
-          backgroundColor: THEME.warmIvory,
-          border: `1.5px solid ${THEME.deepForestCharcoal}`,
+          backgroundColor: '#FFFFFF',
+          border: '1px solid #E2E8F0',
           borderRadius: THEME.radius.cardLg,
           boxShadow: THEME.shadow.lifted,
           animation: `studysync-scale-in ${THEME.motion.durationNormal} ${THEME.motion.easeSpring}`,
@@ -86,21 +86,20 @@ export const ResetPassword: React.FC = () => {
               width: '48px',
               height: '48px',
               borderRadius: THEME.radius.md,
-              backgroundColor: THEME.emeraldGreen,
+              backgroundColor: 'rgba(2, 132, 199, 0.1)',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
               margin: '0 auto 14px',
-              border: `1.5px solid ${THEME.deepForestCharcoal}`,
-              boxShadow: THEME.shadow.subtle,
+              border: '1px solid rgba(2, 132, 199, 0.3)',
             }}
           >
-            <KeyRound size={22} color={THEME.warmIvory} />
+            <KeyRound size={22} color="#0284C7" />
           </div>
-          <h1 style={{ fontSize: '22px', fontWeight: 800, color: THEME.deepForestCharcoal }}>
+          <h1 style={{ fontSize: '22px', fontWeight: 800, color: '#0F172A' }}>
             Create New Password
           </h1>
-          <p style={{ fontSize: '13px', marginTop: '4px', color: THEME.warmStone }}>
+          <p style={{ fontSize: '13px', marginTop: '4px', color: '#64748B' }}>
             Choose a secure, memorable password for your account.
           </p>
         </div>

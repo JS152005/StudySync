@@ -179,15 +179,14 @@ export const TeachLearn: React.FC = () => {
             display: 'flex',
             flexDirection: 'column',
             gap: '12px',
-            backgroundColor: THEME.warmIvory,
-            border: `2px solid ${THEME.vermilion}`,
+            backgroundColor: '#FFFFFF',
+            border: '1px solid rgba(244, 63, 94, 0.4)',
             borderRadius: THEME.radius.card,
-            boxShadow: THEME.shadow.lifted,
           }}
         >
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
             <span className="badge badge-urgent">Incoming Requests</span>
-            <h2 style={{ fontSize: '15px', fontWeight: 800, color: THEME.deepForestCharcoal }}>
+            <h2 style={{ fontSize: '15px', fontWeight: 800, color: '#0F172A' }}>
               Peer Study Requests ({incomingRequests.length})
             </h2>
           </div>
@@ -199,19 +198,19 @@ export const TeachLearn: React.FC = () => {
                 alignItems: 'center',
                 justifyContent: 'space-between',
                 padding: '12px 16px',
-                backgroundColor: THEME.warmIvory,
+                backgroundColor: '#F8FAFC',
                 borderRadius: THEME.radius.md,
-                border: `1.5px solid ${THEME.deepForestCharcoal}`,
+                border: '1px solid #E2E8F0',
                 flexWrap: 'wrap',
                 gap: '10px',
               }}
             >
               <div>
-                <div style={{ fontSize: '14.5px', fontWeight: 800, color: THEME.deepForestCharcoal }}>
+                <div style={{ fontSize: '14.5px', fontWeight: 800, color: '#0F172A' }}>
                   {req.sender_name} wants to study: {req.subject} — {req.topic}
                 </div>
                 {req.message && (
-                  <div style={{ fontSize: '12px', color: THEME.warmStone, fontStyle: 'italic', marginTop: '2px' }}>
+                  <div style={{ fontSize: '12px', color: '#94A3B8', fontStyle: 'italic', marginTop: '2px' }}>
                     "{req.message}"
                   </div>
                 )}
@@ -223,7 +222,7 @@ export const TeachLearn: React.FC = () => {
                   size="sm"
                   shape="pill"
                   onClick={() => handleRespondRequest(req.id, 'accept')}
-                  leftIcon={<Check size={14} color={THEME.warmIvory} />}
+                  leftIcon={<Check size={14} color="#FFFFFF" />}
                 >
                   Accept
                 </Button>
@@ -232,7 +231,7 @@ export const TeachLearn: React.FC = () => {
                   size="sm"
                   shape="pill"
                   onClick={() => handleRespondRequest(req.id, 'decline')}
-                  leftIcon={<X size={14} color={THEME.deepForestCharcoal} />}
+                  leftIcon={<X size={14} color="#F8FAFC" />}
                 >
                   Decline
                 </Button>
@@ -257,14 +256,14 @@ export const TeachLearn: React.FC = () => {
               display: 'flex',
               flexDirection: 'column',
               gap: '14px',
-              border: `1.5px solid ${THEME.deepForestCharcoal}`,
-              backgroundColor: THEME.warmIvory,
+              border: '1px solid #E2E8F0',
+              backgroundColor: '#FFFFFF',
               borderRadius: THEME.radius.card,
             }}
           >
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <GraduationCap size={20} color={THEME.emeraldGreen} />
-              <h2 style={{ fontSize: '16px', fontWeight: 800, color: THEME.deepForestCharcoal }}>
+              <GraduationCap size={20} color="#0284C7" />
+              <h2 style={{ fontSize: '16px', fontWeight: 800, color: '#0F172A' }}>
                 Peers Who Can Teach You
               </h2>
             </div>
@@ -282,9 +281,9 @@ export const TeachLearn: React.FC = () => {
                   className="card card-interactive"
                   style={{
                     padding: '14px',
-                    backgroundColor: THEME.warmIvory,
+                    backgroundColor: '#F8FAFC',
                     borderRadius: THEME.radius.md,
-                    border: `1.5px solid ${THEME.deepForestCharcoal}`,
+                    border: '1px solid #E2E8F0',
                     display: 'flex',
                     flexDirection: 'column',
                     gap: '10px',
@@ -293,10 +292,10 @@ export const TeachLearn: React.FC = () => {
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '10px' }}>
                     <div>
                       <span className="badge">Can Teach You</span>
-                      <div style={{ fontSize: '14.5px', fontWeight: 800, marginTop: '4px', color: THEME.deepForestCharcoal }}>
+                      <div style={{ fontSize: '14.5px', fontWeight: 800, marginTop: '4px', color: '#0F172A' }}>
                         {peer.subject}: {peer.topic}
                       </div>
-                      <div style={{ fontSize: '12px', color: THEME.warmStone }}>
+                      <div style={{ fontSize: '12px', color: '#64748B' }}>
                         Tutor: {peer.full_name} (@{peer.username}) • {peer.course || 'Student'}
                       </div>
                     </div>
@@ -309,13 +308,13 @@ export const TeachLearn: React.FC = () => {
                         setSelectedPeer(peer);
                         setShowRequestModal(true);
                       }}
-                      leftIcon={<Send size={13} color={THEME.warmIvory} />}
+                      leftIcon={<Send size={13} color="#FFFFFF" />}
                     >
                       Request
                     </Button>
                   </div>
                   {peer.peer_notes && (
-                    <div style={{ fontSize: '12px', color: THEME.warmStone, fontStyle: 'italic' }}>
+                    <div style={{ fontSize: '12px', color: '#64748B', fontStyle: 'italic' }}>
                       Note: "{peer.peer_notes}"
                     </div>
                   )}
@@ -331,14 +330,14 @@ export const TeachLearn: React.FC = () => {
               display: 'flex',
               flexDirection: 'column',
               gap: '14px',
-              border: `1.5px solid ${THEME.deepForestCharcoal}`,
-              backgroundColor: THEME.warmIvory,
+              border: '1px solid #E2E8F0',
+              backgroundColor: '#FFFFFF',
               borderRadius: THEME.radius.card,
             }}
           >
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <BookOpen size={20} color={THEME.emeraldGreen} />
-              <h2 style={{ fontSize: '16px', fontWeight: 800, color: THEME.deepForestCharcoal }}>
+              <BookOpen size={20} color="#0284C7" />
+              <h2 style={{ fontSize: '16px', fontWeight: 800, color: '#0F172A' }}>
                 Peers Seeking Your Help
               </h2>
             </div>
@@ -356,9 +355,9 @@ export const TeachLearn: React.FC = () => {
                   className="card card-interactive"
                   style={{
                     padding: '14px',
-                    backgroundColor: THEME.warmIvory,
+                    backgroundColor: '#F8FAFC',
                     borderRadius: THEME.radius.md,
-                    border: `1.5px solid ${THEME.deepForestCharcoal}`,
+                    border: '1px solid #E2E8F0',
                     display: 'flex',
                     flexDirection: 'column',
                     gap: '10px',
@@ -367,16 +366,16 @@ export const TeachLearn: React.FC = () => {
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '10px' }}>
                     <div>
                       <span className="badge-outline">Needs Help</span>
-                      <div style={{ fontSize: '14.5px', fontWeight: 800, marginTop: '4px', color: THEME.deepForestCharcoal }}>
+                      <div style={{ fontSize: '14.5px', fontWeight: 800, marginTop: '4px', color: '#F8FAFC' }}>
                         {peer.subject}: {peer.topic}
                       </div>
-                      <div style={{ fontSize: '12px', color: THEME.warmStone }}>
+                      <div style={{ fontSize: '12px', color: '#94A3B8' }}>
                         Learner: {peer.full_name} (@{peer.username}) • {peer.course || 'Student'}
                       </div>
                     </div>
 
                     <NavLink to="/rooms" className="btn-secondary btn-sm btn-pill" style={{ display: 'inline-flex' }}>
-                      <Video size={13} color={THEME.deepForestCharcoal} />
+                      <Video size={13} color="#F8FAFC" />
                       <span>Invite</span>
                     </NavLink>
                   </div>
@@ -393,12 +392,12 @@ export const TeachLearn: React.FC = () => {
         <div
           className="card"
           style={{
-            border: `1.5px solid ${THEME.deepForestCharcoal}`,
-            backgroundColor: THEME.warmIvory,
+            border: '1px solid #E2E8F0',
+            backgroundColor: '#FFFFFF',
             borderRadius: THEME.radius.card,
           }}
         >
-          <h3 style={{ fontSize: '15px', fontWeight: 800, marginBottom: '12px', color: THEME.deepForestCharcoal }}>
+          <h3 style={{ fontSize: '15px', fontWeight: 800, marginBottom: '12px', color: '#0F172A' }}>
             My "I Can Teach" Topics ({teachTopics.length})
           </h3>
           <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
@@ -410,16 +409,16 @@ export const TeachLearn: React.FC = () => {
                   alignItems: 'center',
                   justifyContent: 'space-between',
                   padding: '10px 14px',
-                  backgroundColor: THEME.warmIvory,
+                  backgroundColor: '#F8FAFC',
                   borderRadius: THEME.radius.md,
-                  border: `1px solid ${THEME.warmStone}`,
+                  border: '1px solid #E2E8F0',
                 }}
               >
                 <div>
-                  <div style={{ fontSize: '13.5px', fontWeight: 800, color: THEME.deepForestCharcoal }}>
+                  <div style={{ fontSize: '13.5px', fontWeight: 800, color: '#0F172A' }}>
                     {t.subject} — {t.topic}
                   </div>
-                  {t.notes && <div style={{ fontSize: '11.5px', color: THEME.warmStone }}>{t.notes}</div>}
+                  {t.notes && <div style={{ fontSize: '11.5px', color: '#64748B' }}>{t.notes}</div>}
                 </div>
                 <Button
                   variant="ghost"
@@ -427,7 +426,7 @@ export const TeachLearn: React.FC = () => {
                   onClick={() => handleDeleteTopic(t.id)}
                   aria-label="Remove topic"
                 >
-                  <Trash2 size={13} color={THEME.warmStone} />
+                  <Trash2 size={13} color="#64748B" />
                 </Button>
               </div>
             ))}
@@ -438,12 +437,12 @@ export const TeachLearn: React.FC = () => {
         <div
           className="card"
           style={{
-            border: `1.5px solid ${THEME.deepForestCharcoal}`,
-            backgroundColor: THEME.warmIvory,
+            border: '1px solid #E2E8F0',
+            backgroundColor: '#FFFFFF',
             borderRadius: THEME.radius.card,
           }}
         >
-          <h3 style={{ fontSize: '15px', fontWeight: 800, marginBottom: '12px', color: THEME.deepForestCharcoal }}>
+          <h3 style={{ fontSize: '15px', fontWeight: 800, marginBottom: '12px', color: '#0F172A' }}>
             My "I Need Help" Topics ({learnTopics.length})
           </h3>
           <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
@@ -455,16 +454,16 @@ export const TeachLearn: React.FC = () => {
                   alignItems: 'center',
                   justifyContent: 'space-between',
                   padding: '10px 14px',
-                  backgroundColor: THEME.warmIvory,
+                  backgroundColor: '#F8FAFC',
                   borderRadius: THEME.radius.md,
-                  border: `1px solid ${THEME.warmStone}`,
+                  border: '1px solid #E2E8F0',
                 }}
               >
                 <div>
-                  <div style={{ fontSize: '13.5px', fontWeight: 800, color: THEME.deepForestCharcoal }}>
+                  <div style={{ fontSize: '13.5px', fontWeight: 800, color: '#0F172A' }}>
                     {t.subject} — {t.topic}
                   </div>
-                  {t.notes && <div style={{ fontSize: '11.5px', color: THEME.warmStone }}>{t.notes}</div>}
+                  {t.notes && <div style={{ fontSize: '11.5px', color: '#64748B' }}>{t.notes}</div>}
                 </div>
                 <Button
                   variant="ghost"
@@ -472,7 +471,7 @@ export const TeachLearn: React.FC = () => {
                   onClick={() => handleDeleteTopic(t.id)}
                   aria-label="Remove topic"
                 >
-                  <Trash2 size={13} color={THEME.warmStone} />
+                  <Trash2 size={13} color="#94A3B8" />
                 </Button>
               </div>
             ))}

@@ -27,9 +27,9 @@ export const ToggleSwitch: React.FC<ToggleSwitchProps> = ({
 
   // Dimensions based on size
   const config = {
-    sm: { width: 40, height: 22, thumb: 16, icon: 10, offset: 3 },
-    md: { width: 48, height: 26, thumb: 20, icon: 12, offset: 3 },
-    lg: { width: 56, height: 30, thumb: 24, icon: 14, offset: 3 },
+    sm: { width: 38, height: 22, thumb: 16, icon: 10, offset: 3 },
+    md: { width: 46, height: 26, thumb: 20, icon: 11, offset: 3 },
+    lg: { width: 54, height: 30, thumb: 24, icon: 13, offset: 3 },
   }[size];
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
@@ -46,7 +46,7 @@ export const ToggleSwitch: React.FC<ToggleSwitchProps> = ({
         display: 'inline-flex',
         alignItems: 'center',
         gap: '12px',
-        opacity: disabled ? 0.6 : 1,
+        opacity: disabled ? 0.5 : 1,
         cursor: disabled ? 'not-allowed' : 'pointer',
         userSelect: 'none',
       }}
@@ -64,10 +64,11 @@ export const ToggleSwitch: React.FC<ToggleSwitchProps> = ({
           width: `${config.width}px`,
           height: `${config.height}px`,
           borderRadius: THEME.radius.pill,
-          backgroundColor: checked ? THEME.emeraldGreen : THEME.warmStone,
-          border: `1.5px solid ${THEME.deepForestCharcoal}`,
+          backgroundColor: checked ? THEME.accent : '#1E293B',
+          border: `1px solid ${checked ? THEME.accent : 'rgba(255, 255, 255, 0.12)'}`,
           position: 'relative',
-          transition: `background-color ${THEME.motion.durationNormal} ${THEME.motion.easeOut}, border-color ${THEME.motion.durationNormal} ${THEME.motion.easeOut}`,
+          transition: `background-color ${THEME.motion.durationNormal} ${THEME.motion.easeOut}, border-color ${THEME.motion.durationNormal} ${THEME.motion.easeOut}, box-shadow ${THEME.motion.durationNormal} ${THEME.motion.easeOut}`,
+          boxShadow: checked ? '0 0 12px rgba(14, 165, 233, 0.35)' : 'none',
           flexShrink: 0,
           outline: 'none',
           padding: '2px',
@@ -81,24 +82,23 @@ export const ToggleSwitch: React.FC<ToggleSwitchProps> = ({
             width: `${config.thumb}px`,
             height: `${config.thumb}px`,
             borderRadius: THEME.radius.full,
-            backgroundColor: THEME.warmIvory,
-            border: `1.5px solid ${THEME.deepForestCharcoal}`,
+            backgroundColor: '#FFFFFF',
             position: 'absolute',
             top: `${config.offset - 1.5}px`,
             left: `${config.offset - 1.5}px`,
-            transform: checked ? `translateX(${config.width - config.thumb - config.offset * 2}px)` : 'translateX(0)',
+            transform: checked ? `translateX(${config.width - config.thumb - config.offset * 2 + 1}px)` : 'translateX(0)',
             transition: `transform ${THEME.motion.durationNormal} ${THEME.motion.easeSpring}`,
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
-            boxShadow: '0 1px 3px rgba(38, 53, 47, 0.25)',
+            boxShadow: '0 2px 4px rgba(0, 0, 0, 0.35)',
           }}
         >
           {/* Dual-cue visual indicator (not color alone) */}
           {checked ? (
-            <Check size={config.icon} color={THEME.emeraldGreen} strokeWidth={3} />
+            <Check size={config.icon} color="#0284C7" strokeWidth={3} />
           ) : (
-            <Minus size={config.icon} color={THEME.warmStone} strokeWidth={2.5} />
+            <Minus size={config.icon} color="#94A3B8" strokeWidth={2.5} />
           )}
         </div>
       </div>
@@ -110,8 +110,8 @@ export const ToggleSwitch: React.FC<ToggleSwitchProps> = ({
             <span
               style={{
                 fontSize: size === 'sm' ? '12.5px' : '13.5px',
-                fontWeight: 700,
-                color: THEME.deepForestCharcoal,
+                fontWeight: 600,
+                color: THEME.textPrimary,
                 lineHeight: 1.3,
               }}
             >
@@ -119,7 +119,7 @@ export const ToggleSwitch: React.FC<ToggleSwitchProps> = ({
             </span>
           )}
           {description && (
-            <span style={{ fontSize: '11.5px', color: THEME.warmStone, lineHeight: 1.3, marginTop: '2px' }}>
+            <span style={{ fontSize: '11.5px', color: THEME.textSecondary, lineHeight: 1.3, marginTop: '2px' }}>
               {description}
             </span>
           )}

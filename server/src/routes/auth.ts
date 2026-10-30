@@ -2,7 +2,7 @@ import { Router, Response } from 'express';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import crypto from 'crypto';
-import { db } from '../db/index.js';
+import { db, generateStudentId } from '../db/index.js';
 import { config } from '../config/index.js';
 import { requireAuth, AuthRequest } from '../middleware/auth.js';
 import {
@@ -87,15 +87,24 @@ router.post('/register', async (req, res): Promise<void> => {
     const userId = crypto.randomUUID();
     const now = new Date().toISOString();
 
+    // Generate unique student ID
+    let studentId = generateStudentId();
+    let existingStudent = db.prepare('SELECT id FROM users WHERE student_id = ?').get(studentId);
+    while (existingStudent) {
+      studentId = generateStudentId();
+      existingStudent = db.prepare('SELECT id FROM users WHERE student_id = ?').get(studentId);
+    }
+
     const insertUser = db.prepare(`
       INSERT INTO users (
-        id, email, username, full_name, password_hash,
-        course, college, academic_year, created_at, updated_at
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        id, student_id, email, username, full_name, password_hash,
+        course, college, academic_year, is_verified, created_at, updated_at
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 0, ?, ?)
     `);
 
     insertUser.run(
       userId,
+      studentId,
       normalizedEmail,
       normalizedUsername,
       full_name.trim(),
@@ -122,14 +131,14 @@ router.post('/register', async (req, res): Promise<void> => {
       console.error('[AUTH] Failed to send verification email:', err)
     );
 
-    const token = generateSessionToken(userId);
-    setAuthCookie(res, token);
-
+    // Mandatory email verification: do NOT set session cookie or return token!
     res.status(201).json({
-      message: 'Account registered successfully. Please check your email for verification.',
-      token,
+      message: 'Account registered successfully. Please verify your email before logging in.',
+      unverified: true,
+      email: normalizedEmail,
       user: {
         id: userId,
+        student_id: studentId,
         email: normalizedEmail,
         username: normalizedUsername,
         full_name: full_name.trim(),
@@ -151,23 +160,34 @@ router.post('/login', async (req, res): Promise<void> => {
     const { identifier, password } = req.body;
 
     if (!identifier || !password) {
-      res.status(400).json({ error: 'Email/Username and password are required.' });
+      res.status(400).json({ error: 'Email, Username or Student ID and password are required.' });
       return;
     }
 
     const cleanId = identifier.trim().toLowerCase();
     const user = db.prepare(`
-      SELECT * FROM users WHERE (email = ? OR username = ?) AND is_active = 1
-    `).get(cleanId, cleanId) as any;
+      SELECT * FROM users
+      WHERE (LOWER(email) = ? OR LOWER(username) = ? OR LOWER(student_id) = ?) AND is_active = 1
+    `).get(cleanId, cleanId, cleanId) as any;
 
     if (!user) {
-      res.status(401).json({ error: 'Invalid email/username or password.' });
+      res.status(401).json({ error: 'Invalid email, username, student ID or password.' });
       return;
     }
 
     const isMatch = await bcrypt.compare(password, user.password_hash);
     if (!isMatch) {
-      res.status(401).json({ error: 'Invalid email/username or password.' });
+      res.status(401).json({ error: 'Invalid email, username, student ID or password.' });
+      return;
+    }
+
+    // Enforce email verification
+    if (user.is_verified !== 1) {
+      res.status(403).json({
+        error: 'Please verify your email address before logging in.',
+        unverified: true,
+        email: user.email,
+      });
       return;
     }
 
@@ -179,6 +199,7 @@ router.post('/login', async (req, res): Promise<void> => {
       token,
       user: {
         id: user.id,
+        student_id: user.student_id,
         email: user.email,
         username: user.username,
         full_name: user.full_name,
@@ -336,11 +357,32 @@ router.post('/verify-email', (req, res): void => {
 });
 
 // 8. RESEND VERIFICATION EMAIL
-router.post('/resend-verification', requireAuth, async (req: AuthRequest, res): Promise<void> => {
+router.post('/resend-verification', async (req: AuthRequest, res): Promise<void> => {
   try {
-    const user = req.user!;
-    if (user.is_verified) {
-      res.status(400).json({ error: 'Your email address is already verified.' });
+    const bodyEmail = req.body?.email?.trim().toLowerCase();
+    let user: any = null;
+
+    if (bodyEmail) {
+      user = db.prepare('SELECT id, full_name, email, is_verified FROM users WHERE email = ? AND is_active = 1').get(bodyEmail);
+    } else {
+      const token = req.headers.authorization?.startsWith('Bearer ') ? req.headers.authorization.substring(7) : req.cookies?.token;
+      if (token) {
+        try {
+          const decoded = jwt.verify(token, config.jwtSecret) as { userId: string };
+          user = db.prepare('SELECT id, full_name, email, is_verified FROM users WHERE id = ? AND is_active = 1').get(decoded.userId);
+        } catch {
+          // ignore
+        }
+      }
+    }
+
+    if (!user) {
+      res.json({ message: 'If an unverified account exists with that email address, a verification link has been sent.' });
+      return;
+    }
+
+    if (user.is_verified === 1) {
+      res.status(400).json({ error: 'Your email address is already verified. You may log in directly.' });
       return;
     }
 

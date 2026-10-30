@@ -55,7 +55,7 @@ export const Register: React.FC = () => {
         academic_year: academicYear,
         terms_accepted: termsAccepted,
       });
-      navigate('/dashboard');
+      navigate(`/verify-email?pending=true&email=${encodeURIComponent(email)}`);
     } catch (err: any) {
       setError(err.message || 'Registration failed.');
     } finally {
@@ -70,7 +70,7 @@ export const Register: React.FC = () => {
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
-        backgroundColor: THEME.warmIvory,
+        backgroundColor: '#F8FAFC',
         padding: '30px 20px',
       }}
     >
@@ -83,8 +83,8 @@ export const Register: React.FC = () => {
           display: 'flex',
           flexDirection: 'column',
           gap: '20px',
-          backgroundColor: THEME.warmIvory,
-          border: `1.5px solid ${THEME.deepForestCharcoal}`,
+          backgroundColor: '#FFFFFF',
+          border: '1px solid #E2E8F0',
           borderRadius: THEME.radius.cardLg,
           boxShadow: THEME.shadow.lifted,
           animation: `studysync-scale-in ${THEME.motion.durationNormal} ${THEME.motion.easeSpring}`,
@@ -96,21 +96,20 @@ export const Register: React.FC = () => {
               width: '48px',
               height: '48px',
               borderRadius: THEME.radius.md,
-              backgroundColor: THEME.emeraldGreen,
+              backgroundColor: 'rgba(2, 132, 199, 0.1)',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
               margin: '0 auto 14px',
-              border: `1.5px solid ${THEME.deepForestCharcoal}`,
-              boxShadow: THEME.shadow.subtle,
+              border: '1px solid rgba(2, 132, 199, 0.3)',
             }}
           >
-            <Sparkles size={24} color={THEME.warmIvory} strokeWidth={2.5} />
+            <Sparkles size={24} color="#0284C7" strokeWidth={2.5} />
           </div>
-          <h1 style={{ fontSize: '24px', fontWeight: 800, color: THEME.deepForestCharcoal }}>
+          <h1 style={{ fontSize: '24px', fontWeight: 800, color: '#0F172A' }}>
             Create Student Account
           </h1>
-          <p style={{ fontSize: '13px', marginTop: '4px', color: THEME.warmStone }}>
+          <p style={{ fontSize: '13px', marginTop: '4px', color: '#94A3B8' }}>
             Join thousands of engineering and medical students learning together.
           </p>
         </div>
@@ -235,8 +234,8 @@ export const Register: React.FC = () => {
             style={{
               padding: '12px',
               borderRadius: THEME.radius.md,
-              border: `1.5px solid ${termsAccepted ? THEME.emeraldGreen : THEME.deepForestCharcoal}`,
-              backgroundColor: THEME.warmIvory,
+              border: `1px solid ${termsAccepted ? '#0284C7' : '#E2E8F0'}`,
+              backgroundColor: '#F8FAFC',
               transition: `border-color ${THEME.motion.durationFast} ${THEME.motion.easeOut}`,
             }}
           >
@@ -256,7 +255,7 @@ export const Register: React.FC = () => {
             size="lg"
             disabled={!termsAccepted}
             loading={loading}
-            leftIcon={<UserPlus size={16} color={THEME.warmIvory} />}
+            leftIcon={<UserPlus size={16} color="#FFFFFF" />}
             style={{ width: '100%', marginTop: '8px' }}
           >
             Complete Registration
@@ -267,13 +266,13 @@ export const Register: React.FC = () => {
           style={{
             textAlign: 'center',
             fontSize: '13px',
-            borderTop: `1px solid ${THEME.warmStone}`,
+            borderTop: '1px solid #E2E8F0',
             paddingTop: '16px',
-            color: THEME.warmStone,
+            color: '#64748B',
           }}
         >
           Already have an account?{' '}
-          <NavLink to="/login" style={{ textDecoration: 'underline', color: THEME.emeraldGreen, fontWeight: 700 }}>
+          <NavLink to="/login" style={{ textDecoration: 'underline', color: '#0284C7', fontWeight: 700 }}>
             Sign In
           </NavLink>
         </div>

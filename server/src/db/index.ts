@@ -63,9 +63,27 @@ export const db: DBInterface = {
   },
 };
 
+export function generateStudentId(): string {
+  const chars = '23456789ABCDEFGHJKLMNPQRSTUVWXYZ';
+  let id = 'STU-';
+  for (let i = 0; i < 6; i++) {
+    id += chars.charAt(Math.floor(Math.random() * chars.length));
+  }
+  return id;
+}
+
+export function generateRoomInviteCode(): string {
+  const chars = '23456789ABCDEFGHJKLMNPQRSTUVWXYZ';
+  let id = 'ROOM-';
+  for (let i = 0; i < 6; i++) {
+    id += chars.charAt(Math.floor(Math.random() * chars.length));
+  }
+  return id;
+}
+
 export function initDatabase() {
-  const schema = `
-    -- Users Table
+  // 1. Ensure users table exists with base columns
+  rawDb.exec(`
     CREATE TABLE IF NOT EXISTS users (
       id TEXT PRIMARY KEY,
       email TEXT UNIQUE NOT NULL,
@@ -84,9 +102,38 @@ export function initDatabase() {
       created_at TEXT NOT NULL,
       updated_at TEXT NOT NULL
     );
+  `);
 
+  // 2. Migration: check if student_id exists; if not, add it before indexes
+  try {
+    const tableInfo = rawDb.prepare('PRAGMA table_info(users)').all() as Array<{ name: string }>;
+    const hasStudentId = tableInfo.some((col) => col.name === 'student_id');
+    if (!hasStudentId) {
+      rawDb.exec('ALTER TABLE users ADD COLUMN student_id TEXT;');
+    }
+
+    // Backfill any existing users without a student_id
+    const usersWithoutId = rawDb.prepare("SELECT id FROM users WHERE student_id IS NULL OR student_id = ''").all() as Array<{ id: string }>;
+    for (const u of usersWithoutId) {
+      let candidateId = generateStudentId();
+      let assigned = false;
+      while (!assigned) {
+        try {
+          rawDb.prepare('UPDATE users SET student_id = ? WHERE id = ?').run(candidateId, u.id);
+          assigned = true;
+        } catch {
+          candidateId = generateStudentId();
+        }
+      }
+    }
+  } catch (migErr) {
+    console.error('[DB] Migration error checking student_id:', migErr);
+  }
+
+  const schema = `
     CREATE INDEX IF NOT EXISTS idx_users_email ON users(email);
     CREATE INDEX IF NOT EXISTS idx_users_username ON users(username);
+    CREATE UNIQUE INDEX IF NOT EXISTS idx_users_student_id ON users(student_id);
 
     -- Email Verification Tokens
     CREATE TABLE IF NOT EXISTS email_verification_tokens (
@@ -193,6 +240,7 @@ export function initDatabase() {
       topic TEXT DEFAULT '',
       group_id TEXT,
       host_id TEXT NOT NULL,
+      invite_code TEXT UNIQUE,
       is_active INTEGER DEFAULT 1,
       teach_mode INTEGER DEFAULT 0,
       created_at TEXT NOT NULL,
@@ -399,8 +447,90 @@ export function initDatabase() {
 
     CREATE INDEX IF NOT EXISTS idx_resources_user ON resources(user_id);
     CREATE INDEX IF NOT EXISTS idx_resources_group ON resources(group_id);
+
+    -- Public Community Feed
+    CREATE TABLE IF NOT EXISTS community_posts (
+      id TEXT PRIMARY KEY,
+      author_id TEXT NOT NULL,
+      title TEXT NOT NULL,
+      content TEXT NOT NULL,
+      tags TEXT DEFAULT '',
+      attachment_url TEXT,
+      likes_count INTEGER DEFAULT 0,
+      comments_count INTEGER DEFAULT 0,
+      created_at TEXT NOT NULL,
+      updated_at TEXT NOT NULL,
+      FOREIGN KEY(author_id) REFERENCES users(id) ON DELETE CASCADE
+    );
+
+    CREATE INDEX IF NOT EXISTS idx_community_posts_author ON community_posts(author_id);
+    CREATE INDEX IF NOT EXISTS idx_community_posts_created ON community_posts(created_at);
+
+    -- Community Comments
+    CREATE TABLE IF NOT EXISTS community_comments (
+      id TEXT PRIMARY KEY,
+      post_id TEXT NOT NULL,
+      author_id TEXT NOT NULL,
+      content TEXT NOT NULL,
+      created_at TEXT NOT NULL,
+      FOREIGN KEY(post_id) REFERENCES community_posts(id) ON DELETE CASCADE,
+      FOREIGN KEY(author_id) REFERENCES users(id) ON DELETE CASCADE
+    );
+
+    CREATE INDEX IF NOT EXISTS idx_community_comments_post ON community_comments(post_id);
+
+    -- Community Likes
+    CREATE TABLE IF NOT EXISTS community_likes (
+      id TEXT PRIMARY KEY,
+      post_id TEXT NOT NULL,
+      user_id TEXT NOT NULL,
+      created_at TEXT NOT NULL,
+      FOREIGN KEY(post_id) REFERENCES community_posts(id) ON DELETE CASCADE,
+      FOREIGN KEY(user_id) REFERENCES users(id) ON DELETE CASCADE,
+      UNIQUE(post_id, user_id)
+    );
+
+    -- Community Reports
+    CREATE TABLE IF NOT EXISTS community_reports (
+      id TEXT PRIMARY KEY,
+      post_id TEXT NOT NULL,
+      reporter_id TEXT NOT NULL,
+      reason TEXT NOT NULL,
+      created_at TEXT NOT NULL,
+      FOREIGN KEY(post_id) REFERENCES community_posts(id) ON DELETE CASCADE,
+      FOREIGN KEY(reporter_id) REFERENCES users(id) ON DELETE CASCADE,
+      UNIQUE(post_id, reporter_id)
+    );
   `;
 
   rawDb.exec(schema);
+
+  // Migration: ensure study_rooms has invite_code column
+  try {
+    const roomTableInfo = rawDb.prepare('PRAGMA table_info(study_rooms)').all() as Array<{ name: string }>;
+    const hasInviteCode = roomTableInfo.some((col) => col.name === 'invite_code');
+    if (!hasInviteCode) {
+      rawDb.exec('ALTER TABLE study_rooms ADD COLUMN invite_code TEXT;');
+      rawDb.exec('CREATE UNIQUE INDEX IF NOT EXISTS idx_study_rooms_invite_code ON study_rooms(invite_code);');
+    }
+
+    // Backfill any rooms that lack an invite_code
+    const roomsWithoutCode = rawDb.prepare("SELECT id FROM study_rooms WHERE invite_code IS NULL OR invite_code = ''").all() as Array<{ id: string }>;
+    for (const r of roomsWithoutCode) {
+      let candidateCode = generateRoomInviteCode();
+      let assigned = false;
+      while (!assigned) {
+        try {
+          rawDb.prepare('UPDATE study_rooms SET invite_code = ? WHERE id = ?').run(candidateCode, r.id);
+          assigned = true;
+        } catch {
+          candidateCode = generateRoomInviteCode();
+        }
+      }
+    }
+  } catch (migErr) {
+    console.error('[DB] Migration error checking study_rooms invite_code:', migErr);
+  }
+
   console.log('[DB] Database schema initialized successfully with node:sqlite.');
 }

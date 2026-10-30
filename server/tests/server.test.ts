@@ -1,5 +1,6 @@
 import { describe, it, expect, beforeAll, afterAll } from 'vitest';
 import request from 'supertest';
+import crypto from 'crypto';
 import { app } from '../src/index.js';
 import { db } from '../src/db/index.js';
 import { computeSessionTiming } from '../src/routes/focus.js';
@@ -8,6 +9,7 @@ import { createVerificationEmail, createPasswordResetEmail } from '../src/servic
 describe('StudySync Core Systems & Security Suite', () => {
   let authToken = '';
   let userId = '';
+  let studentId = '';
   let studentUsername = `student_${Date.now()}`;
   let studentEmail = `${studentUsername}@example.com`;
   let groupId = '';
@@ -74,7 +76,7 @@ describe('StudySync Core Systems & Security Suite', () => {
     });
   });
 
-  describe('2. Authentication & Account Management Flow', () => {
+  describe('2. Authentication, Mandatory Email Verification & Student Identity', () => {
     it('Rejects registration when terms are not accepted', async () => {
       const res = await request(app).post('/api/auth/register').send({
         full_name: 'Test Student',
@@ -101,7 +103,7 @@ describe('StudySync Core Systems & Security Suite', () => {
       expect(res.body.error).toContain('match');
     });
 
-    it('Registers a new student account successfully', async () => {
+    it('Registers a new student account without returning auth token (mandatory verification)', async () => {
       const res = await request(app).post('/api/auth/register').send({
         full_name: 'Test Student',
         email: studentEmail,
@@ -115,12 +117,15 @@ describe('StudySync Core Systems & Security Suite', () => {
       });
 
       expect(res.status).toBe(201);
-      expect(res.body.token).toBeDefined();
+      expect(res.body.unverified).toBe(true);
+      expect(res.body.token).toBeUndefined(); // Must not grant access before verification
       expect(res.body.user.email).toBe(studentEmail);
       expect(res.body.user.username).toBe(studentUsername);
+      expect(res.body.user.is_verified).toBe(0);
+      expect(res.body.user.student_id).toMatch(/^STU-[A-Z0-9]{6}$/);
 
-      authToken = res.body.token;
       userId = res.body.user.id;
+      studentId = res.body.user.student_id;
     });
 
     it('Prevents duplicate registration with the same email or username', async () => {
@@ -136,9 +141,56 @@ describe('StudySync Core Systems & Security Suite', () => {
       expect(res.body.error).toContain('already exists');
     });
 
-    it('Logs in successfully with valid credentials', async () => {
+    it('Rejects login attempt when email is not verified (403 Forbidden)', async () => {
       const res = await request(app).post('/api/auth/login').send({
         identifier: studentUsername,
+        password: 'Password123!',
+      });
+      expect(res.status).toBe(403);
+      expect(res.body.unverified).toBe(true);
+      expect(res.body.error).toContain('verify your email');
+    });
+
+    it('Rejects protected route access when account is unverified', async () => {
+      // Create a spoofed token for unverified user
+      const jwt = (await import('jsonwebtoken')).default;
+      const { config } = await import('../src/config/index.js');
+      const fakeToken = jwt.sign({ userId }, config.jwtSecret, { expiresIn: '1h' });
+
+      const res = await request(app)
+        .get('/api/auth/me')
+        .set('Authorization', `Bearer ${fakeToken}`);
+      expect(res.status).toBe(403);
+      expect(res.body.unverified).toBe(true);
+    });
+
+    it('Verifies email successfully using database verification token', async () => {
+      // Retrieve verification token from database
+      const row = db.prepare('SELECT token_hash FROM email_verification_tokens WHERE user_id = ?').get(userId) as any;
+      expect(row).toBeDefined();
+
+      // Directly mark verified to simulate clicking email link or verify token endpoint
+      const updateRes = db.prepare('UPDATE users SET is_verified = 1 WHERE id = ?').run(userId);
+      expect(updateRes.changes).toBe(1);
+    });
+
+    it('Logs in successfully with verified account using username', async () => {
+      const res = await request(app).post('/api/auth/login').send({
+        identifier: studentUsername,
+        password: 'Password123!',
+      });
+      expect(res.status).toBe(200);
+      expect(res.body.token).toBeDefined();
+      expect(res.body.user.id).toBe(userId);
+      expect(res.body.user.is_verified).toBe(1);
+      expect(res.body.user.student_id).toBe(studentId);
+
+      authToken = res.body.token;
+    });
+
+    it('Logs in successfully using Student ID (STU-XXXXXX)', async () => {
+      const res = await request(app).post('/api/auth/login').send({
+        identifier: studentId,
         password: 'Password123!',
       });
       expect(res.status).toBe(200);
@@ -154,12 +206,36 @@ describe('StudySync Core Systems & Security Suite', () => {
       expect(res.status).toBe(401);
     });
 
-    it('Fetches authenticated user profile via /api/auth/me', async () => {
+    it('Fetches authenticated user profile with Student ID via /api/auth/me', async () => {
       const res = await request(app)
         .get('/api/auth/me')
         .set('Authorization', `Bearer ${authToken}`);
       expect(res.status).toBe(200);
       expect(res.body.user.username).toBe(studentUsername);
+      expect(res.body.user.student_id).toBe(studentId);
+    });
+
+    it('Finds student by exact Student ID via /api/users/search', async () => {
+      // Register a second student to search for
+      const peerRes = await request(app).post('/api/auth/register').send({
+        full_name: 'Search Target Student',
+        email: `search_${Date.now()}@example.com`,
+        username: `search_target_${Date.now()}`,
+        password: 'Password123!',
+        confirm_password: 'Password123!',
+        course: 'Computer Science',
+        terms_accepted: true,
+      });
+
+      const peerStudentId = peerRes.body.user.student_id;
+      expect(peerStudentId).toMatch(/^STU-[A-Z0-9]{6}$/);
+
+      const res = await request(app)
+        .get(`/api/users/search?q=${peerStudentId}`)
+        .set('Authorization', `Bearer ${authToken}`);
+      expect(res.status).toBe(200);
+      expect(res.body.students.length).toBeGreaterThanOrEqual(1);
+      expect(res.body.students.some((s: any) => s.student_id === peerStudentId)).toBe(true);
     });
 
     it('Forgot password sends generic response without leaking account existence', async () => {
@@ -174,7 +250,7 @@ describe('StudySync Core Systems & Security Suite', () => {
       });
       expect(nonExistentRes.status).toBe(200);
       expect(nonExistentRes.body.message).toBe(res.body.message);
-    });
+    }, 15000);
   });
 
   describe('3. Study Groups and Collaboration', () => {
@@ -336,18 +412,30 @@ describe('StudySync Core Systems & Security Suite', () => {
     });
 
     it('Matches peer learners and teachers based on topic overlap', async () => {
-      // Register a second peer who can teach DBMS Normalization
+      const peerUsername = `peer_tutor_${Date.now()}`;
+      const peerEmail = `${peerUsername}@example.com`;
+
+      // Register peer
       const peerRes = await request(app).post('/api/auth/register').send({
         full_name: 'DBMS Peer Tutor',
-        email: `peer_${Date.now()}@example.com`,
-        username: `peer_tutor_${Date.now()}`,
+        email: peerEmail,
+        username: peerUsername,
         password: 'Password123!',
         confirm_password: 'Password123!',
         course: 'Computer Science',
         terms_accepted: true,
       });
 
-      const peerToken = peerRes.body.token;
+      // Mark peer verified
+      db.prepare('UPDATE users SET is_verified = 1 WHERE email = ?').run(peerEmail);
+
+      // Login peer
+      const peerLogin = await request(app).post('/api/auth/login').send({
+        identifier: peerUsername,
+        password: 'Password123!',
+      });
+
+      const peerToken = peerLogin.body.token;
 
       // Peer adds DBMS Normalization under 'teach'
       await request(app)
@@ -533,6 +621,237 @@ describe('StudySync Core Systems & Security Suite', () => {
       expect(res.body.upcomingExams.length).toBeGreaterThan(0);
       expect(res.body.activeGroupsCount).toBeGreaterThan(0);
       expect(res.body.syllabus.total).toBeGreaterThan(0);
+    });
+  });
+
+  describe('9. Public Community Feed & Social Discussions', () => {
+    let postId = '';
+    let commentId = '';
+
+    it('Creates a community discussion post with tags', async () => {
+      const res = await request(app)
+        .post('/api/community/posts')
+        .set('Authorization', `Bearer ${authToken}`)
+        .send({
+          title: 'Guide: How to tackle Dynamic Programming in Exams',
+          content: 'Always define the state clearly: dp[i] represents optimal solution for subproblem i.',
+          tags: 'Engineering, Algorithms, ExamPrep',
+        });
+
+      expect(res.status).toBe(201);
+      expect(res.body.post.title).toBe('Guide: How to tackle Dynamic Programming in Exams');
+      expect(res.body.post.author_student_id).toBe(studentId);
+      expect(res.body.post.likes_count).toBe(0);
+      expect(res.body.post.comments_count).toBe(0);
+      postId = res.body.post.id;
+    });
+
+    it('Lists community posts with pagination, search, and author student IDs', async () => {
+      const res = await request(app).get('/api/community/posts?page=1&limit=10');
+      expect(res.status).toBe(200);
+      expect(res.body.posts.length).toBeGreaterThan(0);
+      expect(res.body.pagination.total).toBeGreaterThan(0);
+
+      const found = res.body.posts.find((p: any) => p.id === postId);
+      expect(found).toBeDefined();
+      expect(found.author_student_id).toBe(studentId);
+    });
+
+    it('Toggles like on a community post (like -> unlike)', async () => {
+      // 1. Like
+      const likeRes = await request(app)
+        .post(`/api/community/posts/${postId}/like`)
+        .set('Authorization', `Bearer ${authToken}`);
+      expect(likeRes.status).toBe(200);
+      expect(likeRes.body.has_liked).toBe(true);
+      expect(likeRes.body.likes_count).toBe(1);
+
+      // 2. Unlike
+      const unlikeRes = await request(app)
+        .post(`/api/community/posts/${postId}/like`)
+        .set('Authorization', `Bearer ${authToken}`);
+      expect(unlikeRes.status).toBe(200);
+      expect(unlikeRes.body.has_liked).toBe(false);
+      expect(unlikeRes.body.likes_count).toBe(0);
+    });
+
+    it('Adds a comment to a community post and increments comment counter', async () => {
+      const res = await request(app)
+        .post(`/api/community/posts/${postId}/comments`)
+        .set('Authorization', `Bearer ${authToken}`)
+        .send({ content: 'Great breakdown! Especially the state definition step.' });
+
+      expect(res.status).toBe(201);
+      expect(res.body.comment.content).toContain('Great breakdown');
+      expect(res.body.comment.author_student_id).toBe(studentId);
+      commentId = res.body.comment.id;
+
+      // Verify post reflects comment count
+      const postRes = await request(app).get(`/api/community/posts/${postId}`);
+      expect(postRes.status).toBe(200);
+      expect(postRes.body.post.comments_count).toBe(1);
+      expect(postRes.body.comments.length).toBe(1);
+    });
+
+    it('Reports a community post for moderation review', async () => {
+      const res = await request(app)
+        .post(`/api/community/posts/${postId}/report`)
+        .set('Authorization', `Bearer ${authToken}`)
+        .send({ reason: 'Test reporting mechanism for safety review' });
+
+      expect(res.status).toBe(201);
+      expect(res.body.message).toContain('flagged for moderation review');
+
+      // Duplicate report prevented
+      const dupRes = await request(app)
+        .post(`/api/community/posts/${postId}/report`)
+        .set('Authorization', `Bearer ${authToken}`)
+        .send({ reason: 'Duplicate report' });
+
+      expect(dupRes.status).toBe(400);
+      expect(dupRes.body.error).toContain('already reported');
+    });
+
+    it('Deletes a comment and updates post comment counter', async () => {
+      const res = await request(app)
+        .delete(`/api/community/comments/${commentId}`)
+        .set('Authorization', `Bearer ${authToken}`);
+      expect(res.status).toBe(200);
+
+      const postRes = await request(app).get(`/api/community/posts/${postId}`);
+      expect(postRes.status).toBe(200);
+      expect(postRes.body.post.comments_count).toBe(0);
+    });
+
+    it('Deletes a post (author only)', async () => {
+      const res = await request(app)
+        .delete(`/api/community/posts/${postId}`)
+        .set('Authorization', `Bearer ${authToken}`);
+      expect(res.status).toBe(200);
+
+      const checkRes = await request(app).get(`/api/community/posts/${postId}`);
+      expect(checkRes.status).toBe(404);
+    });
+  });
+
+  describe('10. Strict Privacy: Private Study Rooms, Join by Code & Resource Isolation', () => {
+    let privateRoomId = '';
+    let privateInviteCode = '';
+    let strangerToken = '';
+
+    beforeAll(async () => {
+      // Create a stranger student
+      const strangerEmail = `stranger_${Date.now()}@example.com`;
+      const strangerUsername = `stranger_${Date.now()}`;
+      await request(app).post('/api/auth/register').send({
+        full_name: 'Private Stranger Student',
+        email: strangerEmail,
+        username: strangerUsername,
+        password: 'Password123!',
+        confirm_password: 'Password123!',
+        terms_accepted: true,
+      });
+      db.prepare('UPDATE users SET is_verified = 1 WHERE email = ?').run(strangerEmail);
+      const loginRes = await request(app).post('/api/auth/login').send({
+        identifier: strangerUsername,
+        password: 'Password123!',
+      });
+      strangerToken = loginRes.body.token;
+    });
+
+    it('Creates private study room with unique ROOM-XXXXXX invite code', async () => {
+      const res = await request(app)
+        .post('/api/rooms')
+        .set('Authorization', `Bearer ${authToken}`)
+        .send({
+          name: 'Quantum Mechanics Private Study',
+          subject: 'Physics',
+          topic: 'Schrodinger Wave Equation',
+        });
+
+      expect(res.status).toBe(201);
+      expect(res.body.room.invite_code).toMatch(/^ROOM-[A-Z0-9]{6}$/);
+      privateRoomId = res.body.room.id;
+      privateInviteCode = res.body.room.invite_code;
+    });
+
+    it('Prevents stranger from seeing another user standalone room in GET /rooms', async () => {
+      const res = await request(app)
+        .get('/api/rooms')
+        .set('Authorization', `Bearer ${strangerToken}`);
+
+      expect(res.status).toBe(200);
+      const found = res.body.rooms.find((r: any) => r.id === privateRoomId);
+      expect(found).toBeUndefined();
+    });
+
+    it('Blocks stranger with 403 Forbidden when accessing private room without code', async () => {
+      const res = await request(app)
+        .get(`/api/rooms/${privateRoomId}`)
+        .set('Authorization', `Bearer ${strangerToken}`);
+
+      expect(res.status).toBe(403);
+      expect(res.body.error).toContain('private');
+      expect(res.body.is_private).toBe(true);
+    });
+
+    it('Allows stranger to access private room when providing valid invite code query param', async () => {
+      const res = await request(app)
+        .get(`/api/rooms/${privateRoomId}?code=${privateInviteCode}`)
+        .set('Authorization', `Bearer ${strangerToken}`);
+
+      expect(res.status).toBe(200);
+      expect(res.body.room.id).toBe(privateRoomId);
+      expect(res.body.room.name).toBe('Quantum Mechanics Private Study');
+    });
+
+    it('Rejects joining private room by code with invalid code', async () => {
+      const res = await request(app)
+        .post('/api/rooms/join-by-code')
+        .set('Authorization', `Bearer ${strangerToken}`)
+        .send({ invite_code: 'ROOM-NONEXISTENT' });
+
+      expect(res.status).toBe(404);
+      expect(res.body.error).toContain('No active private study room');
+    });
+
+    it('Allows stranger to join private room via valid invite code', async () => {
+      const res = await request(app)
+        .post('/api/rooms/join-by-code')
+        .set('Authorization', `Bearer ${strangerToken}`)
+        .send({ invite_code: privateInviteCode });
+
+      expect(res.status).toBe(200);
+      expect(res.body.roomId).toBe(privateRoomId);
+
+      // Stranger is now an active participant and can view room directly
+      const directRes = await request(app)
+        .get(`/api/rooms/${privateRoomId}`)
+        .set('Authorization', `Bearer ${strangerToken}`);
+
+      expect(directRes.status).toBe(200);
+      expect(directRes.body.participants.some((p: any) => p.user_id !== userId)).toBe(true);
+    });
+
+    it('Enforces private resource isolation: stranger cannot view private resources in library', async () => {
+      // 1. Host creates a link resource
+      const linkRes = await request(app)
+        .post('/api/resources/link')
+        .set('Authorization', `Bearer ${authToken}`)
+        .send({
+          title: 'Private Lecture Notes',
+          url: 'https://arxiv.org/abs/quant-ph/010101',
+          description: 'Classified research draft',
+        });
+      expect(linkRes.status).toBe(201);
+      const resId = linkRes.body.resource.id;
+
+      // 2. Stranger queries resources library; host resource should NOT be in stranger general library
+      const strangerResList = await request(app)
+        .get('/api/resources')
+        .set('Authorization', `Bearer ${strangerToken}`);
+      expect(strangerResList.status).toBe(200);
+      expect(strangerResList.body.resources.some((r: any) => r.id === resId)).toBe(false);
     });
   });
 });

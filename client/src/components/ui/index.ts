@@ -7,3 +7,6 @@ export * from './CircularProgress';
 export * from './FloatingActionButton';
 export * from './Skeleton';
 export * from './EmptyState';
+export * from './SparkEffect';
+export * from './OrbActionStack';
+export * from './BiometricLoginButton';

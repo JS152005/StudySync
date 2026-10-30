@@ -25,7 +25,6 @@ export const Resources: React.FC = () => {
   const [file, setFile] = useState<File | null>(null);
   const [fileTitle, setFileTitle] = useState('');
   const [fileDesc, setFileDesc] = useState('');
-  const [isPublic, setIsPublic] = useState(false);
   const [uploading, setUploading] = useState(false);
 
   // Add Link Modal
@@ -64,7 +63,6 @@ export const Resources: React.FC = () => {
     formData.append('title', fileTitle || file.name);
     formData.append('description', fileDesc);
     if (defaultGroupId) formData.append('group_id', defaultGroupId);
-    if (isPublic) formData.append('is_public', '1');
 
     try {
       await apiRequest('/resources/upload', {
@@ -232,10 +230,11 @@ export const Resources: React.FC = () => {
                 display: 'flex',
                 flexDirection: 'column',
                 justifyContent: 'space-between',
-                gap: '14px',
-                border: `1.5px solid ${THEME.deepForestCharcoal}`,
-                backgroundColor: THEME.warmIvory,
+                gap: '16px',
+                backgroundColor: '#FFFFFF',
+                border: '1px solid #E2E8F0',
                 borderRadius: THEME.radius.card,
+                padding: '20px',
               }}
             >
               <div>
@@ -250,7 +249,7 @@ export const Resources: React.FC = () => {
                     onClick={() => setDeletingId(r.id)}
                     aria-label="Delete resource"
                   >
-                    <Trash2 size={13} color={THEME.warmStone} />
+                    <Trash2 size={13} color="#94A3B8" />
                   </Button>
                 </div>
 
@@ -259,18 +258,18 @@ export const Resources: React.FC = () => {
                     fontSize: '15.5px',
                     fontWeight: 800,
                     marginBottom: '4px',
-                    color: THEME.deepForestCharcoal,
+                    color: '#F8FAFC',
                   }}
                 >
                   {r.title}
                 </h3>
                 {r.description && (
-                  <p style={{ fontSize: '12px', lineHeight: 1.45, marginBottom: '8px', color: THEME.deepForestCharcoal }}>
+                  <p style={{ fontSize: '12px', lineHeight: 1.45, marginBottom: '8px', color: '#94A3B8' }}>
                     {r.description}
                   </p>
                 )}
 
-                <div style={{ fontSize: '11px', marginTop: '6px', color: THEME.warmStone }}>
+                <div style={{ fontSize: '11px', marginTop: '6px', color: '#94A3B8' }}>
                   Uploaded by {r.author_name} {r.group_name ? `• ${r.group_name}` : ''}
                 </div>
               </div>
@@ -283,7 +282,7 @@ export const Resources: React.FC = () => {
                   className="btn-secondary btn-pill"
                   style={{ width: '100%', textAlign: 'center', textDecoration: 'none', justifyContent: 'center' }}
                 >
-                  <ExternalLink size={14} color={THEME.deepForestCharcoal} />
+                  <ExternalLink size={14} color="#F8FAFC" />
                   <span>Open Resource Link</span>
                 </a>
               ) : (
@@ -293,7 +292,7 @@ export const Resources: React.FC = () => {
                   className="btn-primary btn-pill"
                   style={{ width: '100%', textAlign: 'center', textDecoration: 'none', justifyContent: 'center' }}
                 >
-                  <Download size={14} color={THEME.warmIvory} />
+                  <Download size={14} color="#FFFFFF" />
                   <span>Download File</span>
                 </a>
               )}
@@ -367,24 +366,6 @@ export const Resources: React.FC = () => {
               placeholder="Summary of contents, textbook editions..."
               value={fileDesc}
               onChange={(e) => setFileDesc(e.target.value)}
-            />
-          </div>
-
-          {/* Polished Animated ToggleSwitch for Public Sharing */}
-          <div
-            style={{
-              padding: '12px',
-              borderRadius: THEME.radius.md,
-              border: `1.5px solid ${THEME.deepForestCharcoal}`,
-              backgroundColor: THEME.warmIvory,
-            }}
-          >
-            <ToggleSwitch
-              id="resource-public-toggle"
-              checked={isPublic}
-              onChange={setIsPublic}
-              label="Make Globally Public"
-              description="Visible to all students across your institution instead of only your private study group."
             />
           </div>
 

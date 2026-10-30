@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
 import { apiRequest } from '../api/client';
 import { useAuth } from '../context/AuthContext';
 import { VideoMeeting } from '../components/VideoMeeting';
@@ -12,10 +12,12 @@ import { SegmentedControl, SegmentOption } from '../components/ui/SegmentedContr
 import { Modal } from '../components/ui/Modal';
 import { Skeleton } from '../components/ui/Skeleton';
 import { useToast } from '../components/ui/ToastContext';
-import { Video, PenTool, HelpCircle, GraduationCap, PhoneOff, Users, Hand } from 'lucide-react';
+import { Video, PenTool, HelpCircle, GraduationCap, PhoneOff, Users, Hand, Lock, Copy, Check } from 'lucide-react';
 
 export const RoomSession: React.FC = () => {
   const { id } = useParams<{ id: string }>();
+  const [searchParams] = useSearchParams();
+  const inviteCodeQuery = (searchParams.get('code') || '').trim();
   const { user } = useAuth();
   const navigate = useNavigate();
   const toast = useToast();
@@ -25,13 +27,15 @@ export const RoomSession: React.FC = () => {
   const [activeTab, setActiveTab] = useState<'video' | 'whiteboard' | 'doubts' | 'teach'>('video');
   const [showEndModal, setShowEndModal] = useState(false);
   const [ending, setEnding] = useState(false);
+  const [copiedCode, setCopiedCode] = useState(false);
 
   const loadRoom = async () => {
     try {
-      const data = await apiRequest(`/rooms/${id}`);
+      const query = inviteCodeQuery ? `?code=${encodeURIComponent(inviteCodeQuery)}` : '';
+      const data = await apiRequest(`/rooms/${id}${query}`);
       setRoomData(data);
     } catch (err: any) {
-      toast.error(err.message || 'Failed to load study room');
+      toast.error(err.message || 'Failed to load private study room');
       navigate('/rooms');
     } finally {
       setLoading(false);
@@ -39,14 +43,24 @@ export const RoomSession: React.FC = () => {
   };
 
   useEffect(() => {
-    apiRequest(`/rooms/${id}/join`, { method: 'POST' }).catch(console.error);
+    const body = inviteCodeQuery ? { invite_code: inviteCodeQuery } : {};
+    apiRequest(`/rooms/${id}/join`, { method: 'POST', body: JSON.stringify(body) }).catch(console.error);
     loadRoom();
     const interval = setInterval(loadRoom, 4000);
     return () => {
       clearInterval(interval);
       apiRequest(`/rooms/${id}/leave`, { method: 'POST' }).catch(console.error);
     };
-  }, [id]);
+  }, [id, inviteCodeQuery]);
+
+  const handleCopyInvite = () => {
+    if (!roomData?.room?.invite_code) return;
+    const code = roomData.room.invite_code;
+    navigator.clipboard.writeText(code);
+    setCopiedCode(true);
+    toast.success(`Copied room invite code: ${code}`);
+    setTimeout(() => setCopiedCode(false), 2500);
+  };
 
   const handleToggleHand = async () => {
     try {
@@ -133,22 +147,48 @@ export const RoomSession: React.FC = () => {
           flexWrap: 'wrap',
           gap: '14px',
           padding: '14px 20px',
-          backgroundColor: THEME.warmIvory,
-          border: `1.5px solid ${THEME.deepForestCharcoal}`,
+          backgroundColor: '#FFFFFF',
+          border: '1px solid #E2E8F0',
           borderRadius: THEME.radius.card,
-          boxShadow: THEME.shadow.subtle,
         }}
       >
         <div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
             <span className="live-pulse-dot" />
-            <span className="badge">Active Study Session</span>
+            <span className="badge" style={{ gap: '4px', fontSize: '11px' }}>
+              <Lock size={12} color="#FFFFFF" />
+              Private Room
+            </span>
             {room.teach_mode === 1 && <span className="badge-outline">Teach Mode</span>}
+            {room.invite_code && (
+              <button
+                type="button"
+                onClick={handleCopyInvite}
+                style={{
+                  background: 'rgba(14, 165, 233, 0.12)',
+                  border: '1px solid rgba(14, 165, 233, 0.3)',
+                  borderRadius: THEME.radius.sm,
+                  padding: '3px 8px',
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '5px',
+                  cursor: 'pointer',
+                  fontSize: '11px',
+                  fontWeight: 700,
+                  color: '#38BDF8',
+                  fontFamily: 'monospace',
+                }}
+                title="Copy private invite code to clipboard"
+              >
+                {copiedCode ? <Check size={12} color="#38BDF8" /> : <Copy size={12} color="#38BDF8" />}
+                <span>INVITE: {room.invite_code}</span>
+              </button>
+            )}
           </div>
-          <h1 style={{ fontSize: '18px', fontWeight: 800, marginTop: '4px', color: THEME.deepForestCharcoal }}>
+          <h1 style={{ fontSize: '18px', fontWeight: 800, marginTop: '6px', color: '#F8FAFC' }}>
             {room.name}
           </h1>
-          <div style={{ fontSize: '12px', color: THEME.warmStone }}>
+          <div style={{ fontSize: '12px', color: '#94A3B8' }}>
             {room.subject ? `${room.subject} • ` : ''}
             {room.topic || 'Peer Study'} • Host: {room.host_name}
           </div>
@@ -169,7 +209,7 @@ export const RoomSession: React.FC = () => {
               variant="vermilion"
               size="sm"
               shape="pill"
-              leftIcon={<PhoneOff size={13} color={THEME.warmIvory} />}
+              leftIcon={<PhoneOff size={13} color="#FFFFFF" />}
               onClick={() => setShowEndModal(true)}
             >
               End Room
@@ -179,7 +219,7 @@ export const RoomSession: React.FC = () => {
               variant="secondary"
               size="sm"
               shape="pill"
-              leftIcon={<PhoneOff size={13} color={THEME.deepForestCharcoal} />}
+              leftIcon={<PhoneOff size={13} color="#F8FAFC" />}
               onClick={handleLeave}
             >
               Leave
@@ -224,15 +264,15 @@ export const RoomSession: React.FC = () => {
             flexDirection: 'column',
             gap: '12px',
             flexShrink: 0,
-            border: `1.5px solid ${THEME.deepForestCharcoal}`,
-            backgroundColor: THEME.warmIvory,
+            border: '1px solid #E2E8F0',
+            backgroundColor: '#FFFFFF',
             borderRadius: THEME.radius.card,
           }}
         >
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <Users size={16} color={THEME.emeraldGreen} />
-              <h3 style={{ fontSize: '14px', fontWeight: 800, color: THEME.deepForestCharcoal }}>
+              <Users size={16} color="#0284C7" />
+              <h3 style={{ fontSize: '14px', fontWeight: 800, color: '#0F172A' }}>
                 Participants ({participants.length})
               </h3>
             </div>
@@ -248,21 +288,21 @@ export const RoomSession: React.FC = () => {
                   alignItems: 'center',
                   justifyContent: 'space-between',
                   padding: '9px 12px',
-                  backgroundColor: THEME.warmIvory,
+                  backgroundColor: '#F8FAFC',
                   borderRadius: THEME.radius.md,
-                  border: `1.5px solid ${p.is_hand_raised === 1 ? THEME.vermilion : THEME.deepForestCharcoal}`,
+                  border: `1px solid ${p.is_hand_raised === 1 ? 'rgba(244, 63, 94, 0.6)' : '#E2E8F0'}`,
                   transition: `border-color ${THEME.motion.durationFast} ${THEME.motion.easeOut}`,
                 }}
               >
                 <div>
-                  <div style={{ fontSize: '13px', fontWeight: 800, color: THEME.deepForestCharcoal }}>
+                  <div style={{ fontSize: '13px', fontWeight: 800, color: '#0F172A' }}>
                     {p.full_name}
                   </div>
-                  <div style={{ fontSize: '11px', color: THEME.warmStone }}>@{p.username}</div>
+                  <div style={{ fontSize: '11px', color: '#94A3B8' }}>@{p.username}</div>
                 </div>
                 {p.is_hand_raised === 1 && (
                   <span className="badge badge-urgent" style={{ fontSize: '10px', gap: '3px', padding: '2px 7px' }}>
-                    <Hand size={10} color={THEME.warmIvory} />
+                    <Hand size={10} color="#FFFFFF" />
                     Hand
                   </span>
                 )}

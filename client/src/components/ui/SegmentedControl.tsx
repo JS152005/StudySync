@@ -30,9 +30,9 @@ export function SegmentedControl<T extends string | number>({
 }: SegmentedControlProps<T>) {
   const isPill = variant === 'pill';
   const borderRadius = isPill ? THEME.radius.pill : THEME.radius.md;
-  const paddingY = size === 'sm' ? '4px' : '6px';
-  const paddingX = size === 'sm' ? '10px' : '14px';
-  const fontSize = size === 'sm' ? '12px' : '13px';
+  const paddingY = size === 'sm' ? '5px' : '7px';
+  const paddingX = size === 'sm' ? '12px' : '16px';
+  const fontSize = size === 'sm' ? '12.5px' : '13.5px';
 
   return (
     <div
@@ -43,14 +43,13 @@ export function SegmentedControl<T extends string | number>({
         display: 'inline-flex',
         alignItems: 'center',
         padding: '3px',
-        backgroundColor: THEME.warmIvory,
-        border: `1.5px solid ${THEME.deepForestCharcoal}`,
+        backgroundColor: '#121826',
+        border: '1px solid rgba(255, 255, 255, 0.08)',
         borderRadius,
         gap: '4px',
         maxWidth: '100%',
         overflowX: 'auto',
         userSelect: 'none',
-        boxShadow: THEME.shadow.subtle,
       }}
     >
       {options.map((opt) => {
@@ -65,44 +64,52 @@ export function SegmentedControl<T extends string | number>({
             style={{
               display: 'inline-flex',
               alignItems: 'center',
+              justifyContent: 'center',
               gap: '6px',
               padding: `${paddingY} ${paddingX}`,
               fontSize,
-              fontWeight: isSelected ? 700 : 600,
+              fontWeight: isSelected ? 600 : 500,
               borderRadius: isPill ? THEME.radius.pill : THEME.radius.sm,
-              backgroundColor: isSelected ? THEME.emeraldGreen : 'transparent',
-              color: isSelected ? THEME.warmIvory : THEME.deepForestCharcoal,
-              border: isSelected ? `1.5px solid ${THEME.emeraldGreen}` : '1.5px solid transparent',
+              backgroundColor: isSelected ? THEME.accent : 'transparent',
+              color: isSelected ? '#FFFFFF' : '#94A3B8',
+              border: 'none',
               cursor: 'pointer',
-              transition: `background-color ${THEME.motion.durationFast} ${THEME.motion.easeOut}, color ${THEME.motion.durationFast} ${THEME.motion.easeOut}, transform ${THEME.motion.durationFast} ${THEME.motion.easeSpring}`,
+              transition: `all ${THEME.motion.durationFast} ${THEME.motion.easeOut}`,
               whiteSpace: 'nowrap',
-              transform: isSelected ? 'scale(1.01)' : 'scale(1)',
+              boxShadow: isSelected ? '0 1px 8px rgba(14, 165, 233, 0.35)' : 'none',
               outline: 'none',
             }}
-            className="segmented-item-focus"
+            className="segmented-item-interactive"
           >
             {opt.icon && (
               <span
                 style={{
                   display: 'flex',
                   alignItems: 'center',
-                  color: isSelected ? THEME.warmIvory : THEME.deepForestCharcoal,
+                  color: isSelected ? '#FFFFFF' : 'inherit',
                 }}
               >
                 {opt.icon}
               </span>
             )}
-            <span style={{ color: isSelected ? THEME.warmIvory : THEME.deepForestCharcoal }}>{opt.label}</span>
+            <span style={{ color: isSelected ? '#FFFFFF' : 'inherit', lineHeight: 1 }}>{opt.label}</span>
             {opt.count !== undefined && (
               <span
                 style={{
-                  fontSize: '11px',
-                  padding: '1px 6px',
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  minWidth: '20px',
+                  height: '18px',
+                  padding: '0 6px',
                   borderRadius: THEME.radius.pill,
-                  backgroundColor: isSelected ? THEME.warmIvory : THEME.warmStone,
-                  color: isSelected ? THEME.emeraldGreen : THEME.warmIvory,
-                  fontWeight: 800,
-                  marginLeft: '2px',
+                  fontSize: '11px',
+                  fontWeight: 700,
+                  fontVariantNumeric: 'tabular-nums',
+                  lineHeight: 1,
+                  backgroundColor: isSelected ? 'rgba(255, 255, 255, 0.22)' : 'rgba(255, 255, 255, 0.08)',
+                  color: isSelected ? '#FFFFFF' : '#94A3B8',
+                  marginLeft: '4px',
                 }}
               >
                 {opt.count}
@@ -114,7 +121,11 @@ export function SegmentedControl<T extends string | number>({
       })}
 
       <style>{`
-        .segmented-item-focus:focus-visible {
+        .segmented-item-interactive:hover:not([aria-checked="true"]) {
+          background-color: rgba(255, 255, 255, 0.06) !important;
+          color: #F8FAFC !important;
+        }
+        .segmented-item-interactive:focus-visible {
           outline: 2px solid var(--color-emerald-green) !important;
           outline-offset: 1px !important;
         }
