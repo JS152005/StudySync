@@ -1,87 +1,174 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
 import { NavLink, useNavigate } from 'react-router-dom';
 import { apiRequest } from '../api/client';
 import { useAuth } from '../context/AuthContext';
 import { THEME } from '../theme';
-import { CircularProgress } from '../components/ui/CircularProgress';
+import { Button } from '../components/ui/Button';
 import { Skeleton } from '../components/ui/Skeleton';
-import { EmptyState } from '../components/ui/EmptyState';
+import { useToast } from '../components/ui/ToastContext';
 import { triggerSparks } from '../components/ui/SparkEffect';
 import {
-  CalendarDays,
-  CheckCircle,
+  MessageSquare,
   UsersRound,
   Video,
-  ListTodo,
-  HelpCircle,
-  Plus,
+  Copy,
+  Check,
   ArrowRight,
   Sparkles,
-  ChevronDown,
-  Timer,
-  Zap,
+  KeyRound,
   Clock,
-  BookOpen,
+  ShieldCheck,
+  UserPlus,
+  Plus,
 } from 'lucide-react';
+
+interface DashboardData {
+  recentDirectChats: Array<{
+    user_id: string;
+    student_id: string;
+    username: string;
+    full_name: string;
+    avatar_url?: string;
+    last_message: string;
+    last_message_at: string;
+    unread_count: number;
+  }>;
+  myGroups: Array<{
+    id: string;
+    name: string;
+    subject?: string;
+    course?: string;
+    invite_code: string;
+    member_count: number;
+    role: string;
+  }>;
+  activeHostedRooms: Array<{
+    id: string;
+    name: string;
+    subject?: string;
+    topic?: string;
+    invite_code: string;
+    participant_count: number;
+    created_at: string;
+  }>;
+  pendingRoomInvitations: Array<{
+    invitation_id: string;
+    room_id: string;
+    room_name: string;
+    room_subject?: string;
+    room_code: string;
+    inviter_name: string;
+    inviter_student_id: string;
+    created_at: string;
+  }>;
+}
 
 export const Dashboard: React.FC = () => {
   const { user } = useAuth();
   const navigate = useNavigate();
-  const [data, setData] = useState<any>(null);
+  const toast = useToast();
+
+  const [data, setData] = useState<DashboardData | null>(null);
   const [loading, setLoading] = useState(true);
+  const [copiedId, setCopiedId] = useState(false);
+  const [quickCode, setQuickCode] = useState('');
+  const [joiningCode, setJoiningCode] = useState(false);
 
-  // Minimal consolidated action dropdown state
-  const [actionMenuOpen, setActionMenuOpen] = useState(false);
-  const actionMenuRef = useRef<HTMLDivElement | null>(null);
-
-  // Unified activity console tab state: 'tasks' | 'rooms' | 'exams'
-  const [activeTab, setActiveTab] = useState<'tasks' | 'rooms' | 'exams'>('tasks');
+  const loadDashboard = async () => {
+    try {
+      const res = await apiRequest<DashboardData>('/users/dashboard-summary');
+      setData(res);
+    } catch (err: any) {
+      console.error('Dashboard load error:', err);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   useEffect(() => {
-    apiRequest('/exams/dashboard-summary')
-      .then((res) => setData(res))
-      .catch((err) => console.error('Dashboard load error:', err))
-      .finally(() => setLoading(false));
+    loadDashboard();
+    const interval = setInterval(loadDashboard, 8000);
+    return () => clearInterval(interval);
   }, []);
 
-  // Close dropdown on outside click
-  useEffect(() => {
-    const handleOutsideClick = (e: MouseEvent) => {
-      if (actionMenuRef.current && !actionMenuRef.current.contains(e.target as Node)) {
-        setActionMenuOpen(false);
-      }
-    };
-    if (actionMenuOpen) {
-      document.addEventListener('mousedown', handleOutsideClick);
+  const handleCopyStudentId = (e: React.MouseEvent) => {
+    if (!user?.student_id) return;
+    navigator.clipboard.writeText(user.student_id);
+    triggerSparks(e, 'azure', 10);
+    setCopiedId(true);
+    toast.success(`Copied Student ID: ${user.student_id}`);
+    setTimeout(() => setCopiedId(false), 2000);
+  };
+
+  const handleQuickJoin = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!quickCode.trim()) return;
+
+    setJoiningCode(true);
+    try {
+      const res = await apiRequest<{ roomId: string; message: string }>('/rooms/join-by-code', {
+        method: 'POST',
+        body: JSON.stringify({ invite_code: quickCode.trim().toUpperCase() }),
+      });
+      toast.success(res.message || 'Joined private room!');
+      navigate(`/rooms/${res.roomId}`);
+    } catch (err: any) {
+      toast.error(err.message || 'Failed to join room. Verify the room code.');
+    } finally {
+      setJoiningCode(false);
     }
-    return () => {
-      document.removeEventListener('mousedown', handleOutsideClick);
-    };
-  }, [actionMenuOpen]);
+  };
+
+  const handleRespondInvitation = async (invitationId: string, action: 'accept' | 'decline') => {
+    try {
+      const res = await apiRequest<{ roomId?: string; message: string }>(
+        `/rooms/invitations/${invitationId}/respond`,
+        {
+          method: 'POST',
+          body: JSON.stringify({ action }),
+        }
+      );
+      toast.success(res.message);
+      if (action === 'accept' && res.roomId) {
+        navigate(`/rooms/${res.roomId}`);
+      } else {
+        loadDashboard();
+      }
+    } catch (err: any) {
+      toast.error(err.message || 'Failed to respond to invitation');
+    }
+  };
+
+  const formatTime = (isoString?: string) => {
+    if (!isoString) return '';
+    const date = new Date(isoString);
+    const now = new Date();
+    const isToday = date.toDateString() === now.toDateString();
+    return isToday
+      ? date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+      : date.toLocaleDateString([], { month: 'short', day: 'numeric' });
+  };
 
   if (loading) {
     return (
       <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
-        <Skeleton height="110px" borderRadius={THEME.radius.cardLg} />
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '16px' }}>
-          <Skeleton height="110px" borderRadius={THEME.radius.card} />
-          <Skeleton height="110px" borderRadius={THEME.radius.card} />
-          <Skeleton height="110px" borderRadius={THEME.radius.card} />
-          <Skeleton height="110px" borderRadius={THEME.radius.card} />
+        <Skeleton height="130px" borderRadius={THEME.radius.cardLg} />
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: '20px' }}>
+          <Skeleton height="320px" borderRadius={THEME.radius.card} />
+          <Skeleton height="320px" borderRadius={THEME.radius.card} />
         </div>
-        <Skeleton height="340px" borderRadius={THEME.radius.card} />
       </div>
     );
   }
 
-  const upcomingExams = data?.upcomingExams || [];
-  const todayTasks = data?.todayTasks || [];
-  const liveRooms = data?.liveRooms || [];
-  const syllabus = data?.syllabus || { total: 0, completed: 0, percentage: 0 };
+  const pendingInvites = data?.pendingRoomInvitations || [];
+  const recentChats = data?.recentDirectChats || [];
+  const myGroups = data?.myGroups || [];
+  const hostedRooms = data?.activeHostedRooms || [];
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '22px' }}>
-      {/* Welcome Header Banner with Minimalised Quick Action Launcher */}
+      {/* 1. Welcome & Student Identity Card */}
       <div
         className="card-featured"
         style={{
@@ -89,8 +176,8 @@ export const Dashboard: React.FC = () => {
           justifyContent: 'space-between',
           alignItems: 'center',
           flexWrap: 'wrap',
-          gap: '18px',
-          padding: '24px 28px',
+          gap: '20px',
+          padding: '28px 32px',
           background: 'linear-gradient(135deg, #FFFFFF 0%, #F0F9FF 100%)',
           border: '1px solid #E2E8F0',
           borderTop: '3px solid #0284C7',
@@ -98,816 +185,574 @@ export const Dashboard: React.FC = () => {
           boxShadow: THEME.shadow.card,
         }}
       >
-        <div style={{ minWidth: '240px' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '6px' }}>
-            <div
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <span style={{ fontSize: '22px', fontWeight: 800, color: '#0F172A' }}>
+              Welcome back, {user?.full_name?.split(' ')[0] || 'Student'}
+            </span>
+            <span
               style={{
-                width: '32px',
-                height: '32px',
-                borderRadius: '10px',
+                fontSize: '11px',
+                fontWeight: 700,
+                color: '#0284C7',
                 backgroundColor: 'rgba(2, 132, 199, 0.1)',
-                display: 'flex',
+                padding: '2px 8px',
+                borderRadius: THEME.radius.pill,
+                display: 'inline-flex',
                 alignItems: 'center',
-                justifyContent: 'center',
-              }}
-            >
-              <Sparkles size={18} color="#0284C7" />
-            </div>
-            <h1
-              className="animate-shimmer"
-              style={{
-                fontSize: '22px',
-                fontWeight: 800,
-                letterSpacing: '-0.02em',
-                margin: 0,
-              }}
-            >
-              Welcome back, {user?.full_name}!
-            </h1>
-          </div>
-          <p style={{ fontSize: '13px', color: '#475569', fontWeight: 500, margin: 0 }}>
-            {user?.college ? `${user.college} • ` : ''}
-            {user?.course || 'Student'} • Year {user?.academic_year || '1'} •{' '}
-            <span style={{ color: '#0F172A', fontWeight: 700 }}>{todayTasks.length} tasks scheduled today</span>
-          </p>
-        </div>
-
-        {/* Minimalised Single Action Button with Animated Menu */}
-        <div style={{ position: 'relative' }} ref={actionMenuRef}>
-          <button
-            type="button"
-            onClick={(e) => {
-              triggerSparks(e, 'azure', 8);
-              setActionMenuOpen((prev) => !prev);
-            }}
-            className="btn-primary"
-            style={{
-              padding: '10px 18px',
-              fontSize: '13.5px',
-              fontWeight: 700,
-              borderRadius: THEME.radius.pill,
-              gap: '8px',
-              boxShadow: '0 4px 14px rgba(2, 132, 199, 0.28)',
-            }}
-          >
-            <Zap size={16} color="#FFFFFF" />
-            <span>Launch Activity</span>
-            <ChevronDown
-              size={15}
-              color="#FFFFFF"
-              style={{
-                transform: actionMenuOpen ? 'rotate(180deg)' : 'rotate(0deg)',
-                transition: 'transform 0.2s cubic-bezier(0.16, 1, 0.3, 1)',
-              }}
-            />
-          </button>
-
-          {/* Minimalised Popover Dropdown */}
-          {actionMenuOpen && (
-            <div
-              className="quick-action-menu"
-              style={{
-                position: 'absolute',
-                top: 'calc(100% + 8px)',
-                right: 0,
-                width: '260px',
-                backgroundColor: '#FFFFFF',
-                borderRadius: THEME.radius.card,
-                border: '1px solid #E2E8F0',
-                boxShadow: THEME.shadow.lifted,
-                padding: '8px',
-                zIndex: 100,
-                display: 'flex',
-                flexDirection: 'column',
                 gap: '4px',
               }}
             >
-              <button
-                type="button"
-                onClick={() => {
-                  setActionMenuOpen(false);
-                  navigate('/rooms?action=create');
-                }}
-                className="btn-ghost"
-                style={{
-                  width: '100%',
-                  justifyContent: 'flex-start',
-                  padding: '10px 12px',
-                  borderRadius: THEME.radius.md,
-                  gap: '12px',
-                  fontSize: '13px',
-                  fontWeight: 600,
-                  color: '#0F172A',
-                }}
-              >
-                <div
-                  style={{
-                    width: '30px',
-                    height: '30px',
-                    borderRadius: '8px',
-                    backgroundColor: 'rgba(2, 132, 199, 0.1)',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    flexShrink: 0,
-                  }}
-                >
-                  <Video size={16} color="#0284C7" />
-                </div>
-                <div style={{ textAlign: 'left' }}>
-                  <div>Create Study Room</div>
-                  <div style={{ fontSize: '11px', color: '#64748B', fontWeight: 500 }}>Live peer video & whiteboard</div>
-                </div>
-              </button>
+              <ShieldCheck size={12} color="#0284C7" />
+              Verified Student
+            </span>
+          </div>
 
-              <button
-                type="button"
-                onClick={() => {
-                  setActionMenuOpen(false);
-                  navigate('/focus?action=create');
-                }}
-                className="btn-ghost"
-                style={{
-                  width: '100%',
-                  justifyContent: 'flex-start',
-                  padding: '10px 12px',
-                  borderRadius: THEME.radius.md,
-                  gap: '12px',
-                  fontSize: '13px',
-                  fontWeight: 600,
-                  color: '#0F172A',
-                }}
-              >
-                <div
-                  style={{
-                    width: '30px',
-                    height: '30px',
-                    borderRadius: '8px',
-                    backgroundColor: 'rgba(244, 63, 94, 0.1)',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    flexShrink: 0,
-                  }}
-                >
-                  <Timer size={16} color="#F43F5E" />
-                </div>
-                <div style={{ textAlign: 'left' }}>
-                  <div>Start Focus Sprint</div>
-                  <div style={{ fontSize: '11px', color: '#64748B', fontWeight: 500 }}>Pomodoro with lock-in</div>
-                </div>
-              </button>
+          <p style={{ fontSize: '13.5px', color: '#64748B', margin: 0 }}>
+            Connect privately with peers, create study groups, and collaborate in real-time study rooms.
+          </p>
 
+          {/* Student ID Banner */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginTop: '10px', flexWrap: 'wrap' }}>
+            <span style={{ fontSize: '11px', fontWeight: 700, color: '#475569', textTransform: 'uppercase', letterSpacing: '0.6px' }}>
+              Your Unique Student ID:
+            </span>
+            <div
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '8px',
+                backgroundColor: '#FFFFFF',
+                border: '1.5px solid #0284C7',
+                padding: '5px 12px',
+                borderRadius: THEME.radius.pill,
+                boxShadow: '0 1px 3px rgba(2, 132, 199, 0.1)',
+                cursor: 'pointer',
+              }}
+              onClick={handleCopyStudentId}
+              title="Click to copy Student ID to clipboard"
+            >
+              <span style={{ fontFamily: 'monospace', fontSize: '14px', fontWeight: 800, color: '#0284C7', letterSpacing: '0.5px' }}>
+                {user?.student_id || 'STU-XXXXXX'}
+              </span>
               <button
                 type="button"
-                onClick={() => {
-                  setActionMenuOpen(false);
-                  navigate('/syllabus?action=create');
-                }}
-                className="btn-ghost"
                 style={{
-                  width: '100%',
-                  justifyContent: 'flex-start',
-                  padding: '10px 12px',
-                  borderRadius: THEME.radius.md,
-                  gap: '12px',
-                  fontSize: '13px',
-                  fontWeight: 600,
-                  color: '#0F172A',
+                  background: 'none',
+                  border: 'none',
+                  padding: 0,
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
                 }}
               >
-                <div
-                  style={{
-                    width: '30px',
-                    height: '30px',
-                    borderRadius: '8px',
-                    backgroundColor: 'rgba(16, 185, 129, 0.1)',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    flexShrink: 0,
-                  }}
-                >
-                  <ListTodo size={16} color="#10B981" />
-                </div>
-                <div style={{ textAlign: 'left' }}>
-                  <div>New Syllabus Goal</div>
-                  <div style={{ fontSize: '11px', color: '#64748B', fontWeight: 500 }}>Track chapters & progress</div>
-                </div>
-              </button>
-
-              <button
-                type="button"
-                onClick={() => {
-                  setActionMenuOpen(false);
-                  navigate('/exams');
-                }}
-                className="btn-ghost"
-                style={{
-                  width: '100%',
-                  justifyContent: 'flex-start',
-                  padding: '10px 12px',
-                  borderRadius: THEME.radius.md,
-                  gap: '12px',
-                  fontSize: '13px',
-                  fontWeight: 600,
-                  color: '#0F172A',
-                }}
-              >
-                <div
-                  style={{
-                    width: '30px',
-                    height: '30px',
-                    borderRadius: '8px',
-                    backgroundColor: 'rgba(245, 158, 11, 0.1)',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    flexShrink: 0,
-                  }}
-                >
-                  <CalendarDays size={16} color="#F59E0B" />
-                </div>
-                <div style={{ textAlign: 'left' }}>
-                  <div>Schedule Exam / Task</div>
-                  <div style={{ fontSize: '11px', color: '#64748B', fontWeight: 500 }}>Set deadlines & milestones</div>
-                </div>
+                {copiedId ? <Check size={14} color="#10B981" /> : <Copy size={14} color="#0284C7" />}
               </button>
             </div>
-          )}
+            <span style={{ fontSize: '11.5px', color: '#94A3B8' }}>
+              Share this ID with peers so they can message you or invite you to study rooms.
+            </span>
+          </div>
+        </div>
+
+        {/* Quick Primary Actions */}
+        <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
+          <Button
+            variant="secondary"
+            shape="pill"
+            leftIcon={<UserPlus size={15} color="#0284C7" />}
+            onClick={() => navigate('/messages?action=new-chat')}
+          >
+            New Chat
+          </Button>
+
+          <Button
+            variant="secondary"
+            shape="pill"
+            leftIcon={<UsersRound size={15} color="#0284C7" />}
+            onClick={() => navigate('/messages?action=create-group')}
+          >
+            Create Group
+          </Button>
+
+          <Button
+            variant="primary"
+            shape="pill"
+            leftIcon={<Video size={15} color="#FFFFFF" />}
+            onClick={() => navigate('/rooms?action=create')}
+          >
+            Create Room
+          </Button>
         </div>
       </div>
 
-      {/* Metrics Grid with Light Interactive Hover Physics */}
-      <div
-        style={{
-          display: 'grid',
-          gridTemplateColumns: 'repeat(auto-fit, minmax(230px, 1fr))',
-          gap: '16px',
-        }}
-      >
-        {/* Metric 1: Syllabus Progress */}
-        <NavLink
-          to="/syllabus"
-          className="card card-interactive"
+      {/* 2. Pending Study Room Invitations (if any) */}
+      {pendingInvites.length > 0 && (
+        <div
           style={{
-            textDecoration: 'none',
+            backgroundColor: '#EFF6FF',
+            border: '1.5px solid #BFDBFE',
+            borderRadius: THEME.radius.card,
+            padding: '16px 20px',
             display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'space-between',
+            flexDirection: 'column',
             gap: '12px',
-            backgroundColor: '#FFFFFF',
-            border: '1px solid #E2E8F0',
           }}
         >
-          <div>
-            <div
-              style={{
-                fontSize: '11px',
-                fontWeight: 700,
-                textTransform: 'uppercase',
-                letterSpacing: '0.04em',
-                color: '#64748B',
-                marginBottom: '4px',
-              }}
-            >
-              Syllabus Mastery
-            </div>
-            <div
-              className="tabular-nums"
-              style={{
-                fontSize: '26px',
-                fontWeight: 800,
-                color: '#0F172A',
-                lineHeight: 1.1,
-              }}
-            >
-              {syllabus.percentage}%
-            </div>
-            <div style={{ fontSize: '11.5px', color: '#64748B', marginTop: '4px' }}>
-              {syllabus.completed} of {syllabus.total} covered
-            </div>
-          </div>
-          <CircularProgress
-            value={syllabus.percentage}
-            size={52}
-            strokeWidth={5}
-            color="#0284C7"
-          >
-            <ListTodo size={17} color="#0284C7" />
-          </CircularProgress>
-        </NavLink>
-
-        {/* Metric 2: Active Groups */}
-        <NavLink
-          to="/groups"
-          className="card card-interactive"
-          style={{
-            textDecoration: 'none',
-            backgroundColor: '#FFFFFF',
-            border: '1px solid #E2E8F0',
-          }}
-        >
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '8px' }}>
-            <span
-              style={{
-                fontSize: '11px',
-                fontWeight: 700,
-                textTransform: 'uppercase',
-                letterSpacing: '0.04em',
-                color: '#64748B',
-              }}
-            >
-              Study Groups
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <Sparkles size={16} color="#0284C7" />
+            <span style={{ fontSize: '13px', fontWeight: 800, color: '#1E3A8A' }}>
+              Study Room Invitations ({pendingInvites.length})
             </span>
-            <div
-              style={{
-                width: '30px',
-                height: '30px',
-                borderRadius: '8px',
-                backgroundColor: 'rgba(2, 132, 199, 0.1)',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-              }}
-            >
-              <UsersRound size={16} color="#0284C7" />
-            </div>
           </div>
-          <div
-            className="tabular-nums"
-            style={{
-              fontSize: '28px',
-              fontWeight: 800,
-              color: '#0F172A',
-              marginBottom: '4px',
-            }}
-          >
-            {data?.activeGroupsCount || 0}
-          </div>
-          <div style={{ fontSize: '12px', color: '#64748B' }}>Active peer circles</div>
-        </NavLink>
 
-        {/* Metric 3: Open Doubts */}
-        <NavLink
-          to="/rooms"
-          className="card card-interactive"
-          style={{
-            textDecoration: 'none',
-            backgroundColor: '#FFFFFF',
-            border: '1px solid #E2E8F0',
-          }}
-        >
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '8px' }}>
-            <span
-              style={{
-                fontSize: '11px',
-                fontWeight: 700,
-                textTransform: 'uppercase',
-                letterSpacing: '0.04em',
-                color: '#64748B',
-              }}
-            >
-              Unresolved Doubts
-            </span>
-            <div
-              style={{
-                width: '30px',
-                height: '30px',
-                borderRadius: '8px',
-                backgroundColor: data?.openDoubtsCount > 0 ? 'rgba(244, 63, 94, 0.1)' : '#F1F5F9',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-              }}
-            >
-              <HelpCircle size={16} color={data?.openDoubtsCount > 0 ? '#F43F5E' : '#64748B'} />
-            </div>
-          </div>
-          <div
-            className="tabular-nums"
-            style={{
-              fontSize: '28px',
-              fontWeight: 800,
-              color: data?.openDoubtsCount > 0 ? '#E11D48' : '#0F172A',
-              marginBottom: '4px',
-            }}
-          >
-            {data?.openDoubtsCount || 0}
-          </div>
-          <div style={{ fontSize: '12px', color: '#64748B' }}>Questions queued for discussion</div>
-        </NavLink>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+            {pendingInvites.map((inv) => (
+              <div
+                key={inv.invitation_id}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  backgroundColor: '#FFFFFF',
+                  padding: '10px 16px',
+                  borderRadius: '8px',
+                  border: '1px solid #DBEAFE',
+                  flexWrap: 'wrap',
+                  gap: '10px',
+                }}
+              >
+                <div>
+                  <div style={{ fontSize: '13px', fontWeight: 700, color: '#0F172A' }}>
+                    {inv.inviter_name}{' '}
+                    <span style={{ fontSize: '11px', color: '#64748B', fontWeight: 500 }}>
+                      ({inv.inviter_student_id})
+                    </span>{' '}
+                    invited you to join: <strong>"{inv.room_name}"</strong>
+                  </div>
+                  {inv.room_subject && (
+                    <div style={{ fontSize: '11.5px', color: '#64748B' }}>
+                      Subject: {inv.room_subject} • Code: {inv.room_code}
+                    </div>
+                  )}
+                </div>
 
-        {/* Metric 4: Upcoming Exams */}
-        <NavLink
-          to="/exams"
-          className="card card-interactive"
-          style={{
-            textDecoration: 'none',
-            backgroundColor: '#FFFFFF',
-            border: '1px solid #E2E8F0',
-          }}
-        >
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '8px' }}>
-            <span
-              style={{
-                fontSize: '11px',
-                fontWeight: 700,
-                textTransform: 'uppercase',
-                letterSpacing: '0.04em',
-                color: '#64748B',
-              }}
-            >
-              Upcoming Exams
-            </span>
-            <div
-              style={{
-                width: '30px',
-                height: '30px',
-                borderRadius: '8px',
-                backgroundColor: upcomingExams.length > 0 ? 'rgba(244, 63, 94, 0.1)' : '#F1F5F9',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-              }}
-            >
-              <CalendarDays size={16} color={upcomingExams.length > 0 ? '#F43F5E' : '#64748B'} />
-            </div>
+                <div style={{ display: 'flex', gap: '8px' }}>
+                  <Button
+                    size="sm"
+                    variant="secondary"
+                    shape="pill"
+                    onClick={() => handleRespondInvitation(inv.invitation_id, 'decline')}
+                  >
+                    Decline
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="primary"
+                    shape="pill"
+                    onClick={() => handleRespondInvitation(inv.invitation_id, 'accept')}
+                  >
+                    Accept & Join
+                  </Button>
+                </div>
+              </div>
+            ))}
           </div>
-          <div
-            className="tabular-nums"
-            style={{
-              fontSize: '28px',
-              fontWeight: 800,
-              color: '#0F172A',
-              marginBottom: '4px',
-            }}
-          >
-            {upcomingExams.length}
-          </div>
-          <div style={{ fontSize: '12px', color: '#64748B' }}>Scheduled milestones</div>
-        </NavLink>
-      </div>
+        </div>
+      )}
 
-      {/* Unified Study Activity Console (Consolidated Tabbed Layout) */}
+      {/* 3. Zero-Friction Room Code Bar */}
       <div
         className="card"
         style={{
+          padding: '16px 20px',
           display: 'flex',
-          flexDirection: 'column',
-          gap: '20px',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          flexWrap: 'wrap',
+          gap: '12px',
           backgroundColor: '#FFFFFF',
           border: '1px solid #E2E8F0',
-          borderRadius: THEME.radius.cardLg,
-          padding: '24px',
-          boxShadow: THEME.shadow.card,
+          borderRadius: THEME.radius.card,
         }}
       >
-        {/* Console Header & Animated Tab Selector */}
-        <div
-          style={{
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'space-between',
-            flexWrap: 'wrap',
-            gap: '14px',
-            borderBottom: '1px solid #E2E8F0',
-            paddingBottom: '16px',
-          }}
-        >
+        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+          <KeyRound size={18} color="#0284C7" />
           <div>
-            <h2 style={{ fontSize: '17px', fontWeight: 800, color: '#0F172A', margin: 0 }}>
-              Study Activity Console
-            </h2>
-            <p style={{ fontSize: '12.5px', color: '#64748B', margin: '2px 0 0' }}>
-              Real-time synchronization across your daily tasks, live peer rooms, and exam deadlines.
-            </p>
-          </div>
-
-          {/* Animated Tab Bar */}
-          <div
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              backgroundColor: '#F1F5F9',
-              borderRadius: THEME.radius.pill,
-              padding: '4px',
-              gap: '4px',
-            }}
-          >
-            <button
-              type="button"
-              onClick={() => setActiveTab('tasks')}
-              style={{
-                border: 'none',
-                height: '32px',
-                padding: '0 14px',
-                borderRadius: THEME.radius.pill,
-                fontSize: '12.5px',
-                fontWeight: 700,
-                backgroundColor: activeTab === 'tasks' ? '#FFFFFF' : 'transparent',
-                color: activeTab === 'tasks' ? '#0F172A' : '#64748B',
-                boxShadow: activeTab === 'tasks' ? '0 1px 3px rgba(0, 0, 0, 0.08)' : 'none',
-                cursor: 'pointer',
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: '6px',
-                transition: 'all 0.18s cubic-bezier(0.16, 1, 0.3, 1)',
-              }}
-            >
-              <CheckCircle size={14} color={activeTab === 'tasks' ? '#0284C7' : '#64748B'} />
-              <span>Today's Tasks</span>
-              <span
-                style={{
-                  fontSize: '11px',
-                  padding: '1px 6px',
-                  borderRadius: THEME.radius.pill,
-                  backgroundColor: activeTab === 'tasks' ? 'rgba(2, 132, 199, 0.12)' : '#E2E8F0',
-                  color: activeTab === 'tasks' ? '#0284C7' : '#64748B',
-                  fontWeight: 700,
-                }}
-              >
-                {todayTasks.length}
-              </span>
-            </button>
-
-            <button
-              type="button"
-              onClick={() => setActiveTab('rooms')}
-              style={{
-                border: 'none',
-                height: '32px',
-                padding: '0 14px',
-                borderRadius: THEME.radius.pill,
-                fontSize: '12.5px',
-                fontWeight: 700,
-                backgroundColor: activeTab === 'rooms' ? '#FFFFFF' : 'transparent',
-                color: activeTab === 'rooms' ? '#0F172A' : '#64748B',
-                boxShadow: activeTab === 'rooms' ? '0 1px 3px rgba(0, 0, 0, 0.08)' : 'none',
-                cursor: 'pointer',
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: '6px',
-                transition: 'all 0.18s cubic-bezier(0.16, 1, 0.3, 1)',
-              }}
-            >
-              <span className="live-pulse-dot" style={{ width: '6px', height: '6px' }} />
-              <span>Live Rooms</span>
-              <span
-                style={{
-                  fontSize: '11px',
-                  padding: '1px 6px',
-                  borderRadius: THEME.radius.pill,
-                  backgroundColor: activeTab === 'rooms' ? 'rgba(16, 185, 129, 0.12)' : '#E2E8F0',
-                  color: activeTab === 'rooms' ? '#10B981' : '#64748B',
-                  fontWeight: 700,
-                }}
-              >
-                {liveRooms.length}
-              </span>
-            </button>
-
-            <button
-              type="button"
-              onClick={() => setActiveTab('exams')}
-              style={{
-                border: 'none',
-                height: '32px',
-                padding: '0 14px',
-                borderRadius: THEME.radius.pill,
-                fontSize: '12.5px',
-                fontWeight: 700,
-                backgroundColor: activeTab === 'exams' ? '#FFFFFF' : 'transparent',
-                color: activeTab === 'exams' ? '#0F172A' : '#64748B',
-                boxShadow: activeTab === 'exams' ? '0 1px 3px rgba(0, 0, 0, 0.08)' : 'none',
-                cursor: 'pointer',
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: '6px',
-                transition: 'all 0.18s cubic-bezier(0.16, 1, 0.3, 1)',
-              }}
-            >
-              <CalendarDays size={14} color={activeTab === 'exams' ? '#F43F5E' : '#64748B'} />
-              <span>Exams</span>
-              <span
-                style={{
-                  fontSize: '11px',
-                  padding: '1px 6px',
-                  borderRadius: THEME.radius.pill,
-                  backgroundColor: activeTab === 'exams' ? 'rgba(244, 63, 94, 0.12)' : '#E2E8F0',
-                  color: activeTab === 'exams' ? '#F43F5E' : '#64748B',
-                  fontWeight: 700,
-                }}
-              >
-                {upcomingExams.length}
-              </span>
-            </button>
+            <div style={{ fontSize: '13.5px', fontWeight: 700, color: '#0F172A' }}>
+              Have a Room Code?
+            </div>
+            <div style={{ fontSize: '11.5px', color: '#64748B' }}>
+              Enter a private study room code shared by a host to join immediately.
+            </div>
           </div>
         </div>
 
-        {/* Tab 1 Content: Today's Tasks */}
-        {activeTab === 'tasks' && (
-          <div className="tab-content-active" style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-              <span style={{ fontSize: '13px', fontWeight: 600, color: '#475569' }}>
-                Assigned milestones for today
-              </span>
-              <NavLink to="/exams" style={{ fontSize: '12.5px', color: '#0284C7', fontWeight: 700 }}>
-                Manage All Tasks &rarr;
-              </NavLink>
-            </div>
+        <form onSubmit={handleQuickJoin} style={{ display: 'flex', gap: '8px', minWidth: '280px', flex: 1, maxWidth: '440px' }}>
+          <input
+            type="text"
+            placeholder="e.g. ROOM-ABC123"
+            value={quickCode}
+            onChange={(e) => setQuickCode(e.target.value.toUpperCase())}
+            style={{
+              flex: 1,
+              padding: '8px 12px',
+              fontFamily: 'monospace',
+              fontSize: '13px',
+              fontWeight: 700,
+              color: '#0F172A',
+              border: '1.5px solid #CBD5E1',
+              borderRadius: THEME.radius.pill,
+              outline: 'none',
+              backgroundColor: '#F8FAFC',
+              textTransform: 'uppercase',
+            }}
+          />
+          <Button
+            type="submit"
+            variant="primary"
+            size="sm"
+            shape="pill"
+            loading={joiningCode}
+            disabled={!quickCode.trim() || joiningCode}
+          >
+            Join Room
+          </Button>
+        </form>
+      </div>
 
-            {todayTasks.length === 0 ? (
-              <EmptyState
-                icon={<CheckCircle size={24} />}
-                title="No pending tasks today"
-                description="Keep up your learning momentum! Add a revision milestone or chapter study task."
-                action={
-                  <NavLink to="/exams" className="btn-secondary btn-sm" style={{ gap: '6px' }}>
-                    <Plus size={14} color="#0F172A" />
-                    <span>Add Study Task</span>
-                  </NavLink>
-                }
-              />
-            ) : (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                {todayTasks.map((t: any) => (
+      {/* 4. Core Collaboration Sections Grid */}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: '20px' }}>
+        {/* RECENT CHATS */}
+        <div
+          className="card"
+          style={{
+            padding: '20px',
+            display: 'flex',
+            flexDirection: 'column',
+            gap: '14px',
+            backgroundColor: '#FFFFFF',
+            border: '1px solid #E2E8F0',
+            borderRadius: THEME.radius.card,
+          }}
+        >
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <MessageSquare size={16} color="#0284C7" />
+              <h2 style={{ fontSize: '15px', fontWeight: 800, color: '#0F172A', margin: 0 }}>
+                Recent Chats
+              </h2>
+            </div>
+            <NavLink
+              to="/messages"
+              style={{
+                fontSize: '12px',
+                fontWeight: 700,
+                color: '#0284C7',
+                textDecoration: 'none',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '4px',
+              }}
+            >
+              <span>View all</span>
+              <ArrowRight size={12} color="#0284C7" />
+            </NavLink>
+          </div>
+
+          {recentChats.length === 0 ? (
+            <div style={{ textAlign: 'center', padding: '28px 12px', color: '#94A3B8' }}>
+              <MessageSquare size={28} color="#CBD5E1" style={{ margin: '0 auto 8px auto', display: 'block' }} />
+              <div style={{ fontSize: '13px', fontWeight: 600, color: '#475569' }}>No messages yet</div>
+              <div style={{ fontSize: '11.5px', marginTop: '4px' }}>
+                Search a student by Student ID to start a conversation.
+              </div>
+              <Button
+                variant="secondary"
+                size="sm"
+                shape="pill"
+                style={{ marginTop: '12px' }}
+                onClick={() => navigate('/messages?action=new-chat')}
+              >
+                Start New Chat
+              </Button>
+            </div>
+          ) : (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+              {recentChats.map((chat) => (
+                <div
+                  key={chat.user_id}
+                  onClick={() => navigate(`/messages?user_id=${chat.user_id}`)}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '12px',
+                    padding: '10px 12px',
+                    borderRadius: '8px',
+                    backgroundColor: '#F8FAFC',
+                    border: '1px solid #E2E8F0',
+                    cursor: 'pointer',
+                    transition: 'background-color 0.15s ease',
+                  }}
+                >
                   <div
-                    key={t.id}
-                    className="item-row"
                     style={{
+                      width: '36px',
+                      height: '36px',
+                      borderRadius: '50%',
+                      backgroundColor: 'rgba(2, 132, 199, 0.1)',
+                      color: '#0284C7',
+                      fontWeight: 800,
+                      fontSize: '13px',
                       display: 'flex',
                       alignItems: 'center',
-                      justifyContent: 'space-between',
-                      padding: '14px 18px',
-                      borderRadius: THEME.radius.md,
-                      backgroundColor: '#F8FAFC',
-                      border: '1px solid #E2E8F0',
+                      justifyContent: 'center',
+                      flexShrink: 0,
                     }}
                   >
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                      <CheckCircle size={16} color="#0284C7" />
-                      <span style={{ fontSize: '13.5px', fontWeight: 600, color: '#0F172A' }}>
-                        {t.title}
+                    {chat.full_name[0]?.toUpperCase() || 'S'}
+                  </div>
+
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' }}>
+                      <span style={{ fontSize: '13px', fontWeight: 700, color: '#0F172A', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                        {chat.full_name}
+                      </span>
+                      <span style={{ fontSize: '11px', color: '#94A3B8', marginLeft: '6px' }}>
+                        {formatTime(chat.last_message_at)}
                       </span>
                     </div>
-                    <span className={t.priority === 'high' ? 'badge badge-urgent' : 'badge'}>
-                      {t.priority}
-                    </span>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
-        )}
 
-        {/* Tab 2 Content: Live Study Rooms */}
-        {activeTab === 'rooms' && (
-          <div className="tab-content-active" style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-              <span style={{ fontSize: '13px', fontWeight: 600, color: '#475569' }}>
-                Real-time active collaborative spaces
-              </span>
-              <NavLink to="/rooms" style={{ fontSize: '12.5px', color: '#0284C7', fontWeight: 700 }}>
-                Explore All Rooms &rarr;
-              </NavLink>
-            </div>
-
-            {liveRooms.length === 0 ? (
-              <EmptyState
-                icon={<Video size={24} />}
-                title="No active sessions right now"
-                description="Start an instant study room to collaborate on exam topics or solve doubts together on the whiteboard."
-                action={
-                  <button
-                    type="button"
-                    onClick={(e) => {
-                      triggerSparks(e, 'azure', 10);
-                      navigate('/rooms?action=create');
-                    }}
-                    className="btn-primary btn-sm"
-                  >
-                    <Plus size={14} color="#FFFFFF" />
-                    <span>Create a Study Room</span>
-                  </button>
-                }
-              />
-            ) : (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                {liveRooms.map((r: any) => (
-                  <div
-                    key={r.id}
-                    className="item-row"
-                    style={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'space-between',
-                      padding: '14px 18px',
-                      borderRadius: THEME.radius.md,
-                      backgroundColor: '#F8FAFC',
-                      border: '1px solid #E2E8F0',
-                    }}
-                  >
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                      <span className="live-pulse-dot" />
-                      <div>
-                        <div style={{ fontSize: '14px', fontWeight: 700, color: '#0F172A' }}>
-                          {r.name}
-                        </div>
-                        <div style={{ fontSize: '12px', color: '#64748B' }}>
-                          Host: {r.host_name} • {r.subject || 'General'}
-                        </div>
-                      </div>
-                    </div>
-                    <NavLink
-                      to={`/rooms/${r.id}`}
-                      className="btn-primary btn-sm btn-pill"
-                      style={{ padding: '6px 14px', fontSize: '12px', gap: '4px' }}
-                      onClick={(e) => triggerSparks(e, 'azure', 8)}
-                    >
-                      <span>Join Room</span>
-                      <ArrowRight size={13} color="#FFFFFF" />
-                    </NavLink>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
-        )}
-
-        {/* Tab 3 Content: Upcoming Exams */}
-        {activeTab === 'exams' && (
-          <div className="tab-content-active" style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-              <span style={{ fontSize: '13px', fontWeight: 600, color: '#475569' }}>
-                Upcoming syllabus deadlines & exams
-              </span>
-              <NavLink to="/exams" style={{ fontSize: '12.5px', color: '#0284C7', fontWeight: 700 }}>
-                Exam Calendar &rarr;
-              </NavLink>
-            </div>
-
-            {upcomingExams.length === 0 ? (
-              <EmptyState
-                icon={<CalendarDays size={24} />}
-                title="No upcoming exams scheduled"
-                description="Keep your semester organized by adding your midterms, finals, or quiz dates."
-                action={
-                  <NavLink to="/exams" className="btn-secondary btn-sm" style={{ gap: '6px' }}>
-                    <Plus size={14} color="#0F172A" />
-                    <span>Schedule an Exam</span>
-                  </NavLink>
-                }
-              />
-            ) : (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                {upcomingExams.map((exam: any) => (
-                  <div
-                    key={exam.id}
-                    className="item-row"
-                    style={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'space-between',
-                      padding: '14px 18px',
-                      borderRadius: THEME.radius.md,
-                      backgroundColor: '#F8FAFC',
-                      border: '1px solid #E2E8F0',
-                    }}
-                  >
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                      <div
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '2px' }}>
+                      <span
                         style={{
-                          width: '34px',
-                          height: '34px',
-                          borderRadius: '8px',
-                          backgroundColor: 'rgba(244, 63, 94, 0.1)',
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'center',
+                          fontSize: '12px',
+                          color: '#64748B',
+                          overflow: 'hidden',
+                          textOverflow: 'ellipsis',
+                          whiteSpace: 'nowrap',
+                          maxWidth: '200px',
                         }}
                       >
-                        <BookOpen size={16} color="#F43F5E" />
-                      </div>
-                      <div>
-                        <div style={{ fontSize: '14px', fontWeight: 700, color: '#0F172A' }}>
-                          {exam.title}
-                        </div>
-                        <div style={{ fontSize: '12px', color: '#64748B', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                          <Clock size={12} color="#64748B" />
-                          <span>{exam.exam_date || 'Date TBD'} • {exam.course_code || 'General'}</span>
-                        </div>
-                      </div>
+                        {chat.last_message}
+                      </span>
+                      {chat.unread_count > 0 && (
+                        <span
+                          style={{
+                            fontSize: '10px',
+                            fontWeight: 800,
+                            backgroundColor: '#0284C7',
+                            color: '#FFFFFF',
+                            borderRadius: THEME.radius.pill,
+                            padding: '1px 6px',
+                          }}
+                        >
+                          {chat.unread_count}
+                        </span>
+                      )}
                     </div>
-                    <span className="badge badge-urgent">
-                      {exam.days_left !== undefined ? `${exam.days_left}d left` : 'Upcoming'}
-                    </span>
                   </div>
-                ))}
-              </div>
-            )}
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+
+        {/* PRIVATE STUDY GROUPS */}
+        <div
+          className="card"
+          style={{
+            padding: '20px',
+            display: 'flex',
+            flexDirection: 'column',
+            gap: '14px',
+            backgroundColor: '#FFFFFF',
+            border: '1px solid #E2E8F0',
+            borderRadius: THEME.radius.card,
+          }}
+        >
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <UsersRound size={16} color="#0284C7" />
+              <h2 style={{ fontSize: '15px', fontWeight: 800, color: '#0F172A', margin: 0 }}>
+                Private Study Groups
+              </h2>
+            </div>
+            <button
+              type="button"
+              onClick={() => navigate('/messages?action=create-group')}
+              style={{
+                background: 'none',
+                border: 'none',
+                color: '#0284C7',
+                fontSize: '12px',
+                fontWeight: 700,
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '2px',
+                padding: 0,
+              }}
+            >
+              <Plus size={13} color="#0284C7" />
+              <span>New Group</span>
+            </button>
           </div>
-        )}
+
+          {myGroups.length === 0 ? (
+            <div style={{ textAlign: 'center', padding: '28px 12px', color: '#94A3B8' }}>
+              <UsersRound size={28} color="#CBD5E1" style={{ margin: '0 auto 8px auto', display: 'block' }} />
+              <div style={{ fontSize: '13px', fontWeight: 600, color: '#475569' }}>No groups yet</div>
+              <div style={{ fontSize: '11.5px', marginTop: '4px' }}>
+                Create a private study group and add classmates by Student ID.
+              </div>
+              <Button
+                variant="secondary"
+                size="sm"
+                shape="pill"
+                style={{ marginTop: '12px' }}
+                onClick={() => navigate('/messages?action=create-group')}
+              >
+                Create Study Group
+              </Button>
+            </div>
+          ) : (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+              {myGroups.map((g) => (
+                <div
+                  key={g.id}
+                  onClick={() => navigate(`/messages?group_id=${g.id}`)}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    padding: '10px 14px',
+                    borderRadius: '8px',
+                    backgroundColor: '#F8FAFC',
+                    border: '1px solid #E2E8F0',
+                    cursor: 'pointer',
+                    transition: 'background-color 0.15s ease',
+                  }}
+                >
+                  <div>
+                    <div style={{ fontSize: '13px', fontWeight: 700, color: '#0F172A' }}>
+                      {g.name}
+                    </div>
+                    <div style={{ fontSize: '11px', color: '#64748B', marginTop: '2px' }}>
+                      {g.member_count} {g.member_count === 1 ? 'member' : 'members'} • Code: {g.invite_code}
+                    </div>
+                  </div>
+
+                  <span
+                    style={{
+                      fontSize: '11px',
+                      fontWeight: 700,
+                      color: g.role === 'owner' ? '#0369A1' : '#64748B',
+                      backgroundColor: g.role === 'owner' ? '#E0F2FE' : '#F1F5F9',
+                      padding: '2px 8px',
+                      borderRadius: THEME.radius.pill,
+                      textTransform: 'capitalize',
+                    }}
+                  >
+                    {g.role}
+                  </span>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+
+        {/* ACTIVE STUDY ROOMS */}
+        <div
+          className="card"
+          style={{
+            padding: '20px',
+            display: 'flex',
+            flexDirection: 'column',
+            gap: '14px',
+            backgroundColor: '#FFFFFF',
+            border: '1px solid #E2E8F0',
+            borderRadius: THEME.radius.card,
+          }}
+        >
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <Video size={16} color="#0284C7" />
+              <h2 style={{ fontSize: '15px', fontWeight: 800, color: '#0F172A', margin: 0 }}>
+                Study Rooms
+              </h2>
+            </div>
+            <NavLink
+              to="/rooms"
+              style={{
+                fontSize: '12px',
+                fontWeight: 700,
+                color: '#0284C7',
+                textDecoration: 'none',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '4px',
+              }}
+            >
+              <span>Rooms Hub</span>
+              <ArrowRight size={12} color="#0284C7" />
+            </NavLink>
+          </div>
+
+          {hostedRooms.length === 0 ? (
+            <div style={{ textAlign: 'center', padding: '28px 12px', color: '#94A3B8' }}>
+              <Video size={28} color="#CBD5E1" style={{ margin: '0 auto 8px auto', display: 'block' }} />
+              <div style={{ fontSize: '13px', fontWeight: 600, color: '#475569' }}>No active rooms</div>
+              <div style={{ fontSize: '11.5px', marginTop: '4px' }}>
+                Launch a private study room to collaborate via video, screen share, and whiteboard.
+              </div>
+              <Button
+                variant="primary"
+                size="sm"
+                shape="pill"
+                style={{ marginTop: '12px' }}
+                onClick={() => navigate('/rooms?action=create')}
+              >
+                Create Study Room
+              </Button>
+            </div>
+          ) : (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+              {hostedRooms.map((r) => (
+                <div
+                  key={r.id}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    padding: '10px 14px',
+                    borderRadius: '8px',
+                    backgroundColor: '#F8FAFC',
+                    border: '1px solid #E2E8F0',
+                  }}
+                >
+                  <div>
+                    <div style={{ fontSize: '13px', fontWeight: 700, color: '#0F172A' }}>
+                      {r.name}
+                    </div>
+                    <div style={{ fontSize: '11px', color: '#64748B', marginTop: '2px' }}>
+                      Code: <strong style={{ fontFamily: 'monospace' }}>{r.invite_code}</strong> • {r.participant_count} active
+                    </div>
+                  </div>
+
+                  <Button
+                    size="sm"
+                    variant="primary"
+                    shape="pill"
+                    onClick={() => navigate(`/rooms/${r.id}`)}
+                  >
+                    Rejoin Room
+                  </Button>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
       </div>
     </div>
   );

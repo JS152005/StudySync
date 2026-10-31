@@ -1,0 +1,12 @@
+node_modules
+client/node_modules
+dist
+client/dist
+.git
+.agents
+.taste-skill
+.uixskills
+test-results
+*.log
+studysync.db-shm
+studysync.db-wal

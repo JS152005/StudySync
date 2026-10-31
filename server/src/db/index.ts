@@ -153,6 +153,7 @@ export function initDatabase() {
       expires_at TEXT NOT NULL,
       used_at TEXT,
       created_at TEXT NOT NULL,
+      attempts INTEGER DEFAULT 0,
       FOREIGN KEY(user_id) REFERENCES users(id) ON DELETE CASCADE
     );
 
@@ -269,6 +270,37 @@ export function initDatabase() {
       updated_at TEXT NOT NULL,
       FOREIGN KEY(room_id) REFERENCES study_rooms(id) ON DELETE CASCADE
     );
+
+    -- Persistent Room-Scoped Whiteboard Actions & History
+    CREATE TABLE IF NOT EXISTS whiteboard_actions (
+      id TEXT PRIMARY KEY,
+      room_id TEXT NOT NULL,
+      sequence_number INTEGER NOT NULL,
+      user_id TEXT,
+      action_type TEXT NOT NULL,
+      payload TEXT NOT NULL,
+      created_at TEXT NOT NULL,
+      FOREIGN KEY(room_id) REFERENCES study_rooms(id) ON DELETE CASCADE
+    );
+
+    CREATE INDEX IF NOT EXISTS idx_whiteboard_actions_room ON whiteboard_actions(room_id, sequence_number);
+    CREATE INDEX IF NOT EXISTS idx_room_participants_active ON room_participants(room_id, user_id, left_at);
+
+    -- Private Room Invitations
+    CREATE TABLE IF NOT EXISTS room_invitations (
+      id TEXT PRIMARY KEY,
+      room_id TEXT NOT NULL,
+      inviter_id TEXT NOT NULL,
+      invitee_id TEXT NOT NULL,
+      status TEXT NOT NULL DEFAULT 'pending' CHECK(status IN ('pending', 'accepted', 'declined')),
+      created_at TEXT NOT NULL,
+      FOREIGN KEY(room_id) REFERENCES study_rooms(id) ON DELETE CASCADE,
+      FOREIGN KEY(inviter_id) REFERENCES users(id) ON DELETE CASCADE,
+      FOREIGN KEY(invitee_id) REFERENCES users(id) ON DELETE CASCADE
+    );
+
+    CREATE INDEX IF NOT EXISTS idx_room_invitations_invitee ON room_invitations(invitee_id);
+    CREATE INDEX IF NOT EXISTS idx_room_invitations_room ON room_invitations(room_id);
 
     -- Feature One: Doubt Queue
     CREATE TABLE IF NOT EXISTS doubts (
@@ -504,6 +536,17 @@ export function initDatabase() {
   `;
 
   rawDb.exec(schema);
+
+  // Migration: ensure password_reset_tokens has attempts column
+  try {
+    const prtInfo = rawDb.prepare('PRAGMA table_info(password_reset_tokens)').all() as Array<{ name: string }>;
+    const hasAttempts = prtInfo.some((col) => col.name === 'attempts');
+    if (!hasAttempts) {
+      rawDb.exec('ALTER TABLE password_reset_tokens ADD COLUMN attempts INTEGER DEFAULT 0;');
+    }
+  } catch (migErr) {
+    console.error('[DB] Migration error checking password_reset_tokens attempts:', migErr);
+  }
 
   // Migration: ensure study_rooms has invite_code column
   try {

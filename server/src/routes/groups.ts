@@ -31,7 +31,7 @@ router.get('/', requireAuth, (req: AuthRequest, res): void => {
 // 2. CREATE STUDY GROUP (Always private with unique invite code)
 router.post('/', requireAuth, (req: AuthRequest, res): void => {
   try {
-    const { name, description, subject, course } = req.body;
+    const { name, description, subject, course, member_student_ids, member_ids } = req.body;
     const currentUserId = req.user!.id;
 
     if (!name || name.trim().length === 0) {
@@ -65,6 +65,32 @@ router.post('/', requireAuth, (req: AuthRequest, res): void => {
         VALUES (?, ?, ?, 'owner', 'active', ?)
       `).run(crypto.randomUUID(), groupId, currentUserId, now);
 
+      // Add additional members by Student ID or user ID if provided
+      const memberUserIds = new Set<string>();
+
+      if (Array.isArray(member_ids)) {
+        for (const mid of member_ids) {
+          if (mid && mid !== currentUserId) memberUserIds.add(mid);
+        }
+      }
+
+      if (Array.isArray(member_student_ids)) {
+        for (const stuId of member_student_ids) {
+          if (!stuId) continue;
+          const u = db.prepare('SELECT id FROM users WHERE UPPER(student_id) = ? AND is_active = 1').get(String(stuId).trim().toUpperCase()) as any;
+          if (u && u.id !== currentUserId) {
+            memberUserIds.add(u.id);
+          }
+        }
+      }
+
+      for (const uid of memberUserIds) {
+        db.prepare(`
+          INSERT INTO group_members (id, group_id, user_id, role, status, joined_at)
+          VALUES (?, ?, ?, 'member', 'active', ?)
+        `).run(crypto.randomUUID(), groupId, uid, now);
+      }
+
       // Initial announcement
       db.prepare(`
         INSERT INTO group_announcements (id, group_id, author_id, title, content, created_at)
@@ -74,7 +100,7 @@ router.post('/', requireAuth, (req: AuthRequest, res): void => {
         groupId,
         currentUserId,
         'Welcome to the Study Group!',
-        `Welcome everyone to ${name.trim()}! Collaborate on study rooms, syllabus goals, doubts, and focus sessions here.`,
+        `Welcome everyone to ${name.trim()}! Collaborate on study rooms and private discussions here.`,
         now
       );
     });
@@ -86,6 +112,66 @@ router.post('/', requireAuth, (req: AuthRequest, res): void => {
   } catch (err: any) {
     console.error('[CREATE GROUP ERROR]', err);
     res.status(500).json({ error: 'Failed to create study group.' });
+  }
+});
+
+// 2.1 ADD MEMBER TO GROUP BY STUDENT ID OR USER ID
+router.post('/:id/members', requireAuth, (req: AuthRequest, res): void => {
+  try {
+    const { id } = req.params;
+    const { student_id, user_id } = req.body;
+    const currentUserId = req.user!.id;
+
+    // Verify current user is owner or moderator
+    const myRole = db.prepare(`
+      SELECT role FROM group_members WHERE group_id = ? AND user_id = ? AND status = 'active'
+    `).get(id, currentUserId) as any;
+
+    if (!myRole || (myRole.role !== 'owner' && myRole.role !== 'moderator')) {
+      res.status(403).json({ error: 'Only group owners or moderators can add members.' });
+      return;
+    }
+
+    let targetUserId = user_id;
+
+    if (!targetUserId && student_id) {
+      const u = db.prepare(`
+        SELECT id, student_id, full_name FROM users WHERE UPPER(student_id) = ? AND is_active = 1
+      `).get(String(student_id).trim().toUpperCase()) as any;
+      if (!u) {
+        res.status(404).json({ error: 'No student found with Student ID: ' + student_id });
+        return;
+      }
+      targetUserId = u.id;
+    }
+
+    if (!targetUserId) {
+      res.status(400).json({ error: 'Student ID or User ID is required.' });
+      return;
+    }
+
+    const existing = db.prepare(`
+      SELECT id, status FROM group_members WHERE group_id = ? AND user_id = ?
+    `).get(id, targetUserId) as any;
+
+    if (existing) {
+      if (existing.status === 'active') {
+        res.status(400).json({ error: 'This student is already a member of the group.' });
+        return;
+      }
+      db.prepare(`UPDATE group_members SET status = 'active' WHERE id = ?`).run(existing.id);
+    } else {
+      const now = new Date().toISOString();
+      db.prepare(`
+        INSERT INTO group_members (id, group_id, user_id, role, status, joined_at)
+        VALUES (?, ?, ?, 'member', 'active', ?)
+      `).run(crypto.randomUUID(), id, targetUserId, now);
+    }
+
+    res.status(201).json({ message: 'Student added to group successfully.' });
+  } catch (err: any) {
+    console.error('[ADD GROUP MEMBER ERROR]', err);
+    res.status(500).json({ error: 'Failed to add member to group.' });
   }
 });
 

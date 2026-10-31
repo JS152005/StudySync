@@ -1,69 +1,83 @@
-import React, { useState, useEffect, useRef, useCallback } from 'react';
+import React, { useRef, useEffect, useState, useCallback } from 'react';
 import { THEME } from '../theme';
-import { Button } from './ui/Button';
-import { getSocket } from '../api/socket';
 import { useAuth } from '../context/AuthContext';
+import { useMeeting, PeerInfo, SharerInfo } from '../context/MeetingContext';
+import { Whiteboard } from './Whiteboard';
 import {
   Mic,
   MicOff,
   Video,
   VideoOff,
-  ScreenShare,
-  PhoneOff,
-  Hand,
-  Users,
-  Volume2,
   MonitorUp,
+  ScreenShare,
+  PenTool,
+  Users,
+  Hand,
+  PhoneOff,
   AlertCircle,
+  Volume2,
+  ShieldCheck,
+  Maximize2,
+  Minimize2,
+  Sparkles,
+  Loader2,
 } from 'lucide-react';
 
-interface Participant {
-  id: string;
+export interface Participant {
+  id?: string;
   user_id: string;
   username: string;
   full_name: string;
-  is_hand_raised: number;
-}
-
-interface PeerInfo {
-  socketId: string;
-  userId?: string;
-  username?: string;
-  fullName?: string;
-  stream?: MediaStream;
+  avatar_url?: string;
+  is_host?: boolean;
+  is_hand_raised?: number | boolean;
+  video_enabled?: boolean;
+  audio_enabled?: boolean;
+  joined_at?: string;
+  socket_id?: string;
 }
 
 interface VideoMeetingProps {
   roomId: string;
+  roomName: string;
   isHost: boolean;
   participants: Participant[];
+  onInviteStudent: () => void;
   onToggleHand: () => void;
   onLeave: () => void;
+  onEndRoom?: () => void;
 }
 
-const RTC_CONFIG: RTCConfiguration = {
-  iceServers: [
-    { urls: 'stun:stun.l.google.com:19302' },
-    { urls: 'stun:stun1.l.google.com:19302' },
-    { urls: 'stun:stun2.l.google.com:19302' },
-  ],
-};
-
-// Remote video tile with reliable callback ref + effect stream binding
+// Remote video tile with accurate media lifecycle states
 const RemoteVideoTile: React.FC<{ peer: PeerInfo }> = ({ peer }) => {
   const videoRef = useRef<HTMLVideoElement | null>(null);
+  const [videoError, setVideoError] = useState(false);
 
-  const setVideoRef = (el: HTMLVideoElement | null) => {
+  const videoTrack = peer.stream?.getVideoTracks()[0];
+  const hasLiveVideoTrack = Boolean(
+    peer.stream &&
+    videoTrack &&
+    videoTrack.readyState === 'live' &&
+    !videoTrack.muted &&
+    !videoError
+  );
+
+  const isConnecting = peer.connectionState === 'connecting' || (peer.videoEnabled === true && !hasLiveVideoTrack && !videoError);
+  const isFailed = peer.connectionState === 'failed';
+  const isCameraOff = peer.videoEnabled === false;
+  const isAudioOnly = peer.audioEnabled === true && isCameraOff;
+
+  const setVideoRef = useCallback((el: HTMLVideoElement | null) => {
     videoRef.current = el;
     if (el && peer.stream) {
       if (el.srcObject !== peer.stream) {
         el.srcObject = peer.stream;
       }
       el.play().catch((err) => {
-        console.warn('Remote video play error:', err);
+        console.warn('[WebRTC] Remote video playback exception:', err);
       });
     }
-  };
+  }, [peer.stream]);
 
   useEffect(() => {
     if (videoRef.current && peer.stream) {
@@ -72,34 +86,35 @@ const RemoteVideoTile: React.FC<{ peer: PeerInfo }> = ({ peer }) => {
       }
       videoRef.current.play().catch(() => {});
     }
-  }, [peer.stream]);
+  }, [peer.stream, hasLiveVideoTrack]);
 
   return (
     <div
-      className="card"
       style={{
         position: 'relative',
         backgroundColor: '#0F172A',
-        border: '1px solid #CBD5E1',
-        minHeight: '260px',
+        border: `1.5px solid ${peer.audioEnabled ? '#0284C7' : '#334155'}`,
+        borderRadius: THEME.radius.card,
+        height: '100%',
+        minHeight: '220px',
         display: 'flex',
         flexDirection: 'column',
         justifyContent: 'center',
         alignItems: 'center',
         overflow: 'hidden',
-        padding: 0,
-        borderRadius: THEME.radius.card,
+        boxShadow: '0 4px 12px rgba(0, 0, 0, 0.3)',
       }}
     >
-      {peer.stream ? (
+      {hasLiveVideoTrack && peer.videoEnabled !== false ? (
         <video
           ref={setVideoRef}
           autoPlay
           playsInline
+          onError={() => setVideoError(true)}
+          onPlaying={() => setVideoError(false)}
           style={{
             width: '100%',
             height: '100%',
-            minHeight: '260px',
             backgroundColor: '#0F172A',
             objectFit: 'cover',
             display: 'block',
@@ -111,29 +126,59 @@ const RemoteVideoTile: React.FC<{ peer: PeerInfo }> = ({ peer }) => {
             display: 'flex',
             flexDirection: 'column',
             alignItems: 'center',
-            gap: '12px',
+            gap: '10px',
+            padding: '16px',
+            textAlign: 'center',
           }}
         >
           <div
             style={{
-              width: '72px',
-              height: '72px',
+              width: '68px',
+              height: '68px',
               borderRadius: THEME.radius.full,
               backgroundColor: '#1E293B',
-              border: '1px solid rgba(14, 165, 233, 0.4)',
+              border: `2px solid ${peer.audioEnabled ? '#38BDF8' : 'rgba(148, 163, 184, 0.3)'}`,
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
               fontSize: '24px',
-              fontWeight: 700,
+              fontWeight: 800,
               color: '#38BDF8',
+              boxShadow: peer.audioEnabled ? '0 0 16px rgba(56, 189, 248, 0.35)' : 'none',
+              transition: 'box-shadow 0.2s ease',
             }}
           >
             {(peer.fullName || peer.username || 'S')[0]?.toUpperCase()}
           </div>
-          <span style={{ fontSize: '14px', fontWeight: 600, color: '#F8FAFC' }}>
-            {peer.fullName || peer.username || 'Connecting peer...'}
+
+          <span style={{ fontSize: '14px', fontWeight: 700, color: '#F8FAFC' }}>
+            {peer.fullName || peer.username || 'Remote Student'}
           </span>
+
+          {/* Accurate Media Lifecycle Status Label */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+            {isFailed ? (
+              <span style={{ fontSize: '11px', color: '#F87171', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                <AlertCircle size={12} />
+                Connection interrupted
+              </span>
+            ) : isConnecting ? (
+              <span style={{ fontSize: '11px', color: '#38BDF8', display: 'flex', alignItems: 'center', gap: '5px' }}>
+                <Loader2 size={12} className="animate-spin" />
+                Connecting video...
+              </span>
+            ) : isAudioOnly ? (
+              <span style={{ fontSize: '11px', color: '#34D399', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                <Volume2 size={12} />
+                Audio Only
+              </span>
+            ) : (
+              <span style={{ fontSize: '11px', color: '#94A3B8', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                <VideoOff size={12} />
+                Camera Off
+              </span>
+            )}
+          </div>
         </div>
       )}
 
@@ -141,22 +186,24 @@ const RemoteVideoTile: React.FC<{ peer: PeerInfo }> = ({ peer }) => {
       <div
         style={{
           position: 'absolute',
-          bottom: '12px',
-          left: '12px',
-          backgroundColor: 'rgba(8, 11, 17, 0.85)',
+          bottom: '10px',
+          left: '10px',
+          backgroundColor: 'rgba(15, 23, 42, 0.88)',
+          backdropFilter: 'blur(6px)',
           border: '1px solid rgba(255, 255, 255, 0.12)',
-          padding: '4px 10px',
+          padding: '3px 9px',
           borderRadius: THEME.radius.pill,
-          fontSize: '11.5px',
-          fontWeight: 600,
+          fontSize: '11px',
+          fontWeight: 700,
           color: '#F8FAFC',
           display: 'flex',
           alignItems: 'center',
           gap: '6px',
+          zIndex: 2,
         }}
       >
-        <Volume2 size={12} color="#0EA5E9" />
-        <span>{peer.fullName || peer.username || 'Remote Student'}</span>
+        {peer.audioEnabled ? <Volume2 size={12} color="#10B981" /> : <MicOff size={12} color="#EF4444" />}
+        <span>{peer.fullName || peer.username || 'Student'}</span>
       </div>
     </div>
   );
@@ -164,192 +211,58 @@ const RemoteVideoTile: React.FC<{ peer: PeerInfo }> = ({ peer }) => {
 
 export const VideoMeeting: React.FC<VideoMeetingProps> = ({
   roomId,
+  roomName,
   isHost,
   participants,
+  onInviteStudent,
   onToggleHand,
   onLeave,
+  onEndRoom,
 }) => {
   const { user } = useAuth();
+  const {
+    localStream,
+    screenStream,
+    audioEnabled,
+    videoEnabled,
+    isSharingScreen,
+    activeScreenSharer,
+    activeWhiteboardSharer,
+    peersMap,
+    authoritativeParticipants,
+    participantCount,
+    deviceError,
+    noiseSuppressionActive,
+    activeView,
+    showParticipants,
+    toggleCamera,
+    toggleMic,
+    startScreenShare,
+    stopScreenShare,
+    setWhiteboardSharing,
+    setActiveView,
+    setShowParticipants,
+    requestPictureInPicture,
+  } = useMeeting();
+
   const localVideoRef = useRef<HTMLVideoElement | null>(null);
   const screenVideoRef = useRef<HTMLVideoElement | null>(null);
+  const presentationContainerRef = useRef<HTMLDivElement | null>(null);
+  const [isFullscreenPresentation, setIsFullscreenPresentation] = useState(false);
 
-  const [localStream, setLocalStream] = useState<MediaStream | null>(null);
-  const localStreamRef = useRef<MediaStream | null>(null);
-
-  const [screenStream, setScreenStream] = useState<MediaStream | null>(null);
-  const screenStreamRef = useRef<MediaStream | null>(null);
-
-  const [peersMap, setPeersMap] = useState<Map<string, PeerInfo>>(new Map());
-  const peerConnections = useRef<Map<string, RTCPeerConnection>>(new Map());
-
-  const [audioEnabled, setAudioEnabled] = useState(true);
-  const [videoEnabled, setVideoEnabled] = useState(true);
-  const [isSharingScreen, setIsSharingScreen] = useState(false);
-  const [deviceError, setDeviceError] = useState<string>('');
-
-  // Update peer stream in state
-  const updatePeerStream = useCallback((socketId: string, stream: MediaStream) => {
-    setPeersMap((prev) => {
-      const next = new Map(prev);
-      const existing = next.get(socketId) || { socketId };
-      next.set(socketId, { ...existing, stream });
-      return next;
-    });
-  }, []);
-
-  // Create an RTCPeerConnection for a remote socket peer
-  const createPeerConnection = useCallback((peerSocketId: string, peerInfo?: Partial<PeerInfo>): RTCPeerConnection => {
-    if (peerConnections.current.has(peerSocketId)) {
-      peerConnections.current.get(peerSocketId)?.close();
-    }
-
-    const socket = getSocket();
-    const pc = new RTCPeerConnection(RTC_CONFIG);
-
-    // Attach local audio/video tracks to peer connection
-    const currentStream = isSharingScreen && screenStreamRef.current ? screenStreamRef.current : localStreamRef.current;
-    if (currentStream) {
-      currentStream.getTracks().forEach((track) => {
-        pc.addTrack(track, currentStream);
-      });
-    }
-
-    // ICE Candidate handler
-    pc.onicecandidate = (event) => {
-      if (event.candidate) {
-        socket.emit('webrtc_ice_candidate', {
-          targetSocketId: peerSocketId,
-          candidate: event.candidate,
-        });
-      }
-    };
-
-    // Remote track handler
-    pc.ontrack = (event) => {
-      const remoteStream = event.streams[0] || new MediaStream([event.track]);
-      updatePeerStream(peerSocketId, remoteStream);
-    };
-
-    // Store in refs and state
-    peerConnections.current.set(peerSocketId, pc);
-    setPeersMap((prev) => {
-      const next = new Map(prev);
-      const prevData = next.get(peerSocketId) || { socketId: peerSocketId };
-      next.set(peerSocketId, { ...prevData, ...peerInfo });
-      return next;
-    });
-
-    return pc;
-  }, [isSharingScreen, updatePeerStream]);
-
-  // Robust Media Stream initialization with fallbacks
+  // Bind local camera preview
   useEffect(() => {
-    let mounted = true;
-
-    async function initMedia() {
-      let stream: MediaStream | null = null;
-      try {
-        // Preferred: video and audio
-        stream = await navigator.mediaDevices.getUserMedia({
-          video: { width: { ideal: 1280 }, height: { ideal: 720 }, facingMode: 'user' },
-          audio: true,
-        });
-      } catch (err: any) {
-        console.warn('High quality constraints failed, attempting standard constraints:', err.message);
-        try {
-          // Standard constraints
-          stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
-        } catch (err2: any) {
-          console.warn('Dual audio+video request failed, attempting separate device fallbacks:', err2.message);
-          // Fallback 1: video only
-          try {
-            stream = await navigator.mediaDevices.getUserMedia({ video: true });
-            setDeviceError('Microphone not detected or blocked. Video preview is active.');
-          } catch (err3: any) {
-            // Fallback 2: audio only
-            try {
-              stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-              setDeviceError('Camera not detected or blocked. Audio channel is active.');
-              setVideoEnabled(false);
-            } catch (err4: any) {
-              setDeviceError('Camera and microphone permissions not granted or devices offline. Please allow camera permissions in your browser.');
-            }
-          }
-        }
-      }
-
-      if (!mounted) {
-        if (stream) {
-          stream.getTracks().forEach((t) => t.stop());
-        }
-        return;
-      }
-
-      if (stream) {
-        setLocalStream(stream);
-        localStreamRef.current = stream;
-
-        const hasVideo = stream.getVideoTracks().length > 0;
-        setVideoEnabled(hasVideo);
-
-        const hasAudio = stream.getAudioTracks().length > 0;
-        setAudioEnabled(hasAudio);
-
-        // Immediately attach tracks to any existing peer connections
-        peerConnections.current.forEach((pc) => {
-          stream.getTracks().forEach((track) => {
-            pc.addTrack(track, stream);
-          });
-        });
-      }
-    }
-
-    if (navigator.mediaDevices?.getUserMedia) {
-      initMedia();
-    } else {
-      setDeviceError('Media devices API is not supported in this browser environment.');
-    }
-
-    return () => {
-      mounted = false;
-    };
-  }, []);
-
-  // Guarantee local video element binding whenever localStream or videoEnabled changes
-  const attachLocalVideo = useCallback((el: HTMLVideoElement | null) => {
-    localVideoRef.current = el;
-    if (el && localStreamRef.current) {
-      if (el.srcObject !== localStreamRef.current) {
-        el.srcObject = localStreamRef.current;
-      }
-      el.muted = true;
-      el.play().catch((err) => {
-        console.warn('Local preview autoplay notice:', err.message);
-      });
-    }
-  }, []);
-
-  useEffect(() => {
-    if (localVideoRef.current && localStream) {
-      if (localVideoRef.current.srcObject !== localStream) {
+    if (localVideoRef.current) {
+      if (videoEnabled && localStream && localStream.getVideoTracks().length > 0) {
         localVideoRef.current.srcObject = localStream;
+        localVideoRef.current.play().catch(() => {});
+      } else {
+        localVideoRef.current.srcObject = null;
       }
-      localVideoRef.current.muted = true;
-      localVideoRef.current.play().catch(() => {});
     }
   }, [localStream, videoEnabled]);
 
-  // Guarantee screen share video element binding
-  const attachScreenVideo = useCallback((el: HTMLVideoElement | null) => {
-    screenVideoRef.current = el;
-    if (el && screenStreamRef.current) {
-      if (el.srcObject !== screenStreamRef.current) {
-        el.srcObject = screenStreamRef.current;
-      }
-      el.play().catch(() => {});
-    }
-  }, []);
-
+  // Bind screen share video
   useEffect(() => {
     if (screenVideoRef.current && screenStream) {
       if (screenVideoRef.current.srcObject !== screenStream) {
@@ -359,527 +272,678 @@ export const VideoMeeting: React.FC<VideoMeetingProps> = ({
     }
   }, [screenStream, isSharingScreen]);
 
-  // WebRTC Socket.IO mesh signaling lifecycle
+  // Fullscreen presentation handler
+  const togglePresentationFullscreen = useCallback(() => {
+    if (!presentationContainerRef.current) return;
+
+    if (!document.fullscreenElement) {
+      presentationContainerRef.current.requestFullscreen().then(() => {
+        setIsFullscreenPresentation(true);
+      }).catch((err) => {
+        console.warn('[Fullscreen] Presentation fullscreen error:', err);
+      });
+    } else {
+      document.exitFullscreen().then(() => {
+        setIsFullscreenPresentation(false);
+      }).catch(() => {});
+    }
+  }, []);
+
   useEffect(() => {
-    const socket = getSocket();
-
-    socket.emit('join_study_room', { roomId });
-
-    // Handle existing peers when we join room -> initiate offers
-    const handleExistingPeers = async ({ peers }: { peers: Array<{ socketId: string; userId?: string; username?: string; fullName?: string }> }) => {
-      for (const peer of peers) {
-        if (!peer.socketId) continue;
-        const pc = createPeerConnection(peer.socketId, {
-          userId: peer.userId,
-          username: peer.username,
-          fullName: peer.fullName,
-        });
-
-        try {
-          const offer = await pc.createOffer();
-          await pc.setLocalDescription(offer);
-          socket.emit('webrtc_offer', {
-            targetSocketId: peer.socketId,
-            offer,
-          });
-        } catch (err) {
-          console.error('[WebRTC] Failed to create offer for peer:', err);
-        }
-      }
+    const handleFullscreenChange = () => {
+      setIsFullscreenPresentation(Boolean(document.fullscreenElement));
     };
-
-    // Handle newly joined peer -> record in state, wait for their offer
-    const handlePeerJoined = ({ socketId, userId, username, fullName }: { socketId: string; userId?: string; username?: string; fullName?: string }) => {
-      setPeersMap((prev) => {
-        const next = new Map(prev);
-        next.set(socketId, { socketId, userId, username, fullName });
-        return next;
-      });
-    };
-
-    // Handle incoming WebRTC offer
-    const handleWebRTCOffer = async ({ senderSocketId, senderUserId, offer }: { senderSocketId: string; senderUserId?: string; offer: RTCSessionDescriptionInit }) => {
-      let pc = peerConnections.current.get(senderSocketId);
-      if (!pc) {
-        pc = createPeerConnection(senderSocketId, { userId: senderUserId });
-      }
-
-      try {
-        await pc.setRemoteDescription(new RTCSessionDescription(offer));
-        const answer = await pc.createAnswer();
-        await pc.setLocalDescription(answer);
-        socket.emit('webrtc_answer', {
-          targetSocketId: senderSocketId,
-          answer,
-        });
-      } catch (err) {
-        console.error('[WebRTC] Error handling offer:', err);
-      }
-    };
-
-    // Handle incoming WebRTC answer
-    const handleWebRTCAnswer = async ({ senderSocketId, answer }: { senderSocketId: string; answer: RTCSessionDescriptionInit }) => {
-      const pc = peerConnections.current.get(senderSocketId);
-      if (pc) {
-        try {
-          await pc.setRemoteDescription(new RTCSessionDescription(answer));
-        } catch (err) {
-          console.error('[WebRTC] Error setting remote description from answer:', err);
-        }
-      }
-    };
-
-    // Handle incoming ICE candidate
-    const handleICECandidate = async ({ senderSocketId, candidate }: { senderSocketId: string; candidate: RTCIceCandidateInit }) => {
-      const pc = peerConnections.current.get(senderSocketId);
-      if (pc && candidate) {
-        try {
-          await pc.addIceCandidate(new RTCIceCandidate(candidate));
-        } catch (err) {
-          console.error('[WebRTC] Error adding ICE candidate:', err);
-        }
-      }
-    };
-
-    // Handle peer disconnected
-    const handlePeerLeft = ({ socketId }: { socketId: string }) => {
-      const pc = peerConnections.current.get(socketId);
-      if (pc) {
-        pc.close();
-        peerConnections.current.delete(socketId);
-      }
-      setPeersMap((prev) => {
-        const next = new Map(prev);
-        next.delete(socketId);
-        return next;
-      });
-    };
-
-    socket.on('existing_peers', handleExistingPeers);
-    socket.on('peer_joined', handlePeerJoined);
-    socket.on('webrtc_offer', handleWebRTCOffer);
-    socket.on('webrtc_answer', handleWebRTCAnswer);
-    socket.on('webrtc_ice_candidate', handleICECandidate);
-    socket.on('peer_left', handlePeerLeft);
-
+    document.addEventListener('fullscreenchange', handleFullscreenChange);
     return () => {
-      socket.emit('leave_study_room', { roomId });
-      socket.off('existing_peers', handleExistingPeers);
-      socket.off('peer_joined', handlePeerJoined);
-      socket.off('webrtc_offer', handleWebRTCOffer);
-      socket.off('webrtc_answer', handleWebRTCAnswer);
-      socket.off('webrtc_ice_candidate', handleICECandidate);
-      socket.off('peer_left', handlePeerLeft);
-
-      peerConnections.current.forEach((pc) => pc.close());
-      peerConnections.current.clear();
-
-      if (localStreamRef.current) {
-        localStreamRef.current.getTracks().forEach((track) => track.stop());
-      }
-      if (screenStreamRef.current) {
-        screenStreamRef.current.getTracks().forEach((track) => track.stop());
-      }
+      document.removeEventListener('fullscreenchange', handleFullscreenChange);
     };
-  }, [roomId, createPeerConnection]);
+  }, []);
 
-  // Toggle or re-acquire microphone
-  const toggleMic = async () => {
-    const stream = localStreamRef.current;
-    const existingAudioTrack = stream?.getAudioTracks()[0];
-
-    if (existingAudioTrack) {
-      existingAudioTrack.enabled = !existingAudioTrack.enabled;
-      setAudioEnabled(existingAudioTrack.enabled);
-    } else {
-      // If mic was not available on start, try acquiring it now
-      try {
-        const newStream = await navigator.mediaDevices.getUserMedia({ audio: true });
-        const newTrack = newStream.getAudioTracks()[0];
-        if (stream) {
-          stream.addTrack(newTrack);
-        } else {
-          setLocalStream(newStream);
-          localStreamRef.current = newStream;
-        }
-        setAudioEnabled(true);
-        peerConnections.current.forEach((pc) => {
-          pc.addTrack(newTrack, stream || newStream);
-        });
-      } catch (err: any) {
-        console.warn('Microphone activation error:', err.message);
-        setDeviceError('Microphone could not be accessed.');
-      }
-    }
-  };
-
-  // Toggle or re-acquire camera
-  const toggleCamera = async () => {
-    const stream = localStreamRef.current;
-    const existingVideoTrack = stream?.getVideoTracks()[0];
-
-    if (existingVideoTrack) {
-      existingVideoTrack.enabled = !existingVideoTrack.enabled;
-      setVideoEnabled(existingVideoTrack.enabled);
-    } else {
-      // If camera was not available on start, try acquiring it now
-      try {
-        const newStream = await navigator.mediaDevices.getUserMedia({
-          video: { width: { ideal: 1280 }, height: { ideal: 720 }, facingMode: 'user' },
-        });
-        const newTrack = newStream.getVideoTracks()[0];
-        if (stream) {
-          stream.addTrack(newTrack);
-          setLocalStream(new MediaStream(stream.getTracks()));
-        } else {
-          setLocalStream(newStream);
-          localStreamRef.current = newStream;
-        }
-        setVideoEnabled(true);
-        setDeviceError('');
-
-        peerConnections.current.forEach((pc) => {
-          pc.addTrack(newTrack, stream || newStream);
-        });
-      } catch (err: any) {
-        console.warn('Camera activation error:', err.message);
-        setDeviceError('Camera could not be accessed. Please ensure camera permissions are allowed.');
-      }
-    }
-  };
-
-  // Toggle screen share with dynamic track replacement
-  const toggleScreenShare = async () => {
-    if (isSharingScreen) {
-      // Stop screen sharing
-      if (screenStreamRef.current) {
-        screenStreamRef.current.getTracks().forEach((track) => track.stop());
-        screenStreamRef.current = null;
-        setScreenStream(null);
-      }
-      setIsSharingScreen(false);
-
-      // Revert video track on all peer connections to camera
-      const camTrack = localStreamRef.current?.getVideoTracks()[0];
-      if (camTrack) {
-        peerConnections.current.forEach((pc) => {
-          const sender = pc.getSenders().find((s) => s.track && s.track.kind === 'video');
-          if (sender) {
-            sender.replaceTrack(camTrack).catch(console.error);
-          }
-        });
-      }
-    } else {
-      // Start screen sharing
-      try {
-        const stream = await navigator.mediaDevices.getDisplayMedia({ video: true, audio: true });
-        screenStreamRef.current = stream;
-        setScreenStream(stream);
-        setIsSharingScreen(true);
-
-        const screenTrack = stream.getVideoTracks()[0];
-
-        // Replace video track across all active peer connections
-        peerConnections.current.forEach((pc) => {
-          const sender = pc.getSenders().find((s) => s.track && s.track.kind === 'video');
-          if (sender) {
-            sender.replaceTrack(screenTrack).catch(console.error);
-          }
-        });
-
-        // Handle native browser stop button
-        screenTrack.onended = () => {
-          setIsSharingScreen(false);
-          setScreenStream(null);
-          screenStreamRef.current = null;
-
-          const camTrack = localStreamRef.current?.getVideoTracks()[0];
-          if (camTrack) {
-            peerConnections.current.forEach((pc) => {
-              const sender = pc.getSenders().find((s) => s.track && s.track.kind === 'video');
-              if (sender) {
-                sender.replaceTrack(camTrack).catch(console.error);
-              }
-            });
-          }
-        };
-      } catch (err: any) {
-        console.warn('Screen share cancelled or failed:', err.message);
-      }
-    }
+  // Update whiteboard sharing state when activeView changes
+  const handleToggleView = (view: 'video' | 'whiteboard') => {
+    setActiveView(view);
+    setWhiteboardSharing(view === 'whiteboard');
   };
 
   const remotePeersList = Array.from(peersMap.values());
+  const totalPeers = remotePeersList.length + 1; // local + remote
+
+  // Dynamic layout grid configuration
+  const getGridTemplate = () => {
+    if (isSharingScreen) {
+      return {
+        columns: 'minmax(480px, 3.5fr) minmax(220px, 1fr)',
+        rows: '1fr',
+      };
+    }
+    if (totalPeers === 1) {
+      return { columns: '1fr', rows: '1fr' };
+    }
+    if (totalPeers === 2) {
+      return { columns: 'repeat(2, 1fr)', rows: '1fr' };
+    }
+    if (totalPeers <= 4) {
+      return { columns: 'repeat(2, 1fr)', rows: 'repeat(2, 1fr)' };
+    }
+    return { columns: 'repeat(3, 1fr)', rows: 'repeat(2, 1fr)' };
+  };
+
+  const gridStyle = getGridTemplate();
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', width: '100%' }}>
-      {/* Device notice if camera/mic is offline */}
+    <div
+      style={{
+        display: 'flex',
+        flexDirection: 'column',
+        width: '100%',
+        height: '100%',
+        minHeight: '78vh',
+        position: 'relative',
+        backgroundColor: '#020617',
+        borderRadius: THEME.radius.cardLg,
+        overflow: 'hidden',
+        border: '1px solid #1E293B',
+      }}
+    >
+      {/* Device Warning Notice */}
       {deviceError && (
-        <div className="alert-box-vermilion" style={{ fontSize: '13px', display: 'flex', alignItems: 'center', gap: '8px' }}>
-          <AlertCircle size={16} color={THEME.vermilion} />
-          <div>
-            <span style={{ color: THEME.vermilion, fontWeight: 700 }}>[MEDIA NOTICE]</span> {deviceError}
-          </div>
+        <div
+          style={{
+            backgroundColor: 'rgba(239, 68, 68, 0.15)',
+            borderBottom: '1px solid rgba(239, 68, 68, 0.3)',
+            padding: '8px 16px',
+            fontSize: '12px',
+            color: '#FCA5A5',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '8px',
+          }}
+        >
+          <AlertCircle size={15} color="#F87171" />
+          <span>{deviceError}</span>
         </div>
       )}
 
-      {/* Video Streams Grid */}
+      {/* Main Collaborative Stage: Maximized & Filling Space */}
       <div
         style={{
-          display: 'grid',
-          gridTemplateColumns: isSharingScreen ? '2fr 1fr' : 'repeat(auto-fit, minmax(280px, 1fr))',
-          gap: '16px',
+          flex: 1,
+          display: 'flex',
+          flexDirection: 'column',
+          padding: '14px',
+          overflow: 'hidden',
+          position: 'relative',
         }}
       >
-        {/* Screen Share Window */}
-        {isSharingScreen && (
-          <div
-            className="card"
-            style={{
-              position: 'relative',
-              backgroundColor: THEME.warmIvory,
-              border: `2px solid ${THEME.emeraldGreen}`,
-              minHeight: '360px',
-              display: 'flex',
-              flexDirection: 'column',
-              overflow: 'hidden',
-              padding: '10px',
-              borderRadius: THEME.radius.card,
-              boxShadow: THEME.shadow.lifted,
-            }}
-          >
+        {activeView === 'whiteboard' ? (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', width: '100%', height: '100%' }}>
+            {/* Whiteboard Top Strip with Video Thumbnails */}
             <div
               style={{
                 display: 'flex',
                 alignItems: 'center',
-                justifyContent: 'space-between',
-                padding: '6px 12px',
-                borderBottom: `1.5px solid ${THEME.emeraldGreen}`,
-                marginBottom: '8px',
-              }}
-            >
-              <span className="badge">Screen Share Active</span>
-              <span style={{ fontSize: '12px', fontWeight: 700, color: THEME.deepForestCharcoal }}>
-                Presenting to Study Room
-              </span>
-            </div>
-            <video
-              ref={attachScreenVideo}
-              autoPlay
-              playsInline
-              style={{
-                width: '100%',
-                height: '100%',
-                maxHeight: '480px',
-                backgroundColor: THEME.deepForestCharcoal,
-                borderRadius: THEME.radius.md,
-                border: `1.5px solid ${THEME.deepForestCharcoal}`,
-                objectFit: 'contain',
-                display: 'block',
-              }}
-            />
-          </div>
-        )}
-
-        {/* Local Participant Tile */}
-        <div
-          className="card"
-          style={{
-            position: 'relative',
-            backgroundColor: '#0F172A',
-            border: `1.5px solid ${audioEnabled ? '#0284C7' : '#CBD5E1'}`,
-            minHeight: '260px',
-            display: 'flex',
-            flexDirection: 'column',
-            justifyContent: 'center',
-            alignItems: 'center',
-            overflow: 'hidden',
-            padding: 0,
-            borderRadius: THEME.radius.card,
-            transition: `border-color ${THEME.motion.durationFast} ${THEME.motion.easeOut}`,
-          }}
-        >
-          {localStream && videoEnabled ? (
-            <video
-              ref={attachLocalVideo}
-              autoPlay
-              playsInline
-              muted
-              style={{
-                width: '100%',
-                height: '100%',
-                minHeight: '260px',
+                gap: '10px',
+                padding: '8px 12px',
                 backgroundColor: '#0F172A',
-                objectFit: 'cover',
-                transform: 'scaleX(-1)', // Mirror local camera
-                display: 'block',
-              }}
-            />
-          ) : (
-            <div
-              style={{
-                display: 'flex',
-                flexDirection: 'column',
-                alignItems: 'center',
-                gap: '12px',
-                padding: '24px',
-                textAlign: 'center',
+                borderRadius: THEME.radius.md,
+                border: '1px solid #334155',
+                overflowX: 'auto',
+                flexShrink: 0,
               }}
             >
               <div
                 style={{
-                  width: '72px',
-                  height: '72px',
-                  borderRadius: THEME.radius.full,
-                  backgroundColor: '#1E293B',
-                  border: '1px solid rgba(14, 165, 233, 0.4)',
                   display: 'flex',
                   alignItems: 'center',
-                  justifyContent: 'center',
-                  fontSize: '24px',
+                  gap: '6px',
+                  padding: '4px 10px',
+                  borderRadius: THEME.radius.pill,
+                  backgroundColor: 'rgba(2, 132, 199, 0.2)',
+                  fontSize: '12px',
                   fontWeight: 700,
                   color: '#38BDF8',
+                  whiteSpace: 'nowrap',
                 }}
               >
-                {user?.full_name ? user.full_name[0].toUpperCase() : 'U'}
+                <PenTool size={13} color="#38BDF8" />
+                Persistent Whiteboard
               </div>
-              <span style={{ fontSize: '14px', fontWeight: 600, color: '#F8FAFC' }}>
-                {localStream?.getVideoTracks().length ? 'Camera is paused' : 'Camera is offline'}
-              </span>
-              <Button
-                variant="secondary"
-                size="sm"
-                shape="pill"
-                onClick={toggleCamera}
-                leftIcon={<Video size={13} color="#F8FAFC" />}
-              >
-                Start Camera
-              </Button>
-            </div>
-          )}
 
-          {/* Local Label Badge */}
+              {activeWhiteboardSharer && (
+                <div
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '6px',
+                    padding: '4px 10px',
+                    borderRadius: THEME.radius.pill,
+                    backgroundColor: 'rgba(16, 185, 129, 0.15)',
+                    border: '1px solid rgba(16, 185, 129, 0.4)',
+                    fontSize: '11px',
+                    fontWeight: 700,
+                    color: '#34D399',
+                    whiteSpace: 'nowrap',
+                  }}
+                >
+                  <span
+                    className="live-pulse-dot"
+                    style={{
+                      width: '6px',
+                      height: '6px',
+                      borderRadius: '50%',
+                      backgroundColor: '#10B981',
+                      display: 'inline-block',
+                    }}
+                  />
+                  <span>
+                    {activeWhiteboardSharer.userId === user?.id
+                      ? 'You are drawing'
+                      : `${activeWhiteboardSharer.username} is drawing`}
+                  </span>
+                </div>
+              )}
+
+              {/* Local Mini Badge */}
+              <div
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '6px',
+                  padding: '4px 8px',
+                  borderRadius: THEME.radius.pill,
+                  backgroundColor: '#1E293B',
+                  fontSize: '11px',
+                  color: '#E2E8F0',
+                  whiteSpace: 'nowrap',
+                }}
+              >
+                {audioEnabled ? <Mic size={11} color="#10B981" /> : <MicOff size={11} color="#EF4444" />}
+                <span>You</span>
+              </div>
+
+              {/* Remote Peers Mini Badges */}
+              {remotePeersList.map((p) => (
+                <div
+                  key={p.socketId}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '6px',
+                    padding: '4px 8px',
+                    borderRadius: THEME.radius.pill,
+                    backgroundColor: '#1E293B',
+                    fontSize: '11px',
+                    color: '#E2E8F0',
+                    whiteSpace: 'nowrap',
+                  }}
+                >
+                  <Volume2 size={11} color="#0EA5E9" />
+                  <span>{p.fullName || p.username || 'Peer'}</span>
+                </div>
+              ))}
+            </div>
+
+            {/* Collaborative Whiteboard Canvas Container */}
+            <div style={{ flex: 1, minHeight: '520px', borderRadius: THEME.radius.card, overflow: 'hidden' }}>
+              <Whiteboard roomId={roomId} />
+            </div>
+          </div>
+        ) : (
+          /* Video & Screen Stage: Dynamic Adaptive Grid Filling Viewport */
           <div
             style={{
-              position: 'absolute',
-              bottom: '12px',
-              left: '12px',
-              backgroundColor: 'rgba(8, 11, 17, 0.85)',
-              border: '1px solid rgba(255, 255, 255, 0.12)',
-              padding: '4px 10px',
-              borderRadius: THEME.radius.pill,
-              fontSize: '11.5px',
-              fontWeight: 600,
-              color: '#F8FAFC',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '6px',
-              zIndex: 2,
+              display: 'grid',
+              gridTemplateColumns: gridStyle.columns,
+              gridTemplateRows: gridStyle.rows,
+              gap: '12px',
+              width: '100%',
+              height: '100%',
+              flex: 1,
             }}
           >
-            {audioEnabled ? (
-              <Mic size={12} color="#10B981" />
-            ) : (
-              <MicOff size={12} color="#F43F5E" />
-            )}
-            <span>You {isHost ? '(Host)' : ''}</span>
-          </div>
-        </div>
+            {/* Active Screen Share Spotlight */}
+            {isSharingScreen && (
+              <div
+                ref={presentationContainerRef}
+                style={{
+                  position: 'relative',
+                  backgroundColor: '#000000',
+                  border: '2px solid #0284C7',
+                  borderRadius: THEME.radius.card,
+                  height: '100%',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  overflow: 'hidden',
+                  boxShadow: '0 8px 24px rgba(0, 0, 0, 0.5)',
+                }}
+              >
+                <div
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    padding: '8px 14px',
+                    backgroundColor: '#0F172A',
+                    borderBottom: '1px solid #1E293B',
+                    zIndex: 2,
+                  }}
+                >
+                  <span
+                    style={{
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: '6px',
+                      fontSize: '12px',
+                      fontWeight: 700,
+                      color: '#38BDF8',
+                    }}
+                  >
+                    <MonitorUp size={13} color="#38BDF8" />
+                    You are presenting your screen
+                  </span>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    {/* Fullscreen presentation toggle */}
+                    <button
+                      type="button"
+                      onClick={togglePresentationFullscreen}
+                      style={{
+                        backgroundColor: '#1E293B',
+                        border: '1px solid #334155',
+                        color: '#F8FAFC',
+                        padding: '4px 8px',
+                        borderRadius: THEME.radius.pill,
+                        fontSize: '11px',
+                        cursor: 'pointer',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '4px',
+                      }}
+                      title="Fullscreen presentation"
+                    >
+                      {isFullscreenPresentation ? <Minimize2 size={12} /> : <Maximize2 size={12} />}
+                      <span>{isFullscreenPresentation ? 'Exit Fullscreen' : 'Fullscreen'}</span>
+                    </button>
 
-        {/* Remote Peers Grid */}
-        {remotePeersList.map((peer) => (
-          <RemoteVideoTile key={peer.socketId} peer={peer} />
-        ))}
+                    <button
+                      type="button"
+                      onClick={stopScreenShare}
+                      style={{
+                        backgroundColor: '#EF4444',
+                        border: 'none',
+                        color: '#FFFFFF',
+                        fontSize: '11px',
+                        fontWeight: 700,
+                        padding: '4px 10px',
+                        borderRadius: THEME.radius.pill,
+                        cursor: 'pointer',
+                      }}
+                    >
+                      Stop Presenting
+                    </button>
+                  </div>
+                </div>
+                <video
+                  ref={screenVideoRef}
+                  autoPlay
+                  playsInline
+                  style={{
+                    width: '100%',
+                    height: '100%',
+                    flex: 1,
+                    backgroundColor: '#000000',
+                    objectFit: 'contain',
+                    display: 'block',
+                  }}
+                />
+              </div>
+            )}
+
+            {/* Local Video Tile */}
+            <div
+              style={{
+                position: 'relative',
+                backgroundColor: '#0F172A',
+                border: `1.5px solid ${audioEnabled ? '#10B981' : '#334155'}`,
+                borderRadius: THEME.radius.card,
+                height: '100%',
+                minHeight: '220px',
+                display: 'flex',
+                flexDirection: 'column',
+                justifyContent: 'center',
+                alignItems: 'center',
+                overflow: 'hidden',
+                boxShadow: '0 4px 12px rgba(0, 0, 0, 0.3)',
+              }}
+            >
+              {localStream && videoEnabled ? (
+                <video
+                  ref={localVideoRef}
+                  autoPlay
+                  playsInline
+                  muted
+                  style={{
+                    width: '100%',
+                    height: '100%',
+                    backgroundColor: '#0F172A',
+                    objectFit: 'cover',
+                    transform: 'scaleX(-1)', // Mirror local preview
+                    display: 'block',
+                  }}
+                />
+              ) : (
+                <div
+                  style={{
+                    display: 'flex',
+                    flexDirection: 'column',
+                    alignItems: 'center',
+                    gap: '12px',
+                    padding: '20px',
+                    textAlign: 'center',
+                  }}
+                >
+                  <div
+                    style={{
+                      width: '68px',
+                      height: '68px',
+                      borderRadius: THEME.radius.full,
+                      backgroundColor: '#1E293B',
+                      border: '2px solid rgba(2, 132, 199, 0.5)',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      fontSize: '24px',
+                      fontWeight: 800,
+                      color: '#38BDF8',
+                    }}
+                  >
+                    {user?.full_name ? user.full_name[0].toUpperCase() : 'U'}
+                  </div>
+                  <span style={{ fontSize: '14px', fontWeight: 700, color: '#F8FAFC' }}>
+                    Camera is OFF
+                  </span>
+                  <button
+                    type="button"
+                    onClick={toggleCamera}
+                    style={{
+                      backgroundColor: '#0284C7',
+                      border: 'none',
+                      color: '#FFFFFF',
+                      padding: '6px 14px',
+                      borderRadius: THEME.radius.pill,
+                      fontSize: '12px',
+                      fontWeight: 700,
+                      cursor: 'pointer',
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: '6px',
+                    }}
+                  >
+                    <Video size={13} />
+                    Start Camera
+                  </button>
+                </div>
+              )}
+
+              {/* Local Label Badge */}
+              <div
+                style={{
+                  position: 'absolute',
+                  bottom: '10px',
+                  left: '10px',
+                  backgroundColor: 'rgba(15, 23, 42, 0.88)',
+                  backdropFilter: 'blur(6px)',
+                  border: '1px solid rgba(255, 255, 255, 0.12)',
+                  padding: '3px 9px',
+                  borderRadius: THEME.radius.pill,
+                  fontSize: '11px',
+                  fontWeight: 700,
+                  color: '#F8FAFC',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '6px',
+                  zIndex: 2,
+                }}
+              >
+                {audioEnabled ? <Mic size={12} color="#10B981" /> : <MicOff size={12} color="#EF4444" />}
+                <span>You {isHost ? '(Host)' : ''}</span>
+              </div>
+            </div>
+
+            {/* Remote Peer Video Tiles */}
+            {remotePeersList.map((peer) => (
+              <RemoteVideoTile key={peer.socketId} peer={peer} />
+            ))}
+          </div>
+        )}
       </div>
 
-      {/* Control Bar */}
+      {/* Google Meet Bottom Toolbar */}
       <div
-        className="card"
         style={{
           display: 'flex',
           alignItems: 'center',
-          justifyContent: 'center',
-          gap: '14px',
-          padding: '14px 24px',
-          backgroundColor: '#FFFFFF',
-          border: '1px solid #E2E8F0',
-          borderRadius: THEME.radius.cardLg,
-          boxShadow: THEME.shadow.lifted,
+          justifyContent: 'space-between',
+          padding: '12px 20px',
+          backgroundColor: '#0F172A',
+          borderTop: '1px solid #1E293B',
+          gap: '12px',
           flexWrap: 'wrap',
+          zIndex: 10,
         }}
       >
-        {/* Toggle Audio */}
-        <Button
-          variant={audioEnabled ? 'secondary' : 'vermilion'}
-          shape="pill"
-          onClick={toggleMic}
-          leftIcon={
-            audioEnabled ? (
-              <Mic size={16} color="#0F172A" />
-            ) : (
-              <MicOff size={16} color="#FFFFFF" />
-            )
-          }
-        >
-          {audioEnabled ? 'Mute Mic' : 'Unmute Mic'}
-        </Button>
+        {/* Left: Room Status & Noise Cancellation Info */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+          <span style={{ fontSize: '13px', fontWeight: 800, color: '#F8FAFC' }}>
+            {roomName}
+          </span>
+          {noiseSuppressionActive && (
+            <span
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '4px',
+                backgroundColor: 'rgba(16, 185, 129, 0.12)',
+                border: '1px solid rgba(16, 185, 129, 0.3)',
+                padding: '2px 8px',
+                borderRadius: THEME.radius.pill,
+                fontSize: '11px',
+                fontWeight: 700,
+                color: '#34D399',
+              }}
+              title="Browser-level echo cancellation and noise suppression active on microphone"
+            >
+              <ShieldCheck size={11} color="#34D399" />
+              Noise Suppression Active
+            </span>
+          )}
+        </div>
 
-        {/* Toggle Video */}
-        <Button
-          variant={videoEnabled ? 'secondary' : 'vermilion'}
-          shape="pill"
-          onClick={toggleCamera}
-          leftIcon={
-            videoEnabled ? (
-              <Video size={16} color="#F8FAFC" />
-            ) : (
-              <VideoOff size={16} color="#FFFFFF" />
-            )
-          }
-        >
-          {videoEnabled ? 'Stop Video' : 'Start Video'}
-        </Button>
+        {/* Center: Essential Meeting Controls */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+          {/* 1. Microphone Toggle */}
+          <button
+            type="button"
+            onClick={toggleMic}
+            style={{
+              width: '44px',
+              height: '44px',
+              borderRadius: '50%',
+              border: 'none',
+              backgroundColor: audioEnabled ? '#1E293B' : '#EF4444',
+              color: '#FFFFFF',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              cursor: 'pointer',
+              transition: 'transform 0.15s ease, background-color 0.15s ease',
+            }}
+            title={audioEnabled ? 'Mute Microphone' : 'Unmute Microphone'}
+          >
+            {audioEnabled ? <Mic size={18} color="#38BDF8" /> : <MicOff size={18} color="#FFFFFF" />}
+          </button>
 
-        {/* Toggle Screen Share */}
-        <Button
-          variant={isSharingScreen ? 'primary' : 'secondary'}
-          shape="pill"
-          onClick={toggleScreenShare}
-          leftIcon={
-            isSharingScreen ? (
-              <MonitorUp size={16} color="#FFFFFF" />
-            ) : (
-              <ScreenShare size={16} color="#F8FAFC" />
-            )
-          }
-        >
-          {isSharingScreen ? 'Stop Sharing' : 'Share Screen'}
-        </Button>
+          {/* 2. Camera Toggle */}
+          <button
+            type="button"
+            onClick={toggleCamera}
+            style={{
+              width: '44px',
+              height: '44px',
+              borderRadius: '50%',
+              border: 'none',
+              backgroundColor: videoEnabled ? '#1E293B' : '#EF4444',
+              color: '#FFFFFF',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              cursor: 'pointer',
+              transition: 'transform 0.15s ease, background-color 0.15s ease',
+            }}
+            title={videoEnabled ? 'Turn Camera Off' : 'Turn Camera On'}
+          >
+            {videoEnabled ? <Video size={18} color="#38BDF8" /> : <VideoOff size={18} color="#FFFFFF" />}
+          </button>
 
-        {/* Raise Hand */}
-        <Button
-          variant="secondary"
-          shape="pill"
-          onClick={onToggleHand}
-          leftIcon={<Hand size={16} color="#F8FAFC" />}
-        >
-          Raise Hand
-        </Button>
+          {/* 3. Screen Share */}
+          <button
+            type="button"
+            onClick={startScreenShare}
+            style={{
+              width: '44px',
+              height: '44px',
+              borderRadius: '50%',
+              border: 'none',
+              backgroundColor: isSharingScreen ? '#0284C7' : '#1E293B',
+              color: '#FFFFFF',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              cursor: 'pointer',
+              transition: 'transform 0.15s ease',
+            }}
+            title={isSharingScreen ? 'Stop Screen Sharing' : 'Share Screen'}
+          >
+            <ScreenShare size={18} color={isSharingScreen ? '#FFFFFF' : '#94A3B8'} />
+          </button>
 
-        <div style={{ width: '1px', height: '24px', backgroundColor: 'rgba(255, 255, 255, 0.1)' }} />
+          {/* 4. Whiteboard Switcher */}
+          <button
+            type="button"
+            onClick={() => handleToggleView(activeView === 'whiteboard' ? 'video' : 'whiteboard')}
+            style={{
+              width: '44px',
+              height: '44px',
+              borderRadius: '50%',
+              border: 'none',
+              backgroundColor: activeView === 'whiteboard' ? '#0284C7' : '#1E293B',
+              color: '#FFFFFF',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              cursor: 'pointer',
+              transition: 'transform 0.15s ease',
+            }}
+            title={activeView === 'whiteboard' ? 'Return to Video Grid' : 'Open Persistent Whiteboard'}
+          >
+            <PenTool size={18} color={activeView === 'whiteboard' ? '#FFFFFF' : '#94A3B8'} />
+          </button>
 
-        {/* Leave Room */}
-        <Button
-          variant="vermilion"
-          shape="pill"
-          onClick={onLeave}
-          leftIcon={<PhoneOff size={16} color="#FFFFFF" />}
-        >
-          Leave Call
-        </Button>
+          {/* 5. Raise Hand */}
+          <button
+            type="button"
+            onClick={onToggleHand}
+            style={{
+              width: '44px',
+              height: '44px',
+              borderRadius: '50%',
+              border: 'none',
+              backgroundColor: '#1E293B',
+              color: '#FFFFFF',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              cursor: 'pointer',
+              transition: 'transform 0.15s ease',
+            }}
+            title="Raise / Lower Hand"
+          >
+            <Hand size={18} color="#FBBF24" />
+          </button>
+
+          {/* 6. Leave / Hang Up */}
+          <button
+            type="button"
+            onClick={onLeave}
+            style={{
+              height: '44px',
+              padding: '0 16px',
+              borderRadius: THEME.radius.pill,
+              border: 'none',
+              backgroundColor: '#DC2626',
+              color: '#FFFFFF',
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '6px',
+              fontWeight: 700,
+              fontSize: '13px',
+              cursor: 'pointer',
+            }}
+            title="Leave Study Room"
+          >
+            <PhoneOff size={16} />
+            <span>Leave</span>
+          </button>
+
+          {/* 7. End Room (Host Only) */}
+          {isHost && onEndRoom && (
+            <button
+              type="button"
+              onClick={onEndRoom}
+              style={{
+                height: '44px',
+                padding: '0 14px',
+                borderRadius: THEME.radius.pill,
+                border: '1px solid #7F1D1D',
+                backgroundColor: 'rgba(220, 38, 38, 0.2)',
+                color: '#F87171',
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '6px',
+                fontWeight: 700,
+                fontSize: '12px',
+                cursor: 'pointer',
+              }}
+              title="End session for all participants"
+            >
+              End Room
+            </button>
+          )}
+        </div>
+
+        {/* Right: Participants Drawer & Meeting Mode Switcher */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <button
+            type="button"
+            onClick={() => setShowParticipants((prev) => !prev)}
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '6px',
+              padding: '8px 12px',
+              borderRadius: THEME.radius.pill,
+              backgroundColor: showParticipants ? '#0284C7' : '#1E293B',
+              border: '1px solid #334155',
+              color: '#F8FAFC',
+              fontSize: '12px',
+              fontWeight: 700,
+              cursor: 'pointer',
+            }}
+          >
+            <Users size={14} />
+            <span>Participants ({authoritativeParticipants.length || participants.length || 1})</span>
+          </button>
+        </div>
       </div>
     </div>
   );
 };
-
-export default VideoMeeting;

@@ -30,7 +30,11 @@ export const Login: React.FC = () => {
       const msg = err.message || 'Login failed.';
       setError(msg);
       if (msg.toLowerCase().includes('verify')) {
-        setUnverifiedEmail(identifier.includes('@') ? identifier : '');
+        const emailVal = identifier.includes('@') ? identifier.trim() : '';
+        setUnverifiedEmail(emailVal);
+        if (emailVal) {
+          sessionStorage.setItem('studysync_pending_email', emailVal);
+        }
       }
     } finally {
       setLoading(false);

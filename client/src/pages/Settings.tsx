@@ -138,10 +138,10 @@ export const Settings: React.FC = () => {
             checked={soundCues}
             onChange={(val) => {
               setSoundCues(val);
-              toast.info(val ? 'Timer sound cues enabled' : 'Timer sound cues muted');
+              toast.info(val ? 'Sound notifications enabled' : 'Sound notifications muted');
             }}
-            label="Focus Timer Chimes"
-            description="Play subtle audio cues when Pomodoro study blocks and breaks transition."
+            label="Audio Alert Sounds"
+            description="Play audio cues when receiving new private chat messages or room invitations."
           />
 
           <ToggleSwitch
@@ -149,10 +149,10 @@ export const Settings: React.FC = () => {
             checked={focusReminders}
             onChange={(val) => {
               setFocusReminders(val);
-              toast.info(val ? 'Daily reminders enabled' : 'Daily reminders disabled');
+              toast.info(val ? 'Chat notifications enabled' : 'Chat notifications disabled');
             }}
-            label="Daily Study Streak Alerts"
-            description="Remind me of scheduled examination milestones and syllabus goals."
+            label="Chat Notifications"
+            description="Receive immediate alerts for direct student messages and group conversations."
           />
 
           <ToggleSwitch
@@ -160,10 +160,10 @@ export const Settings: React.FC = () => {
             checked={peerInvites}
             onChange={(val) => {
               setPeerInvites(val);
-              toast.info(val ? 'Peer study invitations active' : 'Peer study invitations paused');
+              toast.info(val ? 'Study room invitations active' : 'Study room invitations paused');
             }}
-            label="Peer Teaching Invitations"
-            description="Allow peers with matching syllabus doubts to send me study room invitations."
+            label="Study Room Invitations"
+            description="Allow verified peers to send you private study room invitations via your Student ID."
           />
         </div>
       </div>
@@ -244,7 +244,7 @@ export const Settings: React.FC = () => {
         {passwordMsg && (
           <div className="alert-box-emerald" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
             <Check size={16} color="#10B981" />
-            <span style={{ color: '#F8FAFC' }}>{passwordMsg}</span>
+            <span style={{ color: '#065F46', fontWeight: 600 }}>{passwordMsg}</span>
           </div>
         )}
 
@@ -255,7 +255,7 @@ export const Settings: React.FC = () => {
         )}
 
         <div>
-          <label style={{ fontSize: '12px', fontWeight: 700, display: 'block', marginBottom: '4px', color: '#F8FAFC' }}>
+          <label style={{ fontSize: '12px', fontWeight: 700, display: 'block', marginBottom: '4px', color: '#0F172A' }}>
             Current Password *
           </label>
           <input

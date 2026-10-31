@@ -119,7 +119,7 @@ router.get('/search', requireAuth, (req: AuthRequest, res): void => {
     const currentUserId = req.user!.id;
 
     if (!query) {
-      // Return recent or recommended students
+      // Return recent students
       const students = db.prepare(`
         SELECT id, student_id, username, full_name, course, college, academic_year, bio, avatar_url, availability
         FROM users WHERE id != ? AND is_active = 1
@@ -142,6 +142,106 @@ router.get('/search', requireAuth, (req: AuthRequest, res): void => {
   } catch (err: any) {
     console.error('[SEARCH USERS ERROR]', err);
     res.status(500).json({ error: 'Search failed.' });
+  }
+});
+
+// 3.1 FIND STUDENT EXACTLY BY UNIQUE STUDENT ID (for 1-on-1 chats & invites)
+router.get('/by-student-id/:studentId', requireAuth, (req: AuthRequest, res): void => {
+  try {
+    const rawId = String(req.params.studentId).trim().toUpperCase();
+    const currentUserId = req.user!.id;
+
+    if (!rawId) {
+      res.status(400).json({ error: 'Student ID is required.' });
+      return;
+    }
+
+    const student = db.prepare(`
+      SELECT id, student_id, username, full_name, course, college, academic_year, bio, avatar_url, availability
+      FROM users
+      WHERE UPPER(student_id) = ? AND is_active = 1
+    `).get(rawId) as any;
+
+    if (!student) {
+      res.status(404).json({ error: 'No student found with Student ID: ' + rawId });
+      return;
+    }
+
+    if (student.id === currentUserId) {
+      res.status(400).json({ error: 'You entered your own Student ID.', isSelf: true, student });
+      return;
+    }
+
+    res.json({ student });
+  } catch (err: any) {
+    console.error('[FIND BY STUDENT ID ERROR]', err);
+    res.status(500).json({ error: 'Failed to find student.' });
+  }
+});
+
+// 3.2 MINIMAL DASHBOARD SUMMARY (Chats, Groups, Rooms & Invitations)
+router.get('/dashboard-summary', requireAuth, (req: AuthRequest, res): void => {
+  try {
+    const currentUserId = req.user!.id;
+
+    // Recent direct conversations
+    const recentDirectChats = db.prepare(`
+      SELECT u.id as user_id, u.student_id, u.username, u.full_name, u.avatar_url, u.availability,
+             m.content as last_message, m.created_at as last_message_at, m.sender_id,
+             (SELECT COUNT(*) FROM messages WHERE conversation_type = 'direct' AND sender_id = u.id AND recipient_id = ? AND is_read = 0) as unread_count
+      FROM users u
+      JOIN messages m ON (
+        m.id = (
+          SELECT id FROM messages
+          WHERE conversation_type = 'direct'
+            AND ((sender_id = ? AND recipient_id = u.id) OR (sender_id = u.id AND recipient_id = ?))
+          ORDER BY created_at DESC LIMIT 1
+        )
+      )
+      WHERE u.id != ? AND u.is_active = 1
+      ORDER BY m.created_at DESC LIMIT 5
+    `).all(currentUserId, currentUserId, currentUserId, currentUserId);
+
+    // Private groups
+    const myGroups = db.prepare(`
+      SELECT g.id, g.name, g.subject, g.course, g.invite_code, gm.role,
+             (SELECT COUNT(*) FROM group_members WHERE group_id = g.id AND status = 'active') as member_count
+      FROM study_groups g
+      JOIN group_members gm ON gm.group_id = g.id
+      WHERE gm.user_id = ? AND gm.status = 'active'
+      ORDER BY g.updated_at DESC LIMIT 6
+    `).all(currentUserId);
+
+    // Active rooms hosted by user
+    const activeHostedRooms = db.prepare(`
+      SELECT r.id, r.name, r.subject, r.topic, r.invite_code, r.created_at,
+             (SELECT COUNT(*) FROM room_participants WHERE room_id = r.id AND left_at IS NULL) as participant_count
+      FROM study_rooms r
+      WHERE r.host_id = ? AND r.is_active = 1
+      ORDER BY r.created_at DESC LIMIT 5
+    `).all(currentUserId);
+
+    // Pending room invitations
+    const pendingRoomInvitations = db.prepare(`
+      SELECT ri.id as invitation_id, ri.created_at,
+             r.id as room_id, r.name as room_name, r.subject as room_subject, r.invite_code as room_code,
+             u.full_name as inviter_name, u.student_id as inviter_student_id
+      FROM room_invitations ri
+      JOIN study_rooms r ON r.id = ri.room_id
+      JOIN users u ON u.id = ri.inviter_id
+      WHERE ri.invitee_id = ? AND ri.status = 'pending' AND r.is_active = 1
+      ORDER BY ri.created_at DESC LIMIT 5
+    `).all(currentUserId);
+
+    res.json({
+      recentDirectChats,
+      myGroups,
+      activeHostedRooms,
+      pendingRoomInvitations,
+    });
+  } catch (err: any) {
+    console.error('[DASHBOARD SUMMARY ERROR]', err);
+    res.status(500).json({ error: 'Failed to retrieve dashboard summary.' });
   }
 });
 

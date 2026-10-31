@@ -1,8 +1,7 @@
 import React, { useRef, useState, useEffect, useCallback } from 'react';
 import { apiRequest } from '../api/client';
-import { getSocket } from '../api/socket';
 import { THEME } from '../theme';
-import { Button } from './ui/Button';
+import { useMeeting, WhiteboardStrokeAction } from '../context/MeetingContext';
 import {
   Pen,
   Eraser,
@@ -14,6 +13,8 @@ import {
   Download,
   Save,
   Check,
+  Maximize2,
+  Minimize2,
 } from 'lucide-react';
 
 interface WhiteboardProps {
@@ -42,23 +43,35 @@ interface StrokeAction {
 }
 
 export const Whiteboard: React.FC<WhiteboardProps> = ({ roomId }) => {
+  const {
+    setWhiteboardSharing,
+    whiteboardActions,
+    addWhiteboardStroke,
+    clearWhiteboard,
+  } = useMeeting();
+
+  const containerRef = useRef<HTMLDivElement | null>(null);
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
+
   const [currentTool, setCurrentTool] = useState<Tool>('pen');
-  const [inkColor, setInkColor] = useState<InkColor>(THEME.deepForestCharcoal);
+  const [inkColor, setInkColor] = useState<InkColor>('#0F172A');
   const [lineWidth, setLineWidth] = useState<number>(3);
   const [isDrawing, setIsDrawing] = useState(false);
   const [startPos, setStartPos] = useState<{ x: number; y: number } | null>(null);
   const [lastPos, setLastPos] = useState<{ x: number; y: number } | null>(null);
   const [snapshot, setSnapshot] = useState<ImageData | null>(null);
-  const [saveStatus, setSaveStatus] = useState<string>('');
+  const [isFullscreen, setIsFullscreen] = useState(false);
 
-  // Execute a normalized remote action on canvas
-  const applyRemoteStroke = useCallback((action: StrokeAction) => {
-    const canvas = canvasRef.current;
-    if (!canvas) return;
-    const ctx = canvas.getContext('2d');
-    if (!ctx) return;
+  // Announce active whiteboard sharing to room participants
+  useEffect(() => {
+    setWhiteboardSharing(true);
+    return () => {
+      setWhiteboardSharing(false);
+    };
+  }, [setWhiteboardSharing]);
 
+  // Execute a normalized action on canvas
+  const applyStrokeToCanvas = useCallback((ctx: CanvasRenderingContext2D, canvas: HTMLCanvasElement, action: StrokeAction) => {
     const w = canvas.width;
     const h = canvas.height;
 
@@ -71,10 +84,10 @@ export const Whiteboard: React.FC<WhiteboardProps> = ({ roomId }) => {
       const toY = (action.toY ?? 0) * h;
 
       if (action.tool === 'eraser') {
-        ctx.strokeStyle = THEME.warmIvory;
-        ctx.lineWidth = (action.width ?? 3) * 5;
+        ctx.strokeStyle = '#FFFFFF';
+        ctx.lineWidth = (action.width ?? 3) * 6;
       } else {
-        ctx.strokeStyle = action.color || THEME.deepForestCharcoal;
+        ctx.strokeStyle = action.color || '#0F172A';
         ctx.lineWidth = action.width ?? 3;
       }
       ctx.lineCap = 'round';
@@ -90,7 +103,7 @@ export const Whiteboard: React.FC<WhiteboardProps> = ({ roomId }) => {
       const endX = (action.endX ?? 0) * w;
       const endY = (action.endY ?? 0) * h;
 
-      ctx.strokeStyle = action.color || THEME.deepForestCharcoal;
+      ctx.strokeStyle = action.color || '#0F172A';
       ctx.lineWidth = action.width ?? 3;
 
       if (action.tool === 'rect') {
@@ -110,64 +123,96 @@ export const Whiteboard: React.FC<WhiteboardProps> = ({ roomId }) => {
       const x = (action.x ?? 0) * w;
       const y = (action.y ?? 0) * h;
       ctx.font = 'bold 16px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
-      ctx.fillStyle = action.color || THEME.deepForestCharcoal;
+      ctx.fillStyle = action.color || '#0F172A';
       ctx.fillText(action.text, x, y);
     }
 
     ctx.restore();
   }, []);
 
-  // Socket.IO real-time synchronization
-  useEffect(() => {
-    const socket = getSocket();
-    socket.emit('join_study_room', { roomId });
-
-    const handleStroke = (action: StrokeAction) => {
-      applyRemoteStroke(action);
-    };
-
-    const handleClear = () => {
-      const canvas = canvasRef.current;
-      if (!canvas) return;
-      const ctx = canvas.getContext('2d');
-      if (!ctx) return;
-      ctx.fillStyle = THEME.warmIvory;
-      ctx.fillRect(0, 0, canvas.width, canvas.height);
-    };
-
-    socket.on('whiteboard_stroke', handleStroke);
-    socket.on('whiteboard_clear', handleClear);
-
-    return () => {
-      socket.off('whiteboard_stroke', handleStroke);
-      socket.off('whiteboard_clear', handleClear);
-    };
-  }, [roomId, applyRemoteStroke]);
-
-  // Load saved canvas data on mount
-  useEffect(() => {
+  // Redraw complete history of whiteboard actions
+  const redrawAllActions = useCallback(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
     const ctx = canvas.getContext('2d');
     if (!ctx) return;
 
-    // Fill Warm Ivory background initially
-    ctx.fillStyle = THEME.warmIvory;
+    // Fill white background
+    ctx.fillStyle = '#FFFFFF';
     ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-    apiRequest<{ canvasData: string }>(`/rooms/${roomId}/whiteboard`)
-      .then((data) => {
-        if (data.canvasData && data.canvasData !== '[]') {
-          const img = new Image();
-          img.onload = () => {
-            ctx.drawImage(img, 0, 0);
-          };
-          img.src = data.canvasData;
-        }
-      })
-      .catch((err) => console.error('Failed to load whiteboard:', err));
-  }, [roomId]);
+    for (const item of whiteboardActions) {
+      if (item.actionType === 'clear') {
+        ctx.fillStyle = '#FFFFFF';
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+      } else if (item.stroke) {
+        applyStrokeToCanvas(ctx, canvas, item.stroke);
+      }
+    }
+  }, [whiteboardActions, applyStrokeToCanvas]);
 
+  // Re-render when whiteboard actions array changes
+  useEffect(() => {
+    redrawAllActions();
+  }, [whiteboardActions, redrawAllActions]);
+
+  // Adjust canvas size to container while keeping aspect ratio and redrawing
+  const handleResize = useCallback(() => {
+    const canvas = canvasRef.current;
+    const container = containerRef.current;
+    if (!canvas || !container) return;
+
+    const rect = container.getBoundingClientRect();
+    const newWidth = Math.max(640, Math.floor(rect.width));
+    const newHeight = Math.max(480, Math.floor(rect.height - 70)); // minus toolbar height
+
+    if (canvas.width !== newWidth || canvas.height !== newHeight) {
+      canvas.width = newWidth;
+      canvas.height = newHeight;
+      redrawAllActions();
+    }
+  }, [redrawAllActions]);
+
+  useEffect(() => {
+    handleResize();
+    window.addEventListener('resize', handleResize);
+    return () => {
+      window.removeEventListener('resize', handleResize);
+    };
+  }, [handleResize]);
+
+  // Fullscreen toggle handler
+  const toggleFullscreen = useCallback(() => {
+    const container = containerRef.current;
+    if (!container) return;
+
+    if (!document.fullscreenElement) {
+      container.requestFullscreen().then(() => {
+        setIsFullscreen(true);
+        setTimeout(handleResize, 100);
+      }).catch((err) => {
+        console.warn('[Fullscreen] Whiteboard fullscreen error:', err);
+      });
+    } else {
+      document.exitFullscreen().then(() => {
+        setIsFullscreen(false);
+        setTimeout(handleResize, 100);
+      }).catch(() => {});
+    }
+  }, [handleResize]);
+
+  useEffect(() => {
+    const onFullscreenChange = () => {
+      setIsFullscreen(Boolean(document.fullscreenElement));
+      setTimeout(handleResize, 100);
+    };
+    document.addEventListener('fullscreenchange', onFullscreenChange);
+    return () => {
+      document.removeEventListener('fullscreenchange', onFullscreenChange);
+    };
+  }, [handleResize]);
+
+  // Drawing mouse event handlers
   const startDrawing = (e: React.MouseEvent<HTMLCanvasElement>) => {
     const canvas = canvasRef.current;
     if (!canvas) return;
@@ -211,8 +256,8 @@ export const Whiteboard: React.FC<WhiteboardProps> = ({ roomId }) => {
       ctx.lineCap = 'round';
       ctx.lineJoin = 'round';
       if (currentTool === 'eraser') {
-        ctx.strokeStyle = THEME.warmIvory;
-        ctx.lineWidth = lineWidth * 5;
+        ctx.strokeStyle = '#FFFFFF';
+        ctx.lineWidth = lineWidth * 6;
       } else {
         ctx.strokeStyle = inkColor;
         ctx.lineWidth = lineWidth;
@@ -224,20 +269,16 @@ export const Whiteboard: React.FC<WhiteboardProps> = ({ roomId }) => {
       ctx.stroke();
       ctx.restore();
 
-      // Emit stroke action over socket
-      const socket = getSocket();
-      socket.emit('whiteboard_stroke', {
-        roomId,
-        stroke: {
-          type: 'draw',
-          tool: currentTool,
-          color: currentTool === 'eraser' ? THEME.warmIvory : inkColor,
-          width: lineWidth,
-          fromX: prev.x / canvas.width,
-          fromY: prev.y / canvas.height,
-          toX: x / canvas.width,
-          toY: y / canvas.height,
-        },
+      // Emit stroke action to room and persist
+      addWhiteboardStroke({
+        type: 'draw',
+        tool: currentTool,
+        color: currentTool === 'eraser' ? '#FFFFFF' : inkColor,
+        width: lineWidth,
+        fromX: prev.x / canvas.width,
+        fromY: prev.y / canvas.height,
+        toX: x / canvas.width,
+        toY: y / canvas.height,
       });
 
       setLastPos({ x, y });
@@ -286,32 +327,24 @@ export const Whiteboard: React.FC<WhiteboardProps> = ({ roomId }) => {
         ctx.fillStyle = inkColor;
         ctx.fillText(text.trim(), startPos.x, startPos.y);
 
-        const socket = getSocket();
-        socket.emit('whiteboard_stroke', {
-          roomId,
-          stroke: {
-            type: 'text',
-            text: text.trim(),
-            x: startPos.x / canvas.width,
-            y: startPos.y / canvas.height,
-            color: inkColor,
-          },
+        addWhiteboardStroke({
+          type: 'text',
+          text: text.trim(),
+          x: startPos.x / canvas.width,
+          y: startPos.y / canvas.height,
+          color: inkColor,
         });
       }
     } else if (['rect', 'circle', 'line'].includes(currentTool) && startPos) {
-      const socket = getSocket();
-      socket.emit('whiteboard_stroke', {
-        roomId,
-        stroke: {
-          type: 'shape',
-          tool: currentTool,
-          startX: startPos.x / canvas.width,
-          startY: startPos.y / canvas.height,
-          endX: endX / canvas.width,
-          endY: endY / canvas.height,
-          color: inkColor,
-          width: lineWidth,
-        },
+      addWhiteboardStroke({
+        type: 'shape',
+        tool: currentTool,
+        startX: startPos.x / canvas.width,
+        startY: startPos.y / canvas.height,
+        endX: endX / canvas.width,
+        endY: endY / canvas.height,
+        color: inkColor,
+        width: lineWidth,
       });
     }
 
@@ -322,65 +355,50 @@ export const Whiteboard: React.FC<WhiteboardProps> = ({ roomId }) => {
 
   const handleClear = () => {
     if (!window.confirm('Clear whiteboard for all participants in this room?')) return;
-    const canvas = canvasRef.current;
-    if (!canvas) return;
-    const ctx = canvas.getContext('2d');
-    if (!ctx) return;
-
-    ctx.fillStyle = THEME.warmIvory;
-    ctx.fillRect(0, 0, canvas.width, canvas.height);
-
-    const socket = getSocket();
-    socket.emit('whiteboard_clear', { roomId });
-  };
-
-  const handleSave = async () => {
-    const canvas = canvasRef.current;
-    if (!canvas) return;
-    const dataUrl = canvas.toDataURL('image/png');
-
-    try {
-      setSaveStatus('Saving...');
-      await apiRequest(`/rooms/${roomId}/whiteboard`, {
-        method: 'PUT',
-        body: JSON.stringify({ canvasData: dataUrl }),
-      });
-      setSaveStatus('Saved!');
-      setTimeout(() => setSaveStatus(''), 2500);
-    } catch {
-      setSaveStatus('Failed to save');
-    }
+    clearWhiteboard();
   };
 
   const handleDownload = () => {
     const canvas = canvasRef.current;
     if (!canvas) return;
     const link = document.createElement('a');
-    link.download = `studysync-whiteboard-${Date.now()}.png`;
+    link.download = `studysync-whiteboard-${roomId}-${Date.now()}.png`;
     link.href = canvas.toDataURL('image/png');
     link.click();
   };
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', width: '100%' }}>
+    <div
+      ref={containerRef}
+      style={{
+        display: 'flex',
+        flexDirection: 'column',
+        width: '100%',
+        height: '100%',
+        backgroundColor: '#FFFFFF',
+        borderRadius: isFullscreen ? '0' : THEME.radius.card,
+        overflow: 'hidden',
+        position: 'relative',
+      }}
+    >
       {/* Whiteboard Toolbar */}
       <div
-        className="card"
         style={{
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'space-between',
           flexWrap: 'wrap',
-          gap: '10px',
-          padding: '10px 16px',
-          backgroundColor: '#FFFFFF',
-          border: '1px solid #E2E8F0',
-          borderRadius: THEME.radius.card,
+          gap: '8px',
+          padding: '8px 14px',
+          backgroundColor: '#F8FAFC',
+          borderBottom: '1px solid #E2E8F0',
+          zIndex: 5,
         }}
         role="toolbar"
         aria-label="Whiteboard drawing tools"
       >
-        <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
+        {/* Tool selector buttons */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '5px', flexWrap: 'wrap' }}>
           {[
             { id: 'pen', label: 'Pen', icon: Pen },
             { id: 'eraser', label: 'Eraser', icon: Eraser },
@@ -397,146 +415,155 @@ export const Whiteboard: React.FC<WhiteboardProps> = ({ roomId }) => {
                 type="button"
                 onClick={() => setCurrentTool(tool.id as Tool)}
                 style={{
-                  padding: '6px 11px',
-                  backgroundColor: active ? '#0284C7' : '#F1F5F9',
-                  color: active ? '#FFFFFF' : '#475569',
+                  padding: '5px 10px',
+                  backgroundColor: active ? '#0284C7' : '#FFFFFF',
+                  color: active ? '#FFFFFF' : '#334155',
                   fontSize: '12px',
                   display: 'flex',
                   alignItems: 'center',
-                  gap: '6px',
+                  gap: '5px',
                   borderRadius: THEME.radius.sm,
-                  border: `1px solid ${active ? '#0284C7' : '#E2E8F0'}`,
+                  border: `1px solid ${active ? '#0284C7' : '#CBD5E1'}`,
                   cursor: 'pointer',
                   fontWeight: 700,
-                  transition: `all ${THEME.motion.durationFast} ${THEME.motion.easeOut}`,
+                  transition: 'all 0.15s ease',
                 }}
+                title={tool.label}
               >
-                <Icon size={14} color={active ? '#FFFFFF' : '#475569'} />
+                <Icon size={13} />
                 <span>{tool.label}</span>
               </button>
             );
           })}
         </div>
 
-        <div style={{ display: 'flex', alignItems: 'center', gap: '14px', flexWrap: 'wrap' }}>
-          {/* Stroke Palette */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-            <span style={{ fontSize: '11px', fontWeight: 700, color: '#94A3B8' }}>COLOR</span>
-            {[
-              { color: '#F8FAFC', name: 'White' },
-              { color: '#38BDF8', name: 'Azure' },
-              { color: '#10B981', name: 'Mint' },
-              { color: '#F59E0B', name: 'Amber' },
-              { color: '#F43F5E', name: 'Rose' },
-            ].map((c) => (
+        {/* Color Palette, Line Width & Canvas Actions */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
+          {/* Color palette */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+            {['#0F172A', '#0284C7', '#10B981', '#DC2626', '#F59E0B', '#8B5CF6'].map((c) => (
               <button
-                key={c.color}
+                key={c}
                 type="button"
-                onClick={() => setInkColor(c.color)}
+                onClick={() => setInkColor(c)}
                 style={{
                   width: '20px',
                   height: '20px',
-                  borderRadius: THEME.radius.full,
-                  backgroundColor: c.color,
-                  border: inkColor === c.color ? '2px solid #FFFFFF' : '1px solid rgba(255, 255, 255, 0.2)',
+                  borderRadius: '50%',
+                  backgroundColor: c,
+                  border: inkColor === c ? '2.5px solid #000000' : '1px solid rgba(0,0,0,0.15)',
                   cursor: 'pointer',
-                  outline: inkColor === c.color ? '2px solid #0EA5E9' : 'none',
-                  padding: 0,
+                  transform: inkColor === c ? 'scale(1.15)' : 'scale(1)',
+                  transition: 'transform 0.15s ease',
                 }}
-                title={c.name}
+                title={c}
               />
             ))}
           </div>
 
           {/* Stroke Width Slider */}
           <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-            <span style={{ fontSize: '11px', fontWeight: 700, color: '#94A3B8' }}>SIZE</span>
+            <span style={{ fontSize: '11px', color: '#64748B', fontWeight: 700 }}>Width</span>
             <input
               type="range"
               min="1"
-              max="14"
+              max="12"
               value={lineWidth}
               onChange={(e) => setLineWidth(Number(e.target.value))}
-              style={{ width: '65px', accentColor: '#0EA5E9', cursor: 'pointer' }}
+              style={{ width: '60px', cursor: 'pointer' }}
             />
-            <span style={{ fontSize: '11px', fontWeight: 700, color: '#F8FAFC', width: '16px', fontVariantNumeric: 'tabular-nums' }}>
-              {lineWidth}
-            </span>
           </div>
 
-          <div style={{ width: '1px', height: '18px', backgroundColor: 'rgba(255, 255, 255, 0.1)' }} />
+          <div style={{ width: '1px', height: '20px', backgroundColor: '#CBD5E1' }} />
 
-          {/* Action Buttons */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-            <Button
-              variant="secondary"
-              size="sm"
-              shape="rounded"
-              onClick={handleClear}
-              leftIcon={<RotateCcw size={13} color="#F8FAFC" />}
-              title="Clear entire whiteboard"
-            >
-              Clear
-            </Button>
-            <Button
-              variant="secondary"
-              size="sm"
-              shape="rounded"
-              onClick={handleSave}
-              leftIcon={saveStatus === 'Saved!' ? <Check size={13} color="#10B981" /> : <Save size={13} color="#F8FAFC" />}
-            >
-              {saveStatus || 'Save'}
-            </Button>
-            <Button
-              variant="secondary"
-              size="sm"
-              shape="rounded"
-              onClick={handleDownload}
-              leftIcon={<Download size={13} color="#F8FAFC" />}
-              title="Download snapshot as PNG"
-            >
-              PNG
-            </Button>
-          </div>
+          {/* Clear Board */}
+          <button
+            type="button"
+            onClick={handleClear}
+            style={{
+              padding: '5px 10px',
+              backgroundColor: '#FEF2F2',
+              color: '#DC2626',
+              border: '1px solid #FECACA',
+              borderRadius: THEME.radius.sm,
+              fontSize: '12px',
+              fontWeight: 700,
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '4px',
+            }}
+            title="Clear board for all participants"
+          >
+            <RotateCcw size={13} />
+            <span>Clear</span>
+          </button>
+
+          {/* Download Canvas Image */}
+          <button
+            type="button"
+            onClick={handleDownload}
+            style={{
+              padding: '5px 10px',
+              backgroundColor: '#FFFFFF',
+              color: '#334155',
+              border: '1px solid #CBD5E1',
+              borderRadius: THEME.radius.sm,
+              fontSize: '12px',
+              fontWeight: 700,
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '4px',
+            }}
+            title="Export whiteboard image"
+          >
+            <Download size={13} />
+            <span>Export</span>
+          </button>
+
+          {/* Fullscreen Mode Toggle */}
+          <button
+            type="button"
+            onClick={toggleFullscreen}
+            style={{
+              padding: '5px 10px',
+              backgroundColor: isFullscreen ? '#0F172A' : '#F1F5F9',
+              color: isFullscreen ? '#FFFFFF' : '#0F172A',
+              border: '1px solid #CBD5E1',
+              borderRadius: THEME.radius.sm,
+              fontSize: '12px',
+              fontWeight: 700,
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '4px',
+            }}
+            title={isFullscreen ? 'Exit Fullscreen' : 'Enter Fullscreen'}
+          >
+            {isFullscreen ? <Minimize2 size={13} /> : <Maximize2 size={13} />}
+            <span>{isFullscreen ? 'Exit Fullscreen' : 'Fullscreen'}</span>
+          </button>
         </div>
       </div>
 
-      {/* Canvas Area */}
-      <div
-        className="card"
-        style={{
-          position: 'relative',
-          padding: 0,
-          backgroundColor: '#FFFFFF',
-          border: '1px solid #E2E8F0',
-          borderRadius: THEME.radius.card,
-          overflow: 'hidden',
-          display: 'flex',
-          justifyContent: 'center',
-          boxShadow: THEME.shadow.card,
-        }}
-      >
+      {/* Main Drawing Canvas */}
+      <div style={{ flex: 1, position: 'relative', overflow: 'hidden', backgroundColor: '#FFFFFF' }}>
         <canvas
           ref={canvasRef}
-          width={1200}
-          height={700}
           onMouseDown={startDrawing}
           onMouseMove={draw}
           onMouseUp={stopDrawing}
           onMouseLeave={stopDrawing}
           style={{
+            display: 'block',
             width: '100%',
-            height: 'auto',
-            maxHeight: '620px',
-            backgroundColor: '#FFFFFF',
+            height: '100%',
             cursor: currentTool === 'eraser' ? 'cell' : currentTool === 'text' ? 'text' : 'crosshair',
             touchAction: 'none',
-            display: 'block',
           }}
         />
       </div>
     </div>
   );
 };
-
-export default Whiteboard;

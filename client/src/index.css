@@ -949,49 +949,89 @@ button:disabled svg, .btn:disabled svg {
 /* ==========================================================================
    FLOATING LEFT NAVIGATION RAIL (Frosted Crisp Light)
    ========================================================================== */
+/* ==========================================================================
+   FLOATING EXPANDABLE NAVIGATION RAIL (Crisp Island Architecture)
+   Default: Compact icon-only rail (68px)
+   Hover: Expands smoothly to 204px revealing text labels without layout shift
+   ========================================================================== */
 .floating-nav-rail {
   position: fixed;
   top: 16px;
   left: 16px;
   bottom: 16px;
-  width: 76px;
-  z-index: 200;
-  background-color: rgba(255, 255, 255, 0.94);
-  backdrop-filter: blur(16px);
-  border-radius: 24px;
-  border: 1px solid rgba(226, 232, 240, 0.9);
-  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.06), 0 1px 3px rgba(0, 0, 0, 0.04);
+  width: 68px;
+  z-index: 300;
+  background-color: rgba(255, 255, 255, 0.95);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border-radius: 20px;
+  border: 1px solid rgba(226, 232, 240, 0.85);
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.05), 0 1px 3px rgba(0, 0, 0, 0.03);
   display: flex;
   flex-direction: column;
   align-items: center;
-  padding: 16px 0;
-  transition: transform var(--motion-normal) var(--motion-ease-out);
+  padding: 14px 8px;
+  transition: width 240ms cubic-bezier(0.16, 1, 0.3, 1),
+              box-shadow 240ms cubic-bezier(0.16, 1, 0.3, 1);
+  overflow: hidden;
+  user-select: none;
+}
+
+.floating-nav-rail:hover {
+  width: 204px;
+  box-shadow: 0 20px 48px rgba(0, 0, 0, 0.12), 0 0 0 1px rgba(2, 132, 199, 0.2);
+}
+
+.floating-nav-emblem-wrapper {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 0 6px;
+  text-decoration: none;
+  cursor: pointer;
 }
 
 .floating-nav-emblem {
-  width: 46px;
-  height: 46px;
-  border-radius: 16px;
+  width: 44px;
+  height: 44px;
+  min-width: 44px;
+  border-radius: 14px;
   background-color: #0284C7;
   display: flex;
   align-items: center;
   justify-content: center;
   box-shadow: 0 4px 14px rgba(2, 132, 199, 0.35);
-  transition: transform var(--motion-fast) var(--motion-ease-spring);
-  text-decoration: none;
-  cursor: pointer;
-  position: relative;
+  transition: transform 180ms cubic-bezier(0.34, 1.35, 0.64, 1);
+  flex-shrink: 0;
 }
 
 .floating-nav-emblem:hover {
-  transform: scale(1.08) rotate(4deg);
+  transform: scale(1.06);
+}
+
+.floating-nav-brand-text {
+  font-size: 16px;
+  font-weight: 800;
+  color: #0F172A;
+  letter-spacing: -0.3px;
+  opacity: 0;
+  max-width: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  transition: opacity 200ms ease, max-width 240ms ease;
+}
+
+.floating-nav-rail:hover .floating-nav-brand-text {
+  opacity: 1;
+  max-width: 130px;
 }
 
 .floating-nav-divider {
-  width: 32px;
+  width: 80%;
   height: 1px;
   background-color: #E2E8F0;
-  margin: 12px 0 8px;
+  margin: 12px 0 10px;
 }
 
 .floating-nav-scroll {
@@ -1000,11 +1040,11 @@ button:disabled svg, .btn:disabled svg {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 8px;
+  gap: 6px;
   overflow-y: auto;
-  overflow-x: visible;
+  overflow-x: hidden;
   scrollbar-width: none;
-  padding: 4px 0;
+  padding: 2px 0;
 }
 
 .floating-nav-scroll::-webkit-scrollbar {
@@ -1013,90 +1053,72 @@ button:disabled svg, .btn:disabled svg {
 
 .floating-nav-tile {
   position: relative;
-  width: 48px;
-  height: 48px;
-  border-radius: 14px;
+  width: 100%;
+  height: 44px;
+  border-radius: 12px;
   display: flex;
   align-items: center;
-  justify-content: center;
+  justify-content: flex-start;
+  padding: 0 12px;
+  gap: 12px;
   text-decoration: none;
   color: #64748B;
   background-color: transparent;
-  transition: color var(--motion-fast) var(--motion-ease-out),
-              background-color var(--motion-fast) var(--motion-ease-out),
-              transform var(--motion-fast) var(--motion-ease-out);
+  transition: color 150ms ease,
+              background-color 150ms ease;
   cursor: pointer;
   outline: none;
+  white-space: nowrap;
 }
 
 .floating-nav-tile:hover {
   background-color: rgba(2, 132, 199, 0.08);
   color: #0284C7;
-  transform: scale(1.06);
 }
 
 .floating-nav-tile.active {
   background-color: #0284C7;
   color: #FFFFFF;
-  box-shadow: 0 4px 14px rgba(2, 132, 199, 0.35);
+  box-shadow: 0 4px 14px rgba(2, 132, 199, 0.3);
 }
 
 .floating-nav-tile.active svg {
   color: #FFFFFF;
 }
 
-.floating-nav-tile:active {
-  transform: scale(0.94);
+.floating-nav-icon-wrapper {
+  width: 24px;
+  height: 24px;
+  min-width: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.floating-nav-label {
+  font-size: 13.5px;
+  font-weight: 600;
+  opacity: 0;
+  max-width: 0;
+  overflow: hidden;
+  white-space: nowrap;
+  transition: opacity 200ms ease, max-width 240ms ease;
+}
+
+.floating-nav-rail:hover .floating-nav-label {
+  opacity: 1;
+  max-width: 130px;
 }
 
 .floating-active-pip {
   position: absolute;
-  left: -8px;
-  width: 4px;
-  height: 20px;
-  border-radius: 4px;
-  background-color: var(--color-accent);
-  box-shadow: 0 0 10px rgba(2, 132, 199, 0.7);
-  animation: studysync-slide-up var(--motion-fast) var(--motion-ease-spring);
-}
-
-.floating-nav-tooltip {
-  position: absolute;
-  left: calc(100% + 14px);
-  top: 50%;
-  transform: translateY(-50%) translateX(-6px);
-  background-color: #0F172A;
-  color: #FFFFFF;
-  font-size: 12px;
-  font-weight: 600;
-  letter-spacing: -0.01em;
-  padding: 6px 12px;
-  border-radius: 8px;
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  white-space: nowrap;
-  pointer-events: none;
-  opacity: 0;
-  transition: opacity var(--motion-fast) var(--motion-ease-out),
-              transform var(--motion-fast) var(--motion-ease-out);
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.2);
-  z-index: 1000;
-}
-
-.floating-nav-tooltip::before {
-  content: '';
-  position: absolute;
-  right: 100%;
-  top: 50%;
-  transform: translateY(-50%);
-  border-width: 5px;
-  border-style: solid;
-  border-color: transparent #0F172A transparent transparent;
-}
-
-.floating-nav-tile:hover .floating-nav-tooltip,
-.floating-nav-emblem:hover .floating-nav-tooltip {
-  opacity: 1;
-  transform: translateY(-50%) translateX(0);
+  left: 2px;
+  width: 3px;
+  height: 18px;
+  border-radius: 3px;
+  background-color: #FFFFFF;
+  box-shadow: 0 0 8px rgba(255, 255, 255, 0.8);
 }
 
 .floating-nav-footer {
@@ -1104,15 +1126,57 @@ button:disabled svg, .btn:disabled svg {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 10px;
+  gap: 6px;
   padding-top: 10px;
   border-top: 1px solid #E2E8F0;
 }
 
+/* Master Workspace Content Frame */
 .app-content-wrapper {
-  margin-left: 98px;
-  width: calc(100% - 98px);
+  margin-left: 92px;
+  width: calc(100% - 92px);
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
   transition: margin-left var(--motion-normal) var(--motion-ease-out);
+}
+
+/* Mobile Bottom Navigation Bar */
+.mobile-bottom-nav {
+  display: none;
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 60px;
+  background-color: rgba(255, 255, 255, 0.96);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border-top: 1px solid #E2E8F0;
+  z-index: 200;
+  justify-content: space-around;
+  align-items: center;
+  padding: 0 8px;
+  box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.04);
+}
+
+.mobile-bottom-nav-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 3px;
+  text-decoration: none;
+  color: #64748B;
+  font-size: 10.5px;
+  font-weight: 600;
+  flex: 1;
+  padding: 6px 0;
+}
+
+.mobile-bottom-nav-item.active {
+  color: #0284C7;
+  font-weight: 700;
 }
 
 @media (max-width: 900px) {
@@ -1122,6 +1186,18 @@ button:disabled svg, .btn:disabled svg {
   .app-content-wrapper {
     margin-left: 0 !important;
     width: 100% !important;
+    padding-bottom: 64px; /* Space for bottom nav */
+  }
+  .mobile-bottom-nav {
+    display: flex !important;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .floating-nav-rail,
+  .floating-nav-brand-text,
+  .floating-nav-label {
+    transition: none !important;
   }
 }
 
@@ -1419,3 +1495,15 @@ button:disabled svg, .btn:disabled svg {
 .orb-stone {
   --orb-glow: 100, 116, 139;
 }
+
+@keyframes studysync-slide-down {
+  from {
+    opacity: 0;
+    transform: translateY(-6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+

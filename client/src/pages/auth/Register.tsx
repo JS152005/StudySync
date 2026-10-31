@@ -55,6 +55,7 @@ export const Register: React.FC = () => {
         academic_year: academicYear,
         terms_accepted: termsAccepted,
       });
+      sessionStorage.setItem('studysync_pending_email', email);
       navigate(`/verify-email?pending=true&email=${encodeURIComponent(email)}`);
     } catch (err: any) {
       setError(err.message || 'Registration failed.');

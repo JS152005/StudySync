@@ -153,6 +153,82 @@ router.post('/join-by-code', requireAuth, (req: AuthRequest, res): void => {
   }
 });
 
+// 3.1 GET PENDING ROOM INVITATIONS
+router.get('/invitations', requireAuth, (req: AuthRequest, res): void => {
+  try {
+    const currentUserId = req.user!.id;
+
+    const invitations = db.prepare(`
+      SELECT ri.id, ri.created_at, ri.status,
+             r.id as room_id, r.name as room_name, r.subject as room_subject, r.topic as room_topic, r.invite_code as room_code,
+             u.full_name as inviter_name, u.student_id as inviter_student_id, u.avatar_url as inviter_avatar
+      FROM room_invitations ri
+      JOIN study_rooms r ON r.id = ri.room_id
+      JOIN users u ON u.id = ri.inviter_id
+      WHERE ri.invitee_id = ? AND ri.status = 'pending' AND r.is_active = 1
+      ORDER BY ri.created_at DESC
+    `).all(currentUserId);
+
+    res.json({ invitations });
+  } catch (err: any) {
+    console.error('[GET INVITATIONS ERROR]', err);
+    res.status(500).json({ error: 'Failed to load invitations.' });
+  }
+});
+
+// 3.2 RESPOND TO ROOM INVITATION (Accept / Decline)
+router.post('/invitations/:invitationId/respond', requireAuth, (req: AuthRequest, res): void => {
+  try {
+    const { invitationId } = req.params;
+    const { action } = req.body; // 'accept' or 'decline'
+    const currentUserId = req.user!.id;
+
+    const invitation = db.prepare(`
+      SELECT ri.*, r.id as room_id, r.invite_code, r.is_active
+      FROM room_invitations ri
+      JOIN study_rooms r ON r.id = ri.room_id
+      WHERE ri.id = ? AND ri.invitee_id = ?
+    `).get(invitationId, currentUserId) as any;
+
+    if (!invitation) {
+      res.status(404).json({ error: 'Invitation not found.' });
+      return;
+    }
+
+    if (invitation.status !== 'pending') {
+      res.status(400).json({ error: 'Invitation has already been answered.' });
+      return;
+    }
+
+    if (action === 'accept') {
+      if (invitation.is_active !== 1) {
+        res.status(400).json({ error: 'This study room has ended.' });
+        return;
+      }
+
+      const now = new Date().toISOString();
+      db.transaction(() => {
+        db.prepare(`UPDATE room_invitations SET status = 'accepted' WHERE id = ?`).run(invitationId);
+        const existing = db.prepare(`SELECT id FROM room_participants WHERE room_id = ? AND user_id = ?`).get(invitation.room_id, currentUserId);
+        if (!existing) {
+          db.prepare(`
+            INSERT INTO room_participants (id, room_id, user_id, is_hand_raised, joined_at)
+            VALUES (?, ?, ?, 0, ?)
+          `).run(crypto.randomUUID(), invitation.room_id, currentUserId, now);
+        }
+      })();
+
+      res.json({ message: 'Invitation accepted!', roomId: invitation.room_id, roomCode: invitation.invite_code });
+    } else {
+      db.prepare(`UPDATE room_invitations SET status = 'declined' WHERE id = ?`).run(invitationId);
+      res.json({ message: 'Invitation declined.' });
+    }
+  } catch (err: any) {
+    console.error('[RESPOND INVITATION ERROR]', err);
+    res.status(500).json({ error: 'Failed to respond to invitation.' });
+  }
+});
+
 // 4. GET ROOM DETAILS (Strictly private: only host, group members, active participants, or with invite code)
 router.get('/:id', requireAuth, (req: AuthRequest, res): void => {
   try {
@@ -199,28 +275,19 @@ router.get('/:id', requireAuth, (req: AuthRequest, res): void => {
     }
 
     const participants = db.prepare(`
-      SELECT rp.id, rp.is_hand_raised, rp.joined_at, u.id as user_id, u.username, u.full_name, u.avatar_url
+      SELECT MIN(rp.id) as id, MAX(rp.is_hand_raised) as is_hand_raised, MIN(rp.joined_at) as joined_at,
+             u.id as user_id, u.username, u.full_name, u.avatar_url
       FROM room_participants rp
       JOIN users u ON u.id = rp.user_id
       WHERE rp.room_id = ? AND rp.left_at IS NULL
-      ORDER BY rp.joined_at ASC
+      GROUP BY u.id
+      ORDER BY joined_at ASC
     `).all(id);
-
-    // Doubts in this room
-    const doubts = db.prepare(`
-      SELECT d.*, u.full_name as author_name, u.username as author_username,
-             (SELECT COUNT(*) FROM doubt_votes WHERE doubt_id = d.id AND user_id = ?) as user_voted
-      FROM doubts d
-      JOIN users u ON u.id = d.author_id
-      WHERE d.room_id = ?
-      ORDER BY d.votes_count DESC, d.created_at ASC
-    `).all(currentUserId, id);
 
     res.json({
       room,
       isHost,
       participants,
-      doubts,
     });
   } catch (err: any) {
     console.error('[GET ROOM ERROR]', err);
@@ -363,7 +430,33 @@ router.get('/:id/whiteboard', requireAuth, (req: AuthRequest, res): void => {
     const { id } = req.params;
 
     const session = db.prepare(`SELECT canvas_data FROM whiteboard_sessions WHERE room_id = ?`).get(id) as any;
-    res.json({ canvasData: session?.canvas_data || '[]' });
+    const actions = db.prepare(`
+      SELECT id, sequence_number, user_id, action_type, payload, created_at
+      FROM whiteboard_actions
+      WHERE room_id = ?
+      ORDER BY sequence_number ASC
+    `).all(id) as any[];
+
+    res.json({
+      canvasData: session?.canvas_data || '[]',
+      actions: actions.map((a) => {
+        let parsed = null;
+        try {
+          parsed = JSON.parse(a.payload);
+        } catch {
+          parsed = a.payload;
+        }
+        return {
+          id: a.id,
+          sequenceNumber: a.sequence_number,
+          userId: a.user_id,
+          actionType: a.action_type,
+          stroke: parsed,
+          createdAt: a.created_at,
+        };
+      }),
+      version: actions.length > 0 ? actions[actions.length - 1].sequence_number : 0,
+    });
   } catch (err: any) {
     console.error('[GET WHITEBOARD ERROR]', err);
     res.status(500).json({ error: 'Failed to fetch whiteboard.' });
@@ -387,6 +480,102 @@ router.put('/:id/whiteboard', requireAuth, (req: AuthRequest, res): void => {
   } catch (err: any) {
     console.error('[SAVE WHITEBOARD ERROR]', err);
     res.status(500).json({ error: 'Failed to save whiteboard.' });
+  }
+});
+
+// 11. INVITE STUDENT BY STUDENT ID
+router.post('/:id/invite-student', requireAuth, (req: AuthRequest, res): void => {
+  try {
+    const { id } = req.params;
+    const { student_id } = req.body;
+    const currentUserId = req.user!.id;
+
+    if (!student_id || !String(student_id).trim()) {
+      res.status(400).json({ error: 'Student ID is required.' });
+      return;
+    }
+
+    const room = db.prepare(`SELECT * FROM study_rooms WHERE id = ? AND is_active = 1`).get(id) as any;
+    if (!room) {
+      res.status(404).json({ error: 'Study room not found or has ended.' });
+      return;
+    }
+
+    // Check inviter is host or active participant
+    const isHost = room.host_id === currentUserId;
+    const isParticipant = db.prepare(`
+      SELECT id FROM room_participants WHERE room_id = ? AND user_id = ? AND left_at IS NULL
+    `).get(id, currentUserId);
+
+    if (!isHost && !isParticipant) {
+      res.status(403).json({ error: 'You must be in the study room to send invitations.' });
+      return;
+    }
+
+    const cleanStuId = String(student_id).trim().toUpperCase();
+    const targetUser = db.prepare(`
+      SELECT id, student_id, full_name, username FROM users WHERE UPPER(student_id) = ? AND is_active = 1
+    `).get(cleanStuId) as any;
+
+    if (!targetUser) {
+      res.status(404).json({ error: 'No student found with Student ID: ' + cleanStuId });
+      return;
+    }
+
+    if (targetUser.id === currentUserId) {
+      res.status(400).json({ error: 'You cannot invite yourself.' });
+      return;
+    }
+
+    const now = new Date().toISOString();
+    const invitationId = crypto.randomUUID();
+
+    // Remove any previous pending invitation for this user and room
+    db.prepare(`DELETE FROM room_invitations WHERE room_id = ? AND invitee_id = ? AND status = 'pending'`).run(id, targetUser.id);
+
+    db.prepare(`
+      INSERT INTO room_invitations (id, room_id, inviter_id, invitee_id, status, created_at)
+      VALUES (?, ?, ?, ?, 'pending', ?)
+    `).run(invitationId, id, currentUserId, targetUser.id, now);
+
+    res.status(201).json({
+      message: `Invitation sent to ${targetUser.full_name} (${targetUser.student_id})!`,
+      invitationId,
+      invitee: targetUser,
+      roomCode: room.invite_code,
+    });
+  } catch (err: any) {
+    console.error('[INVITE STUDENT ERROR]', err);
+    res.status(500).json({ error: 'Failed to send room invitation.' });
+  }
+});
+
+// 12. REMOVE PARTICIPANT (Host only)
+router.delete('/:id/participants/:userId', requireAuth, (req: AuthRequest, res): void => {
+  try {
+    const { id, userId } = req.params;
+    const currentUserId = req.user!.id;
+
+    const room = db.prepare(`SELECT * FROM study_rooms WHERE id = ?`).get(id) as any;
+    if (!room) {
+      res.status(404).json({ error: 'Room not found.' });
+      return;
+    }
+
+    if (room.host_id !== currentUserId) {
+      res.status(403).json({ error: 'Only the room host can remove participants.' });
+      return;
+    }
+
+    const now = new Date().toISOString();
+    db.prepare(`
+      UPDATE room_participants SET left_at = ? WHERE room_id = ? AND user_id = ? AND left_at IS NULL
+    `).run(now, id, userId);
+
+    res.json({ message: 'Participant removed from study room.' });
+  } catch (err: any) {
+    console.error('[REMOVE PARTICIPANT ERROR]', err);
+    res.status(500).json({ error: 'Failed to remove participant.' });
   }
 });
 

@@ -52,48 +52,76 @@ export async function sendEmail(options: EmailOptions): Promise<boolean> {
   }
 }
 
-// 1. Email Verification Template
+// 1. Email Verification Template (with 6-Digit OTP)
 export function createVerificationEmail(to: string, name: string, token: string): EmailOptions {
-  const verifyUrl = `${config.appBaseUrl}/verify-email?token=${token}`;
+  const verifyUrl = `${config.appBaseUrl}/verify-email?token=${token}&email=${encodeURIComponent(to)}`;
   return {
     to,
-    subject: 'StudySync — Verify Your Student Account',
-    text: `Hello ${name},\n\nWelcome to StudySync! Please verify your student email address by opening the following link:\n\n${verifyUrl}\n\nThis link will expire in 24 hours.\n\nHappy Studying,\nThe StudySync Team`,
+    subject: 'StudySync — Verify Your Student Account (OTP Code)',
+    text: `Hello ${name},\n\nWelcome to StudySync! Your 6-digit verification code (OTP) is:\n\n${token}\n\nEnter this code on the verification screen to activate your account, or open the link below:\n\n${verifyUrl}\n\nThis code will expire in 24 hours.\n\nHappy Studying,\nThe StudySync Team`,
     html: `
-      <div style="font-family: Arial, sans-serif; background-color: #F0F8FF; padding: 30px;">
-        <div style="max-width: 560px; margin: 0 auto; background-color: #FFFFFF; border: 2px solid #E6E6FA; border-radius: 8px; padding: 24px;">
-          <h2 style="color: #4b4453; margin-top: 0;">Welcome to StudySync</h2>
-          <p style="color: #555555; line-height: 1.6;">Hello <strong>${escapeHtml(name)}</strong>,</p>
-          <p style="color: #555555; line-height: 1.6;">Thank you for registering on StudySync. Please verify your email address to unlock full student collaboration features.</p>
-          <div style="margin: 25px 0;">
-            <a href="${verifyUrl}" style="background-color: #E6E6FA; color: #333333; padding: 12px 24px; text-decoration: none; border-radius: 6px; font-weight: bold; display: inline-block; border: 1px solid #d4d4f7;">Verify Email Address</a>
+      <div style="font-family: Arial, sans-serif; background-color: #F8FAFC; padding: 30px;">
+        <div style="max-width: 560px; margin: 0 auto; background-color: #FFFFFF; border: 1px solid #E2E8F0; border-radius: 12px; padding: 28px; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);">
+          <div style="text-align: center; margin-bottom: 20px;">
+            <div style="display: inline-block; width: 44px; height: 44px; line-height: 44px; border-radius: 10px; background-color: rgba(2, 132, 199, 0.1); color: #0284C7; font-size: 22px;">✉️</div>
+            <h2 style="color: #0F172A; margin: 12px 0 4px 0; font-size: 20px; font-weight: 800;">Verify Your Student Account</h2>
+            <p style="color: #64748B; font-size: 13px; margin: 0;">Hello <strong>${escapeHtml(name)}</strong>, welcome to StudySync!</p>
           </div>
-          <p style="color: #777777; font-size: 13px;">Or copy and paste this link into your browser:<br/><a href="${verifyUrl}" style="color: #6a5acd;">${verifyUrl}</a></p>
-          <p style="color: #888888; font-size: 12px; border-top: 1px solid #E6E6FA; padding-top: 12px; margin-top: 24px;">This link will expire in 24 hours. If you did not create this account, please ignore this email.</p>
+
+          <p style="color: #334155; line-height: 1.6; font-size: 14px;">Please enter the following 6-digit verification code on the verification page to activate your student account:</p>
+
+          <div style="margin: 24px 0; text-align: center;">
+            <div style="font-size: 11px; font-weight: 700; color: #64748B; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 8px;">6-Digit Verification OTP</div>
+            <div style="display: inline-block; font-size: 32px; font-weight: 800; letter-spacing: 8px; color: #0284C7; font-family: monospace; background: #F0F9FF; border: 2px dashed #0284C7; padding: 12px 24px; border-radius: 8px;">
+              ${escapeHtml(token)}
+            </div>
+            <div style="font-size: 12px; color: #94A3B8; margin-top: 8px;">Valid for 24 hours</div>
+          </div>
+
+          <div style="margin: 20px 0; text-align: center;">
+            <a href="${verifyUrl}" style="background-color: #0284C7; color: #FFFFFF; padding: 10px 22px; text-decoration: none; border-radius: 6px; font-weight: bold; display: inline-block; font-size: 13px;">Auto-Verify with One Click</a>
+          </div>
+
+          <p style="color: #94A3B8; font-size: 12px; border-top: 1px solid #E2E8F0; padding-top: 14px; margin-top: 20px; text-align: center;">Or copy and paste this verification link:<br/><a href="${verifyUrl}" style="color: #0284C7;">${verifyUrl}</a></p>
+          <p style="color: #94A3B8; font-size: 11px; margin-top: 8px; text-align: center;">If you did not create this account, please disregard this message.</p>
         </div>
       </div>
     `,
   };
 }
 
-// 2. Forgot-Password Reset Link Template
-export function createPasswordResetEmail(to: string, name: string, token: string): EmailOptions {
-  const resetUrl = `${config.appBaseUrl}/reset-password?token=${token}`;
+// 2. Forgot-Password Reset OTP Email Template
+export function createPasswordResetEmail(to: string, name: string, tokenOrOtp: string): EmailOptions {
+  return createPasswordResetOtpEmail(to, name, tokenOrOtp);
+}
+
+export function createPasswordResetOtpEmail(to: string, name: string, otp: string): EmailOptions {
   return {
     to,
-    subject: 'StudySync — Password Reset Request',
-    text: `Hello ${name},\n\nWe received a request to reset your StudySync account password.\n\nUse this link to choose a new password (valid for 30 minutes):\n${resetUrl}\n\nIf you did not request this reset, your account is safe and no changes were made.\n\nThe StudySync Security Team`,
+    subject: 'StudySync — Password Reset Verification Code (OTP)',
+    text: `Hello ${name},\n\nWe received a request to reset your StudySync account password.\n\nYour 6-digit verification code (OTP) is:\n\n${otp}\n\nEnter this code on the password reset screen to verify your identity and set a new password.\n\nThis verification code will expire in 10 minutes.\n\nIf you did not request a password reset, please ignore this email. Your account remains secure.\n\nThe StudySync Security Team`,
     html: `
-      <div style="font-family: Arial, sans-serif; background-color: #F0F8FF; padding: 30px;">
-        <div style="max-width: 560px; margin: 0 auto; background-color: #FFFFFF; border: 2px solid #E6E6FA; border-radius: 8px; padding: 24px;">
-          <h2 style="color: #4b4453; margin-top: 0;">Reset Your Password</h2>
-          <p style="color: #555555; line-height: 1.6;">Hello <strong>${escapeHtml(name)}</strong>,</p>
-          <p style="color: #555555; line-height: 1.6;">We received a request to reset the password for your StudySync account. Click below to securely set a new password:</p>
-          <div style="margin: 25px 0;">
-            <a href="${resetUrl}" style="background-color: #E6E6FA; color: #333333; padding: 12px 24px; text-decoration: none; border-radius: 6px; font-weight: bold; display: inline-block; border: 1px solid #d4d4f7;">Reset Password</a>
+      <div style="font-family: Arial, sans-serif; background-color: #F8FAFC; padding: 30px;">
+        <div style="max-width: 560px; margin: 0 auto; background-color: #FFFFFF; border: 1px solid #E2E8F0; border-radius: 12px; padding: 28px; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);">
+          <div style="text-align: center; margin-bottom: 20px;">
+            <div style="display: inline-block; width: 44px; height: 44px; line-height: 44px; border-radius: 10px; background-color: rgba(2, 132, 199, 0.1); color: #0284C7; font-size: 22px;">🔒</div>
+            <h2 style="color: #0F172A; margin: 12px 0 4px 0; font-size: 20px; font-weight: 800;">Reset Your Password</h2>
+            <p style="color: #64748B; font-size: 13px; margin: 0;">Hello <strong>${escapeHtml(name)}</strong>,</p>
           </div>
-          <p style="color: #777777; font-size: 13px;">Or copy and paste this link into your browser:<br/><a href="${resetUrl}" style="color: #6a5acd;">${resetUrl}</a></p>
-          <p style="color: #888888; font-size: 12px; border-top: 1px solid #E6E6FA; padding-top: 12px; margin-top: 24px;">This single-use reset link expires in 30 minutes. If you did not request a password reset, you can safely ignore this email.</p>
+
+          <p style="color: #334155; line-height: 1.6; font-size: 14px;">We received a request to reset your StudySync account password. Please enter the following 6-digit verification code (OTP) on the password reset screen:</p>
+
+          <div style="margin: 24px 0; text-align: center;">
+            <div style="font-size: 11px; font-weight: 700; color: #64748B; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 8px;">6-Digit Reset Code</div>
+            <div style="display: inline-block; font-size: 32px; font-weight: 800; letter-spacing: 8px; color: #0284C7; font-family: monospace; background: #F0F9FF; border: 2px dashed #0284C7; padding: 12px 24px; border-radius: 8px;">
+              ${escapeHtml(otp)}
+            </div>
+            <div style="font-size: 12px; color: #94A3B8; margin-top: 8px;">Valid for 10 minutes (single-use)</div>
+          </div>
+
+          <p style="color: #64748B; font-size: 12.5px; line-height: 1.5; text-align: center;">Do not share this code with anyone. StudySync will never ask for your verification code.</p>
+
+          <p style="color: #94A3B8; font-size: 11px; border-top: 1px solid #E2E8F0; padding-top: 14px; margin-top: 20px; text-align: center;">If you did not request a password reset, you can safely ignore this email. Your password will not change until this code is verified.</p>
         </div>
       </div>
     `,

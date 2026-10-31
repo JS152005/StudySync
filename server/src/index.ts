@@ -16,13 +16,6 @@ import usersRouter from './routes/users.js';
 import groupsRouter from './routes/groups.js';
 import messagesRouter from './routes/messages.js';
 import roomsRouter from './routes/rooms.js';
-import doubtsRouter from './routes/doubts.js';
-import teachRouter from './routes/teach.js';
-import syllabusRouter from './routes/syllabus.js';
-import focusRouter from './routes/focus.js';
-import examsRouter from './routes/exams.js';
-import resourcesRouter from './routes/resources.js';
-import communityRouter from './routes/community.js';
 
 // 1. Initialize SQLite Database
 initDatabase();
@@ -81,19 +74,12 @@ app.use('/api/auth/login', authLimiter);
 app.use('/api/auth/register', authLimiter);
 app.use('/api/auth/forgot-password', authLimiter);
 
-// 5. Mount API Routes
+// 5. Mount Core API Routes
 app.use('/api/auth', authRouter);
 app.use('/api/users', usersRouter);
 app.use('/api/groups', groupsRouter);
 app.use('/api/messages', messagesRouter);
 app.use('/api/rooms', roomsRouter);
-app.use('/api/doubts', doubtsRouter);
-app.use('/api/teach', teachRouter);
-app.use('/api/syllabus', syllabusRouter);
-app.use('/api/focus', focusRouter);
-app.use('/api/exams', examsRouter);
-app.use('/api/resources', resourcesRouter);
-app.use('/api/community', communityRouter);
 
 // Health check endpoint
 app.get('/api/health', (_req, res) => {

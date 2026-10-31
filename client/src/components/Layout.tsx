@@ -1,86 +1,79 @@
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { NavLink, Outlet, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import { useMeeting } from '../context/MeetingContext';
 import { THEME } from '../theme';
-import { FloatingActionButton, FABAction } from './ui/FloatingActionButton';
 import { triggerSparks } from './ui/SparkEffect';
+import { useToast } from './ui/ToastContext';
 import {
   LayoutDashboard,
-  Users,
   MessageSquare,
-  UsersRound,
   Video,
-  GraduationCap,
-  ListTodo,
-  Timer,
-  CalendarDays,
-  FolderOpen,
-  UserCheck,
+  User,
   Settings,
   LogOut,
   Menu,
   X,
   Sparkles,
-  Search,
+  Copy,
+  Check,
+  Maximize2,
+  ChevronDown,
 } from 'lucide-react';
 
 export const Layout: React.FC = () => {
   const { user, logout } = useAuth();
+  const meeting = useMeeting();
   const navigate = useNavigate();
   const location = useLocation();
+  const toast = useToast();
+
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [profileDropdownOpen, setProfileDropdownOpen] = useState(false);
+  const [copiedId, setCopiedId] = useState(false);
+  const dropdownRef = useRef<HTMLDivElement | null>(null);
 
   const handleLogout = async () => {
     await logout();
     navigate('/login');
   };
 
+  // Close dropdown on outside click
+  useEffect(() => {
+    const handleOutsideClick = (e: MouseEvent) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(e.target as Node)) {
+        setProfileDropdownOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handleOutsideClick);
+    return () => {
+      document.removeEventListener('mousedown', handleOutsideClick);
+    };
+  }, []);
+
+  const handleCopyStudentId = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (!user?.student_id) return;
+    navigator.clipboard.writeText(user.student_id);
+    triggerSparks(e, 'azure', 8);
+    setCopiedId(true);
+    toast.success(`Copied Student ID: ${user.student_id}`);
+    setTimeout(() => setCopiedId(false), 2000);
+  };
+
   const navItems = [
     { to: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
-    { to: '/friends', label: 'Friends', icon: Users },
-    { to: '/messages', label: 'Messages', icon: MessageSquare },
-    { to: '/groups', label: 'Study Groups', icon: UsersRound },
+    { to: '/messages', label: 'Chats', icon: MessageSquare },
     { to: '/rooms', label: 'Study Rooms', icon: Video },
-    { to: '/teach', label: 'Teach & Learn', icon: GraduationCap },
-    { to: '/syllabus', label: 'Syllabus Boards', icon: ListTodo },
-    { to: '/focus', label: 'Focus Sessions', icon: Timer },
-    { to: '/exams', label: 'Exam Planner', icon: CalendarDays },
-    { to: '/resources', label: 'My Resources', icon: FolderOpen },
-    { to: '/profile', label: 'Profile', icon: UserCheck },
+    { to: '/profile', label: 'Profile', icon: User },
     { to: '/settings', label: 'Settings', icon: Settings },
   ];
 
-  // Contextual Floating Action Button actions (only on non-chat/non-live session routes)
-  const isExcludedRoute =
-    location.pathname.startsWith('/rooms/') || location.pathname.startsWith('/messages');
-
-  const fabActions: FABAction[] = [
-    {
-      id: 'quick-room',
-      label: 'Create Study Room',
-      icon: <Video size={18} color="#FFFFFF" />,
-      onClick: () => navigate('/rooms?action=create'),
-      variant: 'primary',
-    },
-    {
-      id: 'quick-focus',
-      label: 'Start Focus Session',
-      icon: <Timer size={18} color="#FFFFFF" />,
-      onClick: () => navigate('/focus?action=create'),
-      variant: 'primary',
-    },
-    {
-      id: 'quick-syllabus',
-      label: 'New Syllabus Board',
-      icon: <ListTodo size={18} color="#FFFFFF" />,
-      onClick: () => navigate('/syllabus?action=create'),
-      variant: 'primary',
-    },
-  ];
+  const inMeetingRoute = meeting.activeRoomId && location.pathname.startsWith(`/rooms/${meeting.activeRoomId}`);
 
   return (
     <div style={{ display: 'flex', minHeight: '100vh', width: '100%', backgroundColor: '#F8FAFC' }}>
-      {/* Desktop Floating Left Navigation Rail */}
+      {/* Desktop Floating Icon Navigation Rail (Island Architecture) */}
       <aside
         className="floating-nav-rail desktop-sidebar"
         aria-label="Main Navigation"
@@ -88,17 +81,19 @@ export const Layout: React.FC = () => {
         {/* Brand Header Emblem */}
         <NavLink
           to="/dashboard"
-          className="floating-nav-emblem"
+          className="floating-nav-emblem-wrapper"
           aria-label="StudySync Dashboard"
           onClick={(e) => triggerSparks(e, 'azure', 12)}
         >
-          <Sparkles size={22} color="#FFFFFF" strokeWidth={2.4} />
-          <span className="floating-nav-tooltip">StudySync Hub</span>
+          <div className="floating-nav-emblem">
+            <Sparkles size={20} color="#FFFFFF" strokeWidth={2.4} />
+          </div>
+          <span className="floating-nav-brand-text">StudySync</span>
         </NavLink>
 
         <div className="floating-nav-divider" />
 
-        {/* Navigation Links with Active Tile & Tooltips */}
+        {/* Navigation Links with Active Pips & Smooth Expanded Labels */}
         <nav className="floating-nav-scroll">
           {navItems.map((item) => {
             const Icon = item.icon;
@@ -114,8 +109,10 @@ export const Layout: React.FC = () => {
                 {({ isActive }) => (
                   <>
                     {isActive && <span className="floating-active-pip" />}
-                    <Icon size={19} strokeWidth={isActive ? 2.4 : 1.8} />
-                    <span className="floating-nav-tooltip">{item.label}</span>
+                    <span className="floating-nav-icon-wrapper">
+                      <Icon size={18} strokeWidth={isActive ? 2.4 : 1.8} />
+                    </span>
+                    <span className="floating-nav-label">{item.label}</span>
                   </>
                 )}
               </NavLink>
@@ -130,34 +127,26 @@ export const Layout: React.FC = () => {
             className="floating-nav-tile"
             aria-label="User Profile"
           >
-            <div
-              style={{
-                width: '34px',
-                height: '34px',
-                borderRadius: '50%',
-                backgroundColor: '#F1F5F9',
-                border: '1.5px solid #0284C7',
-                color: '#0284C7',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                fontWeight: 800,
-                fontSize: '13px',
-                position: 'relative',
-              }}
-            >
-              {user?.full_name ? user.full_name[0].toUpperCase() : 'S'}
-              <span
-                className="live-pulse-dot"
+            <span className="floating-nav-icon-wrapper">
+              <div
                 style={{
-                  position: 'absolute',
-                  bottom: '-1px',
-                  right: '-1px',
-                  border: `1.5px solid #FFFFFF`,
+                  width: '30px',
+                  height: '30px',
+                  borderRadius: '50%',
+                  backgroundColor: '#F1F5F9',
+                  border: '1.5px solid #0284C7',
+                  color: '#0284C7',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  fontWeight: 800,
+                  fontSize: '12px',
                 }}
-              />
-            </div>
-            <span className="floating-nav-tooltip">{user?.full_name || 'Profile'}</span>
+              >
+                {user?.full_name ? user.full_name[0].toUpperCase() : 'S'}
+              </div>
+            </span>
+            <span className="floating-nav-label">{user?.full_name || 'Profile'}</span>
           </NavLink>
 
           <button
@@ -165,104 +154,291 @@ export const Layout: React.FC = () => {
             onClick={handleLogout}
             className="floating-nav-tile"
             aria-label="Sign Out"
-            style={{ border: 'none', background: 'transparent' }}
+            style={{
+              background: 'transparent',
+              border: 'none',
+              cursor: 'pointer',
+              color: '#64748B',
+            }}
           >
-            <LogOut size={18} color="#64748B" />
-            <span className="floating-nav-tooltip">Sign Out</span>
+            <span className="floating-nav-icon-wrapper">
+              <LogOut size={17} strokeWidth={2} />
+            </span>
+            <span className="floating-nav-label">Sign Out</span>
           </button>
         </div>
       </aside>
 
-      {/* Main Container with intentional offset ensuring zero overlap */}
-      <div className="app-content-wrapper" style={{ display: 'flex', flexDirection: 'column', minWidth: 0, backgroundColor: '#F8FAFC' }}>
-        {/* Top Header Bar */}
+      {/* Main Workspace Frame */}
+      <div className="app-content-wrapper">
+        {/* Redesigned Minimalist Top Bar */}
         <header
           style={{
-            height: '58px',
+            height: '56px',
             backgroundColor: '#FFFFFF',
             borderBottom: '1px solid #E2E8F0',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'space-between',
-            padding: '0 24px',
+            padding: '0 20px',
             position: 'sticky',
             top: 0,
-            zIndex: 90,
-            boxShadow: '0 1px 2px rgba(0, 0, 0, 0.03)',
+            zIndex: 40,
+            boxShadow: '0 1px 2px rgba(0, 0, 0, 0.02)',
           }}
         >
-          <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
-            {/* Mobile Menu Button */}
+          {/* Left: StudySync Logo & Wordmark */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
             <button
               type="button"
-              onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-              className="btn-secondary mobile-only-btn"
-              style={{ padding: '7px 9px', display: 'none' }}
-              aria-label="Toggle Navigation Drawer"
+              onClick={() => setMobileMenuOpen(true)}
+              className="btn-ghost mobile-only-btn"
+              style={{ padding: '6px', display: 'none' }}
+              aria-label="Open navigation menu"
             >
-              {mobileMenuOpen ? (
-                <X size={18} color="#0F172A" />
-              ) : (
-                <Menu size={18} color="#0F172A" />
-              )}
+              <Menu size={20} color="#0F172A" />
             </button>
 
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <span
+            <NavLink
+              to="/dashboard"
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '8px',
+                textDecoration: 'none',
+                color: '#0F172A',
+              }}
+            >
+              <div
                 style={{
-                  fontSize: '14px',
-                  fontWeight: 700,
-                  color: '#0F172A',
-                  letterSpacing: '-0.01em',
+                  width: '28px',
+                  height: '28px',
+                  borderRadius: '8px',
+                  backgroundColor: '#0284C7',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  boxShadow: '0 2px 6px rgba(2, 132, 199, 0.3)',
                 }}
               >
-                {user?.course ? `${user.course} Workspace` : 'StudySync Workspace'}
+                <Sparkles size={16} color="#FFFFFF" />
+              </div>
+              <span style={{ fontSize: '16px', fontWeight: 800, letterSpacing: '-0.3px', color: '#0F172A' }}>
+                StudySync
               </span>
-              {user?.college && (
-                <span
-                  style={{
-                    fontSize: '11.5px',
-                    color: '#64748B',
-                    fontWeight: 600,
-                    display: 'inline-block',
-                    padding: '2px 8px',
-                    borderRadius: '6px',
-                    backgroundColor: '#F1F5F9',
-                    border: '1px solid #E2E8F0',
-                  }}
-                  className="hide-on-mobile"
-                >
-                  {user.college}
-                </span>
-              )}
-            </div>
+            </NavLink>
           </div>
 
-          {/* Quick Actions / Status */}
+          {/* Right: Meeting Status Indicator & Profile Dropdown */}
           <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+            {/* Compact Meeting Connection Indicator (Only shown when room is active in background) */}
+            {meeting.activeRoomId && !inMeetingRoute && (
+              <button
+                type="button"
+                onClick={meeting.restoreMeeting}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '6px',
+                  backgroundColor: 'rgba(16, 185, 129, 0.1)',
+                  border: '1px solid rgba(16, 185, 129, 0.35)',
+                  borderRadius: THEME.radius.pill,
+                  padding: '4px 12px',
+                  color: '#047857',
+                  fontSize: '11.5px',
+                  fontWeight: 700,
+                  cursor: 'pointer',
+                  transition: 'all 0.15s ease',
+                }}
+                title="Return to active study room"
+              >
+                <span
+                  style={{
+                    width: '6px',
+                    height: '6px',
+                    borderRadius: '50%',
+                    backgroundColor: '#10B981',
+                    boxShadow: '0 0 6px #10B981',
+                  }}
+                />
+                <span>{meeting.roomData?.room?.name || 'Study Room'}</span>
+                <span style={{ color: '#059669', opacity: 0.8 }}>• Return</span>
+                <Maximize2 size={12} color="#047857" />
+              </button>
+            )}
+
+            {/* Email Verification Pill if unverified */}
             {user?.is_verified === 0 && (
-              <NavLink to="/verify-email" className="badge badge-urgent" style={{ textDecoration: 'none' }}>
+              <NavLink
+                to={user?.email ? `/verify-email?email=${encodeURIComponent(user.email)}` : '/verify-email'}
+                className="badge badge-urgent"
+                style={{ textDecoration: 'none' }}
+              >
                 Verify Email
               </NavLink>
             )}
 
-            <button
-              type="button"
-              onClick={(e) => {
-                triggerSparks(e, 'azure', 10);
-                navigate('/rooms');
-              }}
-              className="btn-primary"
-              style={{
-                padding: '6px 14px',
-                fontSize: '12.5px',
-                borderRadius: THEME.radius.pill,
-                gap: '6px',
-              }}
-            >
-              <Video size={14} color="#FFFFFF" />
-              <span>Join Room</span>
-            </button>
+            {/* Profile Avatar & Dropdown Menu */}
+            <div ref={dropdownRef} style={{ position: 'relative' }}>
+              <button
+                type="button"
+                onClick={() => setProfileDropdownOpen((prev) => !prev)}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '8px',
+                  background: '#F8FAFC',
+                  border: '1px solid #E2E8F0',
+                  borderRadius: THEME.radius.pill,
+                  padding: '3px 8px 3px 3px',
+                  cursor: 'pointer',
+                  transition: 'background-color 0.15s ease',
+                }}
+                aria-expanded={profileDropdownOpen}
+                aria-label="User profile menu"
+              >
+                <div
+                  style={{
+                    width: '28px',
+                    height: '28px',
+                    borderRadius: '50%',
+                    backgroundColor: '#0284C7',
+                    color: '#FFFFFF',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    fontWeight: 800,
+                    fontSize: '12px',
+                  }}
+                >
+                  {user?.full_name ? user.full_name[0].toUpperCase() : 'S'}
+                </div>
+                <span style={{ fontSize: '12.5px', fontWeight: 700, color: '#0F172A' }} className="hide-on-mobile">
+                  {user?.full_name?.split(' ')[0] || 'Student'}
+                </span>
+                <ChevronDown size={13} color="#64748B" />
+              </button>
+
+              {/* Profile Dropdown Popup */}
+              {profileDropdownOpen && (
+                <div
+                  style={{
+                    position: 'absolute',
+                    top: '40px',
+                    right: 0,
+                    width: '240px',
+                    backgroundColor: '#FFFFFF',
+                    border: '1px solid #E2E8F0',
+                    borderRadius: THEME.radius.card,
+                    boxShadow: '0 10px 25px -5px rgba(0, 0, 0, 0.12), 0 8px 10px -6px rgba(0, 0, 0, 0.08)',
+                    zIndex: 100,
+                    padding: '8px 0',
+                    animation: 'studysync-slide-down 0.15s ease',
+                  }}
+                >
+                  {/* User info & Student ID */}
+                  <div style={{ padding: '8px 16px 10px', borderBottom: '1px solid #F1F5F9' }}>
+                    <div style={{ fontSize: '13px', fontWeight: 800, color: '#0F172A' }}>
+                      {user?.full_name || 'Student'}
+                    </div>
+                    <div style={{ fontSize: '11px', color: '#64748B', marginBottom: '6px' }}>
+                      @{user?.username}
+                    </div>
+
+                    {user?.student_id && (
+                      <div
+                        onClick={handleCopyStudentId}
+                        style={{
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          gap: '6px',
+                          backgroundColor: '#F0F9FF',
+                          border: '1px solid #BAE6FD',
+                          borderRadius: THEME.radius.pill,
+                          padding: '2px 8px',
+                          cursor: 'pointer',
+                          fontSize: '11px',
+                          fontWeight: 700,
+                          color: '#0284C7',
+                          fontFamily: 'monospace',
+                        }}
+                        title="Click to copy your Student ID"
+                      >
+                        <span>ID: {user.student_id}</span>
+                        {copiedId ? <Check size={11} color="#10B981" /> : <Copy size={11} color="#0284C7" />}
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Navigation Links */}
+                  <div style={{ padding: '4px 0' }}>
+                    <NavLink
+                      to="/profile"
+                      onClick={() => setProfileDropdownOpen(false)}
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '8px',
+                        padding: '8px 16px',
+                        fontSize: '12.5px',
+                        color: '#334155',
+                        textDecoration: 'none',
+                        fontWeight: 600,
+                      }}
+                    >
+                      <User size={14} color="#64748B" />
+                      <span>My Profile</span>
+                    </NavLink>
+
+                    <NavLink
+                      to="/settings"
+                      onClick={() => setProfileDropdownOpen(false)}
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '8px',
+                        padding: '8px 16px',
+                        fontSize: '12.5px',
+                        color: '#334155',
+                        textDecoration: 'none',
+                        fontWeight: 600,
+                      }}
+                    >
+                      <Settings size={14} color="#64748B" />
+                      <span>Settings</span>
+                    </NavLink>
+                  </div>
+
+                  <div style={{ height: '1px', backgroundColor: '#F1F5F9', margin: '4px 0' }} />
+
+                  {/* Sign Out */}
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setProfileDropdownOpen(false);
+                      handleLogout();
+                    }}
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '8px',
+                      width: '100%',
+                      padding: '8px 16px',
+                      fontSize: '12.5px',
+                      color: '#DC2626',
+                      background: 'none',
+                      border: 'none',
+                      textAlign: 'left',
+                      cursor: 'pointer',
+                      fontWeight: 600,
+                    }}
+                  >
+                    <LogOut size={14} color="#DC2626" />
+                    <span>Sign Out</span>
+                  </button>
+                </div>
+              )}
+            </div>
           </div>
         </header>
 
@@ -285,7 +461,7 @@ export const Layout: React.FC = () => {
                 left: 0,
                 bottom: 0,
                 width: '82%',
-                maxWidth: '300px',
+                maxWidth: '280px',
                 backgroundColor: '#FFFFFF',
                 borderRight: '1px solid #E2E8F0',
                 zIndex: 999,
@@ -295,7 +471,6 @@ export const Layout: React.FC = () => {
                 flexDirection: 'column',
                 gap: '6px',
                 boxShadow: THEME.shadow.modal,
-                animation: `studysync-slide-in-right ${THEME.motion.durationNormal} ${THEME.motion.easeOut}`,
               }}
               onClick={(e) => e.stopPropagation()}
             >
@@ -310,31 +485,24 @@ export const Layout: React.FC = () => {
                 }}
               >
                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                  <div
-                    style={{
-                      width: '28px',
-                      height: '28px',
-                      borderRadius: '8px',
-                      backgroundColor: '#0284C7',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                    }}
-                  >
-                    <Sparkles size={16} color="#FFFFFF" />
-                  </div>
-                  <span style={{ fontSize: '16px', fontWeight: 800, color: '#0F172A' }}>
+                  <Sparkles size={18} color="#0284C7" />
+                  <span style={{ fontSize: '15px', fontWeight: 800, color: '#0F172A' }}>
                     StudySync
                   </span>
                 </div>
                 <button
                   type="button"
                   onClick={() => setMobileMenuOpen(false)}
-                  className="btn-ghost"
-                  style={{ padding: '4px' }}
-                  aria-label="Close navigation"
+                  style={{
+                    background: 'none',
+                    border: 'none',
+                    padding: '4px',
+                    cursor: 'pointer',
+                    color: '#64748B',
+                  }}
+                  aria-label="Close menu"
                 >
-                  <X size={18} color="#64748B" />
+                  <X size={18} />
                 </button>
               </div>
 
@@ -345,80 +513,91 @@ export const Layout: React.FC = () => {
                     key={item.to}
                     to={item.to}
                     onClick={() => setMobileMenuOpen(false)}
-                    style={({ isActive }) => ({
+                    className={({ isActive }) =>
+                      `mobile-nav-item ${isActive ? 'active' : ''}`
+                    }
+                    style={{
                       display: 'flex',
                       alignItems: 'center',
-                      gap: '12px',
+                      gap: '10px',
                       padding: '10px 14px',
                       borderRadius: THEME.radius.md,
-                      fontSize: '13.5px',
-                      fontWeight: isActive ? 700 : 500,
                       textDecoration: 'none',
-                      backgroundColor: isActive ? '#0284C7' : 'transparent',
-                      color: isActive ? '#FFFFFF' : '#475569',
-                      border: `1px solid ${isActive ? '#0284C7' : 'transparent'}`,
-                      transition: 'all 0.15s ease',
-                    })}
+                      fontSize: '13px',
+                      fontWeight: 700,
+                      color: '#334155',
+                    }}
                   >
-                    {({ isActive }) => (
-                      <>
-                        <Icon size={17} color={isActive ? '#FFFFFF' : '#64748B'} />
-                        <span style={{ color: isActive ? '#FFFFFF' : '#475569' }}>
-                          {item.label}
-                        </span>
-                      </>
-                    )}
+                    <Icon size={16} />
+                    <span>{item.label}</span>
                   </NavLink>
                 );
               })}
 
-              <button
-                type="button"
-                onClick={handleLogout}
-                className="btn-secondary"
-                style={{ marginTop: 'auto', width: '100%', padding: '10px', gap: '8px' }}
-              >
-                <LogOut size={16} color="#64748B" />
-                <span>Sign Out</span>
-              </button>
+              <div style={{ marginTop: 'auto', paddingTop: '14px', borderTop: '1px solid #E2E8F0' }}>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setMobileMenuOpen(false);
+                    handleLogout();
+                  }}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '10px',
+                    padding: '10px 14px',
+                    width: '100%',
+                    borderRadius: THEME.radius.md,
+                    border: 'none',
+                    backgroundColor: '#FEF2F2',
+                    color: '#DC2626',
+                    fontSize: '13px',
+                    fontWeight: 700,
+                    cursor: 'pointer',
+                  }}
+                >
+                  <LogOut size={16} />
+                  <span>Sign Out</span>
+                </button>
+              </div>
             </div>
           </div>
         )}
 
-        {/* Main Content View */}
+        {/* Dynamic Outlet Workspace Content */}
         <main
+          className="app-main-content"
           style={{
             flex: 1,
-            padding: '24px 28px',
-            backgroundColor: '#F8FAFC',
-            maxWidth: '1440px',
-            width: '100%',
+            padding: '20px 24px',
+            maxWidth: '1400px',
             margin: '0 auto',
-            animation: `studysync-fade-in ${THEME.motion.durationNormal} ${THEME.motion.easeOut}`,
+            width: '100%',
           }}
         >
           <Outlet />
         </main>
-
-        {/* Global Contextual Floating Action Button */}
-        {!isExcludedRoute && <FloatingActionButton actions={fabActions} mainLabel="Quick actions" />}
       </div>
 
-      <style>{`
-        @media (max-width: 900px) {
-          .desktop-sidebar {
-            display: none !important;
-          }
-          .mobile-only-btn {
-            display: inline-flex !important;
-          }
-          .hide-on-mobile {
-            display: none !important;
-          }
-        }
-      `}</style>
+      {/* Mobile Sticky Bottom Navigation Rail */}
+      <nav className="mobile-bottom-nav" aria-label="Mobile Navigation">
+        {navItems.slice(0, 4).map((item) => {
+          const Icon = item.icon;
+          return (
+            <NavLink
+              key={item.to}
+              to={item.to}
+              className={({ isActive }) =>
+                `mobile-bottom-tile ${isActive ? 'active' : ''}`
+              }
+              aria-label={item.label}
+            >
+              <Icon size={18} />
+              <span>{item.label}</span>
+            </NavLink>
+          );
+        })}
+      </nav>
     </div>
   );
 };
-
-export default Layout;

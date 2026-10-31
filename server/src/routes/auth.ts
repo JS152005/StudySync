@@ -116,9 +116,9 @@ router.post('/register', async (req, res): Promise<void> => {
       now
     );
 
-    // Create verification token
-    const rawToken = crypto.randomBytes(32).toString('hex');
-    const tokenHash = crypto.createHash('sha256').update(rawToken).digest('hex');
+    // Create 6-digit OTP verification token
+    const rawOtp = crypto.randomInt(100000, 1000000).toString();
+    const tokenHash = crypto.createHash('sha256').update(rawOtp).digest('hex');
     const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString();
 
     db.prepare(`
@@ -126,8 +126,10 @@ router.post('/register', async (req, res): Promise<void> => {
       VALUES (?, ?, ?, ?, ?)
     `).run(crypto.randomUUID(), userId, tokenHash, expiresAt, now);
 
+    console.log(`[AUTH] Verification OTP for ${normalizedEmail}: ${rawOtp}`);
+
     // Send verification email asynchronously
-    sendEmail(createVerificationEmail(normalizedEmail, full_name.trim(), rawToken)).catch((err) =>
+    sendEmail(createVerificationEmail(normalizedEmail, full_name.trim(), rawOtp)).catch((err) =>
       console.error('[AUTH] Failed to send verification email:', err)
     );
 
@@ -228,7 +230,7 @@ router.get('/me', requireAuth, (req: AuthRequest, res) => {
   res.json({ user: req.user });
 });
 
-// 5. FORGOT PASSWORD
+// 5. FORGOT PASSWORD (6-Digit Email OTP)
 router.post('/forgot-password', async (req, res): Promise<void> => {
   try {
     const { email } = req.body;
@@ -241,41 +243,113 @@ router.post('/forgot-password', async (req, res): Promise<void> => {
     const user = db.prepare(`SELECT id, full_name, email FROM users WHERE email = ? AND is_active = 1`).get(normalizedEmail) as { id: string; full_name: string; email: string } | undefined;
 
     if (user) {
-      const rawToken = crypto.randomBytes(32).toString('hex');
-      const tokenHash = crypto.createHash('sha256').update(rawToken).digest('hex');
-      const expiresAt = new Date(Date.now() + 30 * 60 * 1000).toISOString(); // 30 minutes
+      // Generate cryptographically secure 6-digit OTP
+      const rawOtp = crypto.randomInt(100000, 1000000).toString();
+      const tokenHash = crypto.createHash('sha256').update(rawOtp).digest('hex');
+      const expiresAt = new Date(Date.now() + 10 * 60 * 1000).toISOString(); // 10 minutes lifetime
       const now = new Date().toISOString();
 
       // Invalidate existing unused tokens for this user
       db.prepare(`UPDATE password_reset_tokens SET used_at = ? WHERE user_id = ? AND used_at IS NULL`).run(now, user.id);
 
       db.prepare(`
-        INSERT INTO password_reset_tokens (id, user_id, token_hash, expires_at, created_at)
-        VALUES (?, ?, ?, ?, ?)
+        INSERT INTO password_reset_tokens (id, user_id, token_hash, expires_at, created_at, attempts)
+        VALUES (?, ?, ?, ?, ?, 0)
       `).run(crypto.randomUUID(), user.id, tokenHash, expiresAt, now);
 
-      await sendEmail(createPasswordResetEmail(user.email, user.full_name, rawToken));
+      console.log(`[AUTH] Password Reset OTP for ${user.email}: ${rawOtp}`);
+
+      await sendEmail(createPasswordResetEmail(user.email, user.full_name, rawOtp));
     }
 
     // Always return generic response to prevent account enumeration
     res.json({
-      message: 'If an account exists with that email address, a password reset link has been sent.',
+      message: 'If an account exists with that email address, a 6-digit verification code has been sent.',
     });
   } catch (err: any) {
     console.error('[FORGOT PASSWORD ERROR]', err);
     res.json({
-      message: 'If an account exists with that email address, a password reset link has been sent.',
+      message: 'If an account exists with that email address, a 6-digit verification code has been sent.',
     });
   }
 });
 
-// 6. RESET PASSWORD
+// 5B. VERIFY PASSWORD RESET OTP (Step 2: Returns short-lived reset authorization token)
+router.post('/verify-reset-otp', (req, res): void => {
+  try {
+    const { email, otp } = req.body;
+    if (!email || !otp) {
+      res.status(400).json({ error: 'Email and 6-digit verification code are required.' });
+      return;
+    }
+
+    const normalizedEmail = String(email).trim().toLowerCase();
+    const cleanedOtp = String(otp).trim().replace(/[\s-]+/g, '');
+
+    if (cleanedOtp.length !== 6 || !/^\d{6}$/.test(cleanedOtp)) {
+      res.status(400).json({ error: 'Verification code must be a 6-digit number.' });
+      return;
+    }
+
+    const user = db.prepare('SELECT id, full_name, email FROM users WHERE email = ? AND is_active = 1').get(normalizedEmail) as { id: string; full_name: string; email: string } | undefined;
+    if (!user) {
+      res.status(400).json({ error: 'Verification code is invalid or has expired.' });
+      return;
+    }
+
+    const record = db.prepare(`
+      SELECT id, user_id, token_hash, expires_at, used_at, attempts
+      FROM password_reset_tokens
+      WHERE user_id = ? AND used_at IS NULL
+      ORDER BY created_at DESC LIMIT 1
+    `).get(user.id) as any;
+
+    if (!record || new Date(record.expires_at) < new Date()) {
+      res.status(400).json({ error: 'Verification code is invalid or has expired.' });
+      return;
+    }
+
+    if (record.attempts >= 5) {
+      res.status(400).json({ error: 'Too many failed attempts. Please request a new verification code.' });
+      return;
+    }
+
+    const submittedHash = crypto.createHash('sha256').update(cleanedOtp).digest('hex');
+    if (submittedHash !== record.token_hash) {
+      db.prepare(`UPDATE password_reset_tokens SET attempts = attempts + 1 WHERE id = ?`).run(record.id);
+      res.status(400).json({ error: 'Invalid verification code. Please check your email and try again.' });
+      return;
+    }
+
+    const now = new Date().toISOString();
+    // Mark OTP as verified/used
+    db.prepare(`UPDATE password_reset_tokens SET used_at = ? WHERE id = ?`).run(now, record.id);
+
+    // Issue short-lived cryptographic reset authorization token (15 minutes)
+    const reset_token = jwt.sign(
+      { userId: user.id, email: user.email, purpose: 'password_reset' },
+      config.jwtSecret,
+      { expiresIn: '15m' }
+    );
+
+    res.json({
+      message: 'Verification code verified successfully. Please set your new password.',
+      reset_token,
+    });
+  } catch (err: any) {
+    console.error('[VERIFY RESET OTP ERROR]', err);
+    res.status(500).json({ error: 'Failed to verify reset code.' });
+  }
+});
+
+// 6. RESET PASSWORD (Requires verified short-lived reset authorization token)
 router.post('/reset-password', async (req, res): Promise<void> => {
   try {
-    const { token, new_password, confirm_password } = req.body;
+    const { reset_token, token, new_password, confirm_password } = req.body;
+    const effectiveToken = reset_token || token;
 
-    if (!token || !new_password) {
-      res.status(400).json({ error: 'Token and new password are required.' });
+    if (!effectiveToken || !new_password) {
+      res.status(400).json({ error: 'Reset authorization token and new password are required.' });
       return;
     }
 
@@ -289,32 +363,56 @@ router.post('/reset-password', async (req, res): Promise<void> => {
       return;
     }
 
-    const tokenHash = crypto.createHash('sha256').update(token).digest('hex');
+    let targetUserId = '';
+    let targetEmail = '';
+    let targetName = '';
     const now = new Date().toISOString();
 
-    const resetRecord = db.prepare(`
-      SELECT r.id, r.user_id, r.expires_at, r.used_at, u.email, u.full_name
-      FROM password_reset_tokens r
-      JOIN users u ON u.id = r.user_id
-      WHERE r.token_hash = ?
-    `).get(tokenHash) as any;
+    // 1. Try decoding as JWT reset_token
+    try {
+      const decoded = jwt.verify(effectiveToken, config.jwtSecret) as { userId: string; purpose: string };
+      if (decoded && decoded.purpose === 'password_reset' && decoded.userId) {
+        const user = db.prepare('SELECT id, email, full_name FROM users WHERE id = ? AND is_active = 1').get(decoded.userId) as any;
+        if (user) {
+          targetUserId = user.id;
+          targetEmail = user.email;
+          targetName = user.full_name;
+        }
+      }
+    } catch {
+      // 2. Fallback: check if effectiveToken matches a valid raw token in password_reset_tokens (for backwards compatibility)
+      const tokenHash = crypto.createHash('sha256').update(effectiveToken).digest('hex');
+      const resetRecord = db.prepare(`
+        SELECT r.id, r.user_id, r.expires_at, r.used_at, u.email, u.full_name
+        FROM password_reset_tokens r
+        JOIN users u ON u.id = r.user_id
+        WHERE r.token_hash = ?
+      `).get(tokenHash) as any;
 
-    if (!resetRecord || resetRecord.used_at || new Date(resetRecord.expires_at) < new Date()) {
-      res.status(400).json({ error: 'This password reset link is invalid or has expired.' });
+      if (resetRecord && !resetRecord.used_at && new Date(resetRecord.expires_at) >= new Date()) {
+        targetUserId = resetRecord.user_id;
+        targetEmail = resetRecord.email;
+        targetName = resetRecord.full_name;
+        db.prepare(`UPDATE password_reset_tokens SET used_at = ? WHERE id = ?`).run(now, resetRecord.id);
+      }
+    }
+
+    if (!targetUserId) {
+      res.status(400).json({ error: 'This password reset authorization is invalid or has expired. Please verify your OTP again.' });
       return;
     }
 
     const salt = await bcrypt.genSalt(12);
     const newPasswordHash = await bcrypt.hash(new_password, salt);
 
-    // Atomically update password and mark token used
+    // Atomically update password and invalidate all tokens for this user
     const updateTx = db.transaction(() => {
-      db.prepare(`UPDATE users SET password_hash = ?, updated_at = ? WHERE id = ?`).run(newPasswordHash, now, resetRecord.user_id);
-      db.prepare(`UPDATE password_reset_tokens SET used_at = ? WHERE id = ?`).run(now, resetRecord.id);
+      db.prepare(`UPDATE users SET password_hash = ?, updated_at = ? WHERE id = ?`).run(newPasswordHash, now, targetUserId);
+      db.prepare(`UPDATE password_reset_tokens SET used_at = ? WHERE user_id = ? AND used_at IS NULL`).run(now, targetUserId);
     });
     updateTx();
 
-    sendEmail(createPasswordChangedEmail(resetRecord.email, resetRecord.full_name)).catch(console.error);
+    sendEmail(createPasswordChangedEmail(targetEmail, targetName)).catch(console.error);
 
     res.json({ message: 'Password has been successfully reset. You may now log in with your new password.' });
   } catch (err: any) {
@@ -323,30 +421,47 @@ router.post('/reset-password', async (req, res): Promise<void> => {
   }
 });
 
-// 7. VERIFY EMAIL
+// 7. VERIFY EMAIL (6-Digit OTP / Token)
 router.post('/verify-email', (req, res): void => {
   try {
-    const { token } = req.body;
-    if (!token) {
-      res.status(400).json({ error: 'Verification token is required.' });
+    const rawToken = req.body?.token ? String(req.body.token).trim() : '';
+    const email = req.body?.email ? String(req.body.email).trim().toLowerCase() : '';
+
+    if (!rawToken) {
+      res.status(400).json({ error: 'Verification code is required.' });
       return;
     }
 
-    const tokenHash = crypto.createHash('sha256').update(token).digest('hex');
+    const cleanedToken = rawToken.replace(/[\s-]+/g, '');
+    const tokenHash = crypto.createHash('sha256').update(cleanedToken).digest('hex');
     const now = new Date().toISOString();
 
-    const record = db.prepare(`
-      SELECT id, user_id, expires_at FROM email_verification_tokens WHERE token_hash = ?
-    `).get(tokenHash) as any;
+    let record: any = null;
+
+    if (email) {
+      const user = db.prepare('SELECT id FROM users WHERE email = ?').get(email) as any;
+      if (user) {
+        record = db.prepare(`
+          SELECT id, user_id, expires_at FROM email_verification_tokens
+          WHERE user_id = ? AND token_hash = ?
+        `).get(user.id, tokenHash) as any;
+      }
+    }
+
+    if (!record) {
+      record = db.prepare(`
+        SELECT id, user_id, expires_at FROM email_verification_tokens WHERE token_hash = ?
+      `).get(tokenHash) as any;
+    }
 
     if (!record || new Date(record.expires_at) < new Date()) {
-      res.status(400).json({ error: 'Verification link is invalid or has expired.' });
+      res.status(400).json({ error: 'Verification code is invalid or has expired.' });
       return;
     }
 
     db.transaction(() => {
       db.prepare(`UPDATE users SET is_verified = 1, updated_at = ? WHERE id = ?`).run(now, record.user_id);
-      db.prepare(`DELETE FROM email_verification_tokens WHERE id = ?`).run(record.id);
+      db.prepare(`DELETE FROM email_verification_tokens WHERE user_id = ?`).run(record.user_id);
     })();
 
     res.json({ message: 'Email verified successfully! You now have full access to StudySync.' });
@@ -356,7 +471,7 @@ router.post('/verify-email', (req, res): void => {
   }
 });
 
-// 8. RESEND VERIFICATION EMAIL
+// 8. RESEND VERIFICATION EMAIL (6-Digit OTP)
 router.post('/resend-verification', async (req: AuthRequest, res): Promise<void> => {
   try {
     const bodyEmail = req.body?.email?.trim().toLowerCase();
@@ -377,7 +492,7 @@ router.post('/resend-verification', async (req: AuthRequest, res): Promise<void>
     }
 
     if (!user) {
-      res.json({ message: 'If an unverified account exists with that email address, a verification link has been sent.' });
+      res.json({ message: 'If an unverified account exists with that email address, a verification code has been sent.' });
       return;
     }
 
@@ -386,8 +501,8 @@ router.post('/resend-verification', async (req: AuthRequest, res): Promise<void>
       return;
     }
 
-    const rawToken = crypto.randomBytes(32).toString('hex');
-    const tokenHash = crypto.createHash('sha256').update(rawToken).digest('hex');
+    const rawOtp = crypto.randomInt(100000, 1000000).toString();
+    const tokenHash = crypto.createHash('sha256').update(rawOtp).digest('hex');
     const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString();
     const now = new Date().toISOString();
 
@@ -397,9 +512,11 @@ router.post('/resend-verification', async (req: AuthRequest, res): Promise<void>
       VALUES (?, ?, ?, ?, ?)
     `).run(crypto.randomUUID(), user.id, tokenHash, expiresAt, now);
 
-    await sendEmail(createVerificationEmail(user.email, user.full_name, rawToken));
+    console.log(`[AUTH] Resent Verification OTP for ${user.email}: ${rawOtp}`);
 
-    res.json({ message: 'Verification email has been resent.' });
+    await sendEmail(createVerificationEmail(user.email, user.full_name, rawOtp));
+
+    res.json({ message: 'A fresh 6-digit verification code has been sent to your email.' });
   } catch (err: any) {
     console.error('[RESEND VERIFICATION ERROR]', err);
     res.status(500).json({ error: 'Failed to resend verification email.' });
