@@ -150,7 +150,7 @@ export function setupSocketHandlers(io: Server) {
         const isHost = room.host_id === socket.userId;
         let isMember = false;
         if (room.group_id) {
-          const gm = db.prepare('SELECT id FROM group_members WHERE group_id = ? AND user_id = ? AND status = "active"').get(room.group_id, socket.userId);
+          const gm = db.prepare("SELECT id FROM group_members WHERE group_id = ? AND user_id = ? AND status = 'active'").get(room.group_id, socket.userId);
           isMember = !!gm;
         }
         const hasJoined = db.prepare('SELECT id FROM room_participants WHERE room_id = ? AND user_id = ?').get(roomId, socket.userId);
@@ -472,7 +472,7 @@ export function setupSocketHandlers(io: Server) {
     socket.on('join_group_chat', ({ groupId }) => {
       if (!groupId) return;
       if (socket.userId) {
-        const member = db.prepare('SELECT id FROM group_members WHERE group_id = ? AND user_id = ? AND status = "active"').get(groupId, socket.userId);
+        const member = db.prepare("SELECT id FROM group_members WHERE group_id = ? AND user_id = ? AND status = 'active'").get(groupId, socket.userId);
         if (member) {
           socket.join(`group:${groupId}`);
         }
@@ -484,7 +484,7 @@ export function setupSocketHandlers(io: Server) {
     socket.on('group_message_sent', ({ groupId, message }) => {
       if (!groupId || !message) return;
       if (socket.userId) {
-        const member = db.prepare('SELECT id FROM group_members WHERE group_id = ? AND user_id = ? AND status = "active"').get(groupId, socket.userId);
+        const member = db.prepare("SELECT id FROM group_members WHERE group_id = ? AND user_id = ? AND status = 'active'").get(groupId, socket.userId);
         if (!member) {
           socket.emit('chat_error', { error: 'You are not a member of this study group.' });
           return;

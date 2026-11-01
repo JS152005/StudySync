@@ -28,8 +28,25 @@ export interface EmailOptions {
   html: string;
 }
 
+export const interceptedEmails: EmailOptions[] = [];
+
+export function getInterceptedEmails(): EmailOptions[] {
+  return interceptedEmails;
+}
+
+export function clearInterceptedEmails(): void {
+  interceptedEmails.length = 0;
+}
+
 export async function sendEmail(options: EmailOptions): Promise<boolean> {
   try {
+    // Intercept emails during automated testing to avoid sending real SMTP emails
+    if (process.env.NODE_ENV === 'test' || process.env.TEST_EMAIL_MODE === 'true') {
+      interceptedEmails.push(options);
+      console.log(`[MAILER TEST MODE] Email intercepted for ${options.to}: ${options.subject}`);
+      return true;
+    }
+
     if (!config.smtp.user || !config.smtp.pass) {
       console.warn('[MAILER] SMTP credentials not fully configured. Email skipped for:', options.to);
       return false;

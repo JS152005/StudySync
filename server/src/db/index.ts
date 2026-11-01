@@ -12,8 +12,9 @@ if (!fs.existsSync(dbDir)) {
 // Initialize native SQLite database from Node 22
 const rawDb = new DatabaseSync(dbPath);
 
-// Enable WAL mode and foreign key enforcement
+// Enable WAL mode, busy timeout, and foreign key enforcement
 rawDb.exec('PRAGMA journal_mode = WAL;');
+rawDb.exec('PRAGMA busy_timeout = 5000;');
 rawDb.exec('PRAGMA foreign_keys = ON;');
 
 export interface DBInterface {
