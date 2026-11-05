@@ -291,7 +291,7 @@ router.post('/verify-reset-otp', (req, res): void => {
       return;
     }
 
-    const user = db.prepare('SELECT id, full_name, email FROM users WHERE email = ? AND is_active = 1').get(normalizedEmail) as { id: string; full_name: string; email: string } | undefined;
+    const user = db.prepare('SELECT id, full_name, email, password_hash FROM users WHERE email = ? AND is_active = 1').get(normalizedEmail) as { id: string; full_name: string; email: string; password_hash: string } | undefined;
     if (!user) {
       res.status(400).json({ error: 'Verification code is invalid or has expired.' });
       return;
@@ -326,9 +326,11 @@ router.post('/verify-reset-otp', (req, res): void => {
     db.prepare(`UPDATE password_reset_tokens SET used_at = ? WHERE id = ?`).run(now, record.id);
 
     // Issue short-lived cryptographic reset authorization token (15 minutes)
+    // Keyed with user's current password_hash so changing password automatically invalidates it
+    const resetSecret = `${config.jwtSecret}-${user.password_hash}`;
     const reset_token = jwt.sign(
       { userId: user.id, email: user.email, purpose: 'password_reset' },
-      config.jwtSecret,
+      resetSecret,
       { expiresIn: '15m' }
     );
 
@@ -370,30 +372,47 @@ router.post('/reset-password', async (req, res): Promise<void> => {
 
     // 1. Try decoding as JWT reset_token
     try {
-      const decoded = jwt.verify(effectiveToken, config.jwtSecret) as { userId: string; purpose: string };
-      if (decoded && decoded.purpose === 'password_reset' && decoded.userId) {
-        const user = db.prepare('SELECT id, email, full_name FROM users WHERE id = ? AND is_active = 1').get(decoded.userId) as any;
+      const unverified = jwt.decode(effectiveToken) as { userId?: string; purpose?: string } | null;
+      if (unverified && unverified.purpose === 'password_reset' && unverified.userId) {
+        const user = db.prepare('SELECT id, email, full_name, password_hash FROM users WHERE id = ? AND is_active = 1').get(unverified.userId) as any;
         if (user) {
-          targetUserId = user.id;
-          targetEmail = user.email;
-          targetName = user.full_name;
+          const resetSecret = `${config.jwtSecret}-${user.password_hash}`;
+          const decoded = jwt.verify(effectiveToken, resetSecret) as { userId: string; purpose: string };
+          if (decoded && decoded.userId === user.id) {
+            targetUserId = user.id;
+            targetEmail = user.email;
+            targetName = user.full_name;
+          }
         }
       }
     } catch {
-      // 2. Fallback: check if effectiveToken matches a valid raw token in password_reset_tokens (for backwards compatibility)
-      const tokenHash = crypto.createHash('sha256').update(effectiveToken).digest('hex');
-      const resetRecord = db.prepare(`
-        SELECT r.id, r.user_id, r.expires_at, r.used_at, u.email, u.full_name
-        FROM password_reset_tokens r
-        JOIN users u ON u.id = r.user_id
-        WHERE r.token_hash = ?
-      `).get(tokenHash) as any;
+      // Fallback: check if effectiveToken is signed with base config.jwtSecret or matches raw token
+      try {
+        const decodedFallback = jwt.verify(effectiveToken, config.jwtSecret) as { userId: string; purpose: string };
+        if (decodedFallback && decodedFallback.purpose === 'password_reset' && decodedFallback.userId) {
+          const user = db.prepare('SELECT id, email, full_name FROM users WHERE id = ? AND is_active = 1').get(decodedFallback.userId) as any;
+          if (user) {
+            targetUserId = user.id;
+            targetEmail = user.email;
+            targetName = user.full_name;
+          }
+        }
+      } catch {
+        // 2. Fallback: check if effectiveToken matches a valid raw token in password_reset_tokens (for backwards compatibility)
+        const tokenHash = crypto.createHash('sha256').update(effectiveToken).digest('hex');
+        const resetRecord = db.prepare(`
+          SELECT r.id, r.user_id, r.expires_at, r.used_at, u.email, u.full_name
+          FROM password_reset_tokens r
+          JOIN users u ON u.id = r.user_id
+          WHERE r.token_hash = ?
+        `).get(tokenHash) as any;
 
-      if (resetRecord && !resetRecord.used_at && new Date(resetRecord.expires_at) >= new Date()) {
-        targetUserId = resetRecord.user_id;
-        targetEmail = resetRecord.email;
-        targetName = resetRecord.full_name;
-        db.prepare(`UPDATE password_reset_tokens SET used_at = ? WHERE id = ?`).run(now, resetRecord.id);
+        if (resetRecord && !resetRecord.used_at && new Date(resetRecord.expires_at) >= new Date()) {
+          targetUserId = resetRecord.user_id;
+          targetEmail = resetRecord.email;
+          targetName = resetRecord.full_name;
+          db.prepare(`UPDATE password_reset_tokens SET used_at = ? WHERE id = ?`).run(now, resetRecord.id);
+        }
       }
     }
 

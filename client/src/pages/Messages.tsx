@@ -135,6 +135,14 @@ export const Messages: React.FC = () => {
       const data = await apiRequest<{ directChats: DirectChat[]; groupChats: GroupChat[] }>('/messages/conversations');
       setDirectChats(data.directChats || []);
       setGroupChats(data.groupChats || []);
+      if (data.groupChats && Array.isArray(data.groupChats)) {
+        const socket = getSocket();
+        data.groupChats.forEach((g) => {
+          if (g.group_id) {
+            socket.emit('join_group_chat', { groupId: g.group_id });
+          }
+        });
+      }
     } catch (err: any) {
       console.error('Load conversations error:', err);
     }

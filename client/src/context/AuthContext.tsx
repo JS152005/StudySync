@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { apiRequest, getAuthToken, setAuthToken, removeAuthToken } from '../api/client';
+import { disconnectSocket } from '../api/socket';
 
 export interface User {
   id: string;
@@ -57,9 +58,25 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   useEffect(() => {
     refreshUser();
+
+    const handleUnauthorized = () => {
+      setUser(null);
+      disconnectSocket();
+    };
+
+    if (typeof window !== 'undefined') {
+      window.addEventListener('studysync:unauthorized', handleUnauthorized);
+    }
+
+    return () => {
+      if (typeof window !== 'undefined') {
+        window.removeEventListener('studysync:unauthorized', handleUnauthorized);
+      }
+    };
   }, []);
 
   const login = async (identifier: string, pass: string) => {
+    disconnectSocket();
     const data = await apiRequest<{ token: string; user: User }>('/auth/login', {
       method: 'POST',
       body: JSON.stringify({ identifier, password: pass }),
@@ -82,6 +99,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     } catch {
       // Ignore network errors on logout
     }
+    disconnectSocket();
     removeAuthToken();
     setUser(null);
   };

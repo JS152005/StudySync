@@ -70,9 +70,29 @@ export const RoomSession: React.FC = () => {
 
   useEffect(() => {
     if (!id) return;
+    let isMounted = true;
+
+    const safeLoadRoom = async () => {
+      try {
+        const query = inviteCodeQuery ? `?code=${encodeURIComponent(inviteCodeQuery)}` : '';
+        const data = await apiRequest(`/rooms/${id}${query}`);
+        if (isMounted) {
+          setRoomData(data);
+          setLoading(false);
+        }
+      } catch (err: any) {
+        if (isMounted) {
+          toast.error(err.message || 'Failed to load private study room');
+          navigate('/rooms');
+        }
+      }
+    };
+
     const body = inviteCodeQuery ? { invite_code: inviteCodeQuery } : {};
     apiRequest(`/rooms/${id}/join`, { method: 'POST', body: JSON.stringify(body) })
-      .then(() => loadRoom())
+      .then(() => {
+        if (isMounted) safeLoadRoom();
+      })
       .catch(console.error);
 
     // If returning to the active room, restore full state without re-joining or re-acquiring media
@@ -82,8 +102,12 @@ export const RoomSession: React.FC = () => {
       meeting.joinRoom(id);
     }
 
-    const interval = setInterval(loadRoom, 5000);
+    const interval = setInterval(() => {
+      if (isMounted) safeLoadRoom();
+    }, 5000);
+
     return () => {
+      isMounted = false;
       clearInterval(interval);
       // Navigation away from /rooms/:id transitions to "dock" state instead of leaving
       meeting.dockMeeting();

@@ -47,7 +47,7 @@ export async function sendEmail(options: EmailOptions): Promise<boolean> {
       return true;
     }
 
-    if (!config.smtp.user || !config.smtp.pass) {
+    if (!config.smtp.host || !config.smtp.user || !config.smtp.pass) {
       console.warn('[MAILER] SMTP credentials not fully configured. Email skipped for:', options.to);
       return false;
     }
@@ -208,7 +208,8 @@ export function createSessionInvitationEmail(to: string, inviterName: string, se
 }
 
 function escapeHtml(str: string): string {
-  return str
+  if (!str) return '';
+  return String(str)
     .replace(/&/g, '&amp;')
     .replace(/</g, '&lt;')
     .replace(/>/g, '&gt;')

@@ -121,9 +121,9 @@ function isSocketInStudyRoom(sock: AuthenticatedSocket, roomId: string): boolean
 }
 
 function socketsShareStudyRoom(sock1: AuthenticatedSocket, targetSocketId: string, ioServer: Server): boolean {
-  if (!targetSocketId) return false;
+  if (!sock1?.rooms || !targetSocketId) return false;
   const targetSocket = ioServer.sockets.sockets.get(targetSocketId);
-  if (!targetSocket) return false;
+  if (!targetSocket?.rooms) return false;
   for (const r of sock1.rooms) {
     if (r.startsWith('room:') && targetSocket.rooms.has(r)) {
       return true;
@@ -374,13 +374,18 @@ export function setupSocketHandlers(io: Server) {
           }
 
           broadcastParticipantsSnapshot(io, roomId);
+
+          // Clean up roomState if no participants remain
+          if (roomState.participants.size === 0) {
+            roomStates.delete(roomId);
+          }
         }
       }
     });
 
     // WebRTC: Relay Offer (target socket must be in the same room as the sender)
     socket.on('webrtc_offer', ({ targetSocketId, offer }) => {
-      if (!socketsShareStudyRoom(socket, targetSocketId, io)) return;
+      if (!targetSocketId || !offer || !socketsShareStudyRoom(socket, targetSocketId, io)) return;
       io.to(targetSocketId).emit('webrtc_offer', {
         senderSocketId: socket.id,
         senderUserId: socket.userId,
@@ -390,7 +395,7 @@ export function setupSocketHandlers(io: Server) {
 
     // WebRTC: Relay Answer (target socket must be in the same room as the sender)
     socket.on('webrtc_answer', ({ targetSocketId, answer }) => {
-      if (!socketsShareStudyRoom(socket, targetSocketId, io)) return;
+      if (!targetSocketId || !answer || !socketsShareStudyRoom(socket, targetSocketId, io)) return;
       io.to(targetSocketId).emit('webrtc_answer', {
         senderSocketId: socket.id,
         answer,
@@ -399,7 +404,7 @@ export function setupSocketHandlers(io: Server) {
 
     // WebRTC: Relay ICE Candidate (target socket must be in the same room as the sender)
     socket.on('webrtc_ice_candidate', ({ targetSocketId, candidate }) => {
-      if (!socketsShareStudyRoom(socket, targetSocketId, io)) return;
+      if (!targetSocketId || !candidate || !socketsShareStudyRoom(socket, targetSocketId, io)) return;
       io.to(targetSocketId).emit('webrtc_ice_candidate', {
         senderSocketId: socket.id,
         candidate,
@@ -546,6 +551,12 @@ export function setupSocketHandlers(io: Server) {
       socket.join(`group:${groupId}`);
     });
 
+    socket.on('leave_group_chat', ({ groupId }) => {
+      if (groupId) {
+        socket.leave(`group:${groupId}`);
+      }
+    });
+
     // 5. ROOM INVITATIONS
     socket.on('room_invitation_sent', ({ targetUserId, invitation }) => {
       if (targetUserId) {
@@ -632,6 +643,11 @@ export function setupSocketHandlers(io: Server) {
               }
 
               broadcastParticipantsSnapshot(io, roomId);
+
+              // Clean up roomState if no participants remain
+              if (roomState.participants.size === 0) {
+                roomStates.delete(roomId);
+              }
             }
           } else if (userId) {
             const roomSockets = io.sockets.adapter.rooms.get(room);

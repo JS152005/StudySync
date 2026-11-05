@@ -40,6 +40,15 @@ export async function apiRequest<T = any>(endpoint: string, options: RequestInit
   }
 
   if (!response.ok) {
+    const hasAuthHeader = headers.has('Authorization');
+    const isAuthOrVerificationRoute = endpoint.startsWith('/auth/') || endpoint.includes('/verify') || endpoint.includes('/password');
+
+    if (response.status === 401 && hasAuthHeader && !isAuthOrVerificationRoute) {
+      removeAuthToken();
+      if (typeof window !== 'undefined') {
+        window.dispatchEvent(new CustomEvent('studysync:unauthorized'));
+      }
+    }
     const errorMsg = data && data.error ? data.error : response.statusText || 'Request failed';
     throw new Error(errorMsg);
   }

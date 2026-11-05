@@ -457,14 +457,15 @@ export class MeetingSession {
 
   private async flushPendingCandidates(peerSocketId: string, pc: RTCPeerConnection) {
     const list = this.pendingCandidates.get(peerSocketId) || [];
+    this.pendingCandidates.delete(peerSocketId);
     for (const c of list) {
+      if (!c || !c.candidate) continue;
       try {
         await pc.addIceCandidate(new RTCIceCandidate(c));
       } catch (err) {
         console.warn('[MeetingSession] Buffered ICE candidate error:', err);
       }
     }
-    this.pendingCandidates.delete(peerSocketId);
   }
 
   // --- Socket Listener Setup & Teardown ---
@@ -521,6 +522,8 @@ export class MeetingSession {
     };
 
     this.handleICECandidateBound = async ({ senderSocketId, candidate }: any) => {
+      if (!senderSocketId) return;
+      if (!candidate || !candidate.candidate) return;
       const pc = this.peerConnections.get(senderSocketId);
       if (pc && pc.remoteDescription && pc.remoteDescription.type) {
         try {

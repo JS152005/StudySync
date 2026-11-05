@@ -48,13 +48,15 @@ export const db: DBInterface = {
   },
   transaction<T>(fn: (...args: any[]) => T): (...args: any[]) => T {
     return (...args: any[]) => {
-      rawDb.exec('BEGIN;');
+      rawDb.exec('BEGIN IMMEDIATE;');
       try {
         const result = fn(...args);
         rawDb.exec('COMMIT;');
         return result;
       } catch (err) {
-        rawDb.exec('ROLLBACK;');
+        try {
+          rawDb.exec('ROLLBACK;');
+        } catch {}
         throw err;
       }
     };

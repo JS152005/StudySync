@@ -38,6 +38,7 @@ export function transitionMeetingState(current: MeetingState, event: MeetingEven
       if (event.type === 'NAVIGATE_AWAY' || event.type === 'DOCK') return 'dock';
       if (event.type === 'DISCONNECTED') return 'disconnected';
       if (event.type === 'ROOM_ENDED' || event.type === 'LEAVE') return 'ended';
+      if (event.type === 'RESET') return 'idle';
       return current;
 
     case 'full':
@@ -45,6 +46,7 @@ export function transitionMeetingState(current: MeetingState, event: MeetingEven
       if (event.type === 'NAVIGATE_AWAY' || event.type === 'DOCK') return 'dock';
       if (event.type === 'DISCONNECTED') return 'disconnected';
       if (event.type === 'ROOM_ENDED' || event.type === 'LEAVE') return 'ended';
+      if (event.type === 'RESET') return 'idle';
       return current;
 
     case 'dock':
@@ -53,6 +55,7 @@ export function transitionMeetingState(current: MeetingState, event: MeetingEven
       if (event.type === 'RESTORE_SUCCESS') return 'full';
       if (event.type === 'DISCONNECTED') return 'disconnected';
       if (event.type === 'ROOM_ENDED' || event.type === 'LEAVE') return 'ended';
+      if (event.type === 'RESET') return 'idle';
       return current;
 
     case 'pip':
@@ -62,6 +65,7 @@ export function transitionMeetingState(current: MeetingState, event: MeetingEven
       if (event.type === 'PIP_CLOSED' || event.type === 'DOCK' || event.type === 'NAVIGATE_AWAY') return 'dock';
       if (event.type === 'DISCONNECTED') return 'disconnected';
       if (event.type === 'ROOM_ENDED' || event.type === 'LEAVE') return 'ended';
+      if (event.type === 'RESET') return 'idle';
       return current;
 
     case 'restoring':
@@ -70,12 +74,14 @@ export function transitionMeetingState(current: MeetingState, event: MeetingEven
       if (event.type === 'NAVIGATE_AWAY' || event.type === 'DOCK') return 'dock';
       if (event.type === 'DISCONNECTED') return 'disconnected';
       if (event.type === 'ROOM_ENDED' || event.type === 'LEAVE') return 'ended';
+      if (event.type === 'RESET') return 'idle';
       return current;
 
     case 'disconnected':
       if (event.type === 'RECONNECTED') return event.target || 'full';
       if (event.type === 'JOIN_START') return 'joining';
       if (event.type === 'ROOM_ENDED' || event.type === 'LEAVE') return 'ended';
+      if (event.type === 'RESET') return 'idle';
       return current;
 
     case 'ended':

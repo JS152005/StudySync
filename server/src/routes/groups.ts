@@ -1,5 +1,6 @@
 import { Router } from 'express';
 import crypto from 'crypto';
+import { Server } from 'socket.io';
 import { db } from '../db/index.js';
 import { requireAuth, AuthRequest } from '../middleware/auth.js';
 import { sendEmail, createGroupInvitationEmail } from '../services/mailer.js';
@@ -307,6 +308,20 @@ router.post('/:id/leave', requireAuth, (req: AuthRequest, res): void => {
     }
 
     db.prepare(`DELETE FROM group_members WHERE group_id = ? AND user_id = ?`).run(id, currentUserId);
+
+    const io: Server | undefined = req.app.get('io');
+    if (io) {
+      const roomSockets = io.sockets.adapter.rooms.get(`group:${id}`);
+      if (roomSockets) {
+        for (const sId of Array.from(roomSockets)) {
+          const targetSock = io.sockets.sockets.get(sId) as any;
+          if (targetSock && targetSock.userId === currentUserId) {
+            targetSock.leave(`group:${id}`);
+          }
+        }
+      }
+    }
+
     res.json({ message: 'You have left the study group.' });
   } catch (err: any) {
     console.error('[LEAVE GROUP ERROR]', err);
@@ -386,6 +401,11 @@ router.put('/:id/members/:userId', requireAuth, (req: AuthRequest, res): void =>
     const { role } = req.body; // 'owner', 'moderator', 'member'
     const currentUserId = req.user!.id;
 
+    if (!role || !['owner', 'moderator', 'member'].includes(role)) {
+      res.status(400).json({ error: 'Role must be owner, moderator, or member.' });
+      return;
+    }
+
     const myRole = db.prepare(`
       SELECT role FROM group_members WHERE group_id = ? AND user_id = ? AND status = 'active'
     `).get(id, currentUserId) as any;
@@ -428,7 +448,40 @@ router.delete('/:id/members/:userId', requireAuth, (req: AuthRequest, res): void
       return;
     }
 
+    const targetMember = db.prepare(`
+      SELECT id, role FROM group_members WHERE group_id = ? AND user_id = ?
+    `).get(id, userId) as any;
+
+    if (!targetMember) {
+      res.status(404).json({ error: 'Member not found in this group.' });
+      return;
+    }
+
+    if (targetMember.role === 'owner') {
+      res.status(403).json({ error: 'Cannot remove the group owner.' });
+      return;
+    }
+
+    if (myRole.role === 'moderator' && targetMember.role === 'moderator' && currentUserId !== userId) {
+      res.status(403).json({ error: 'Moderators cannot remove other moderators.' });
+      return;
+    }
+
     db.prepare(`DELETE FROM group_members WHERE group_id = ? AND user_id = ?`).run(id, userId);
+
+    const io: Server | undefined = req.app.get('io');
+    if (io) {
+      const roomSockets = io.sockets.adapter.rooms.get(`group:${id}`);
+      if (roomSockets) {
+        for (const sId of Array.from(roomSockets)) {
+          const targetSock = io.sockets.sockets.get(sId) as any;
+          if (targetSock && targetSock.userId === userId) {
+            targetSock.leave(`group:${id}`);
+          }
+        }
+      }
+    }
+
     res.json({ message: 'Member removed from group.' });
   } catch (err: any) {
     console.error('[REMOVE MEMBER ERROR]', err);

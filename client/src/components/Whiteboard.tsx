@@ -353,6 +353,25 @@ export const Whiteboard: React.FC<WhiteboardProps> = ({ roomId }) => {
     setLastPos(null);
   };
 
+  const handleTouchStart = (e: React.TouchEvent<HTMLCanvasElement>) => {
+    if (e.touches.length === 1) {
+      const touch = e.touches[0];
+      startDrawing({ clientX: touch.clientX, clientY: touch.clientY } as any);
+    }
+  };
+
+  const handleTouchMove = (e: React.TouchEvent<HTMLCanvasElement>) => {
+    if (e.touches.length === 1) {
+      const touch = e.touches[0];
+      draw({ clientX: touch.clientX, clientY: touch.clientY } as any);
+    }
+  };
+
+  const handleTouchEnd = (e: React.TouchEvent<HTMLCanvasElement>) => {
+    const touch = e.changedTouches[0];
+    stopDrawing({ clientX: touch ? touch.clientX : 0, clientY: touch ? touch.clientY : 0 } as any);
+  };
+
   const handleClear = () => {
     if (!window.confirm('Clear whiteboard for all participants in this room?')) return;
     clearWhiteboard();
@@ -555,6 +574,9 @@ export const Whiteboard: React.FC<WhiteboardProps> = ({ roomId }) => {
           onMouseMove={draw}
           onMouseUp={stopDrawing}
           onMouseLeave={stopDrawing}
+          onTouchStart={handleTouchStart}
+          onTouchMove={handleTouchMove}
+          onTouchEnd={handleTouchEnd}
           style={{
             display: 'block',
             width: '100%',
