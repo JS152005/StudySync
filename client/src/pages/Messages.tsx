@@ -257,17 +257,13 @@ export const Messages: React.FC = () => {
           method: 'POST',
           body: JSON.stringify({ content }),
         });
-        setMessages((prev) => [...prev, res.message]);
-        const socket = getSocket();
-        socket.emit('direct_message_sent', { recipientId: activeChat.id, message: res.message });
+        setMessages((prev) => (prev.some((m) => m.id === res.message.id) ? prev : [...prev, res.message]));
       } else {
         const res = await apiRequest<{ message: ChatMessage }>(`/messages/group/${activeChat.id}`, {
           method: 'POST',
           body: JSON.stringify({ content }),
         });
-        setMessages((prev) => [...prev, res.message]);
-        const socket = getSocket();
-        socket.emit('group_message_sent', { groupId: activeChat.id, message: res.message });
+        setMessages((prev) => (prev.some((m) => m.id === res.message.id) ? prev : [...prev, res.message]));
       }
       loadConversations();
     } catch (err: any) {

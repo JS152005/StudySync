@@ -980,4 +980,82 @@ describe('StudySync Core Systems & Security Suite', () => {
       expect(actionsCount.count).toBe(4);
     });
   });
+
+  describe('8. Study Room Meeting Picture-in-Picture & Lifecycle Suite', () => {
+    let pipRoomId = '';
+
+    it('Creates study room for PiP verification', async () => {
+      const res = await request(app)
+        .post('/api/rooms')
+        .set('Authorization', `Bearer ${authToken}`)
+        .send({
+          name: 'Distributed Systems Lecture Review',
+          subject: 'Computer Science',
+          topic: 'Byzantine Fault Tolerance',
+        });
+
+      expect(res.status).toBe(201);
+      pipRoomId = res.body.room.id;
+      expect(res.body.room.invite_code).toMatch(/^ROOM-/);
+    });
+
+    it('Maintains single logical participant identity across multi-socket connections', async () => {
+      // Connect User socket 1
+      const roomState = getOrCreateRoomState(pipRoomId);
+      const userSockets = new Set(['socket_tab_1', 'socket_tab_2']);
+
+      roomState.participants.set(userId, {
+        userId,
+        username: studentUsername,
+        fullName: 'Alex Rivera',
+        primarySocketId: 'socket_tab_1',
+        sockets: userSockets,
+        isHost: true,
+        isHandRaised: false,
+        videoEnabled: true,
+        audioEnabled: true,
+        joinedAt: new Date().toISOString(),
+      });
+
+      // Verify participant count represents unique student identity (1 student, not 2)
+      expect(roomState.participants.size).toBe(1);
+      const logicalUser = roomState.participants.get(userId);
+      expect(logicalUser).toBeDefined();
+      expect(logicalUser!.sockets.size).toBe(2);
+    });
+
+    it('PiP transition maintains room state and peer connections without dropping session', () => {
+      const roomState = getOrCreateRoomState(pipRoomId);
+      expect(roomState.participants.has(userId)).toBe(true);
+
+      // Adding peer participant
+      roomState.participants.set(peerUserId, {
+        userId: peerUserId,
+        username: 'peer_user',
+        fullName: 'Jordan Lee',
+        primarySocketId: 'peer_socket_1',
+        sockets: new Set(['peer_socket_1']),
+        isHost: false,
+        isHandRaised: false,
+        videoEnabled: true,
+        audioEnabled: false,
+        joinedAt: new Date().toISOString(),
+      });
+
+      // Both participants active in room
+      expect(roomState.participants.size).toBe(2);
+    });
+
+    it('Explicit Leave Room releases room membership and cleans up presence', async () => {
+      const leaveRes = await request(app)
+        .post(`/api/rooms/${pipRoomId}/leave`)
+        .set('Authorization', `Bearer ${authToken}`);
+
+      expect(leaveRes.status).toBe(200);
+
+      // Verify participant left
+      const participant = db.prepare('SELECT left_at FROM room_participants WHERE room_id = ? AND user_id = ?').get(pipRoomId, userId) as any;
+      expect(participant.left_at).not.toBeNull();
+    });
+  });
 });

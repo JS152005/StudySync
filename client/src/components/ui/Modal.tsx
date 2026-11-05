@@ -1,4 +1,5 @@
 import React, { useEffect, useRef } from 'react';
+import { createPortal } from 'react-dom';
 import { THEME } from '../../theme';
 import { X } from 'lucide-react';
 
@@ -49,7 +50,7 @@ export const Modal: React.FC<ModalProps> = ({
 
   if (!isOpen) return null;
 
-  return (
+  const modalNode = (
     <div
       className="modal-overlay"
       onClick={(e) => {
@@ -127,6 +128,13 @@ export const Modal: React.FC<ModalProps> = ({
       </div>
     </div>
   );
+
+  const target =
+    typeof document !== 'undefined'
+      ? document.getElementById('studysync-modal-root') || document.body
+      : null;
+
+  return target ? createPortal(modalNode, target) : modalNode;
 };
 
 export default Modal;

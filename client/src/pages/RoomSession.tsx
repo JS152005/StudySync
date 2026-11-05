@@ -3,7 +3,7 @@ import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
 import { apiRequest } from '../api/client';
 import { useAuth } from '../context/AuthContext';
 import { VideoMeeting, Participant } from '../components/VideoMeeting';
-import { useMeeting } from '../context/MeetingContext';
+import { useMeeting } from '../meeting/MeetingProvider';
 import { THEME } from '../theme';
 import { Button } from '../components/ui/Button';
 import { Modal } from '../components/ui/Modal';
@@ -75,15 +75,18 @@ export const RoomSession: React.FC = () => {
       .then(() => loadRoom())
       .catch(console.error);
 
-    // Register active room in application-level meeting context and ensure unminimized
-    meeting.joinRoom(id);
-    meeting.setMinimized(false);
+    // If returning to the active room, restore full state without re-joining or re-acquiring media
+    if (meeting.activeRoomId === id) {
+      meeting.restoreMeeting();
+    } else {
+      meeting.joinRoom(id);
+    }
 
     const interval = setInterval(loadRoom, 5000);
     return () => {
       clearInterval(interval);
-      // Navigation away from /rooms/:id does NOT leave the meeting!
-      // The meeting continues persistently in the background like Google Meet.
+      // Navigation away from /rooms/:id transitions to "dock" state instead of leaving
+      meeting.dockMeeting();
     };
   }, [id, inviteCodeQuery]);
 

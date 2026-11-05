@@ -9,6 +9,7 @@ export function getSocket(): Socket {
     if (!socketInstance) {
       socketInstance = io(window.location.origin, {
         auth: { token },
+        withCredentials: true,
         autoConnect: true,
         reconnection: true,
         reconnectionAttempts: 15,

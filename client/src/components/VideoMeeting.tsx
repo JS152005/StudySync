@@ -1,7 +1,7 @@
 import React, { useRef, useEffect, useState, useCallback } from 'react';
 import { THEME } from '../theme';
 import { useAuth } from '../context/AuthContext';
-import { useMeeting, PeerInfo, SharerInfo } from '../context/MeetingContext';
+import { useMeeting, PeerInfo, SharerInfo } from '../meeting/MeetingProvider';
 import { Whiteboard } from './Whiteboard';
 import {
   Mic,
@@ -21,6 +21,7 @@ import {
   Minimize2,
   Sparkles,
   Loader2,
+  ExternalLink,
 } from 'lucide-react';
 
 export interface Participant {
@@ -110,6 +111,7 @@ const RemoteVideoTile: React.FC<{ peer: PeerInfo }> = ({ peer }) => {
           ref={setVideoRef}
           autoPlay
           playsInline
+          muted
           onError={() => setVideoError(true)}
           onPlaying={() => setVideoError(false)}
           style={{
@@ -243,6 +245,11 @@ export const VideoMeeting: React.FC<VideoMeetingProps> = ({
     setActiveView,
     setShowParticipants,
     requestPictureInPicture,
+    openDocumentPictureInPicture,
+    isDocumentPipSupported,
+    dockMeeting,
+    state,
+    restoreMeeting,
   } = useMeeting();
 
   const localVideoRef = useRef<HTMLVideoElement | null>(null);
@@ -327,6 +334,73 @@ export const VideoMeeting: React.FC<VideoMeetingProps> = ({
     }
     return { columns: 'repeat(3, 1fr)', rows: 'repeat(2, 1fr)' };
   };
+
+  if (state === 'dock') {
+    return (
+      <div
+        className="card"
+        style={{
+          minHeight: '480px',
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'center',
+          justifyContent: 'center',
+          backgroundColor: '#0F172A',
+          color: '#F8FAFC',
+          borderRadius: '16px',
+          padding: '32px 24px',
+          textAlign: 'center',
+          gap: '16px',
+          border: '1.5px solid #334155',
+        }}
+      >
+        <div
+          style={{
+            width: '56px',
+            height: '56px',
+            borderRadius: '50%',
+            backgroundColor: 'rgba(2, 132, 199, 0.2)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            color: '#38BDF8',
+          }}
+        >
+          <Maximize2 size={26} />
+        </div>
+        <div>
+          <h3 style={{ fontSize: '18px', fontWeight: 800, color: '#F8FAFC', margin: '0 0 6px' }}>
+            Meeting Floating in Widget
+          </h3>
+          <p style={{ fontSize: '13.5px', color: '#94A3B8', margin: 0, maxWidth: '420px', lineHeight: 1.5 }}>
+            This study session is running inside the persistent floating meeting window. You can freely navigate StudySync or expand back to full room view.
+          </p>
+        </div>
+        <button
+          type="button"
+          onClick={restoreMeeting}
+          style={{
+            padding: '10px 22px',
+            borderRadius: THEME.radius.pill,
+            backgroundColor: '#0284C7',
+            color: '#FFFFFF',
+            border: 'none',
+            fontSize: '13px',
+            fontWeight: 700,
+            cursor: 'pointer',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '8px',
+            boxShadow: '0 4px 14px rgba(2, 132, 199, 0.35)',
+            transition: 'background-color 0.15s ease',
+          }}
+        >
+          <Maximize2 size={15} />
+          <span>Expand to Full Room</span>
+        </button>
+      </div>
+    );
+  }
 
   const gridStyle = getGridTemplate();
 
@@ -920,8 +994,33 @@ export const VideoMeeting: React.FC<VideoMeetingProps> = ({
           )}
         </div>
 
-        {/* Right: Participants Drawer & Meeting Mode Switcher */}
+        {/* Right: PiP & Participants Drawer */}
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+          {/* Minimize to Persistent Floating Window inside StudySync */}
+          <button
+            type="button"
+            onClick={dockMeeting}
+            aria-label="Minimize to Floating Window"
+            title="Minimize to persistent floating meeting window"
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '6px',
+              padding: '8px 14px',
+              borderRadius: THEME.radius.pill,
+              backgroundColor: '#1E293B',
+              color: '#38BDF8',
+              border: '1.5px solid #334155',
+              fontSize: '12px',
+              fontWeight: 700,
+              cursor: 'pointer',
+              transition: 'background-color 0.15s ease',
+            }}
+          >
+            <Minimize2 size={13} color="#38BDF8" />
+            <span>Floating Window</span>
+          </button>
+
           <button
             type="button"
             onClick={() => setShowParticipants((prev) => !prev)}

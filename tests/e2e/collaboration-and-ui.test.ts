@@ -2,7 +2,8 @@ import { describe, it, expect, beforeAll, afterAll } from 'vitest';
 import { io as ClientSocket, Socket as ClientSocketType } from 'socket.io-client';
 import crypto from 'crypto';
 import jwt from 'jsonwebtoken';
-import { server } from '../../server/src/index.js';
+import request from 'supertest';
+import { app, server } from '../../server/src/index.js';
 import { db, generateStudentId, generateRoomInviteCode } from '../../server/src/db/index.js';
 import { config } from '../../server/src/config/index.js';
 
@@ -76,11 +77,21 @@ describe('StudySync Multi-User Real-Time Collaboration, WebRTC, Whiteboard & UI 
       VALUES (?, 'Quantum Mechanics Collab', 'Physics', 'Schrodinger Equation', ?, ?, 1, 0, ?)
     `).run(testRoomId, hostId, roomCode, now);
 
-    // Add host as participant
+    // Add host, peer, and latecomer as room participants
     db.prepare(`
       INSERT INTO room_participants (id, room_id, user_id, is_hand_raised, joined_at)
       VALUES (?, ?, ?, 0, ?)
     `).run(crypto.randomUUID(), testRoomId, hostId, now);
+
+    db.prepare(`
+      INSERT INTO room_participants (id, room_id, user_id, is_hand_raised, joined_at)
+      VALUES (?, ?, ?, 0, ?)
+    `).run(crypto.randomUUID(), testRoomId, peerId, now);
+
+    db.prepare(`
+      INSERT INTO room_participants (id, room_id, user_id, is_hand_raised, joined_at)
+      VALUES (?, ?, ?, 0, ?)
+    `).run(crypto.randomUUID(), testRoomId, lateId, now);
 
     // Initialize whiteboard
     db.prepare(`
@@ -371,16 +382,11 @@ describe('StudySync Multi-User Real-Time Collaboration, WebRTC, Whiteboard & UI 
         socketPeer.once('group_message_received', (msg) => resolve(msg));
       });
 
-      const chatPayload = {
-        id: crypto.randomUUID(),
-        conversation_type: 'group',
-        group_id: groupId,
-        sender_id: hostUser.id,
-        content: 'Collaborative study note: review chapters 4 and 5',
-        created_at: new Date().toISOString(),
-      };
-
-      socketHost.emit('group_message_sent', { groupId, message: chatPayload });
+      // Send via authoritative REST endpoint (which verifies membership, inserts to DB, and broadcasts via io)
+      await request(app)
+        .post(`/api/messages/group/${groupId}`)
+        .set('Authorization', `Bearer ${hostUser.token}`)
+        .send({ content: 'Collaborative study note: review chapters 4 and 5' });
 
       const receivedMsg = await messagePromise;
       expect(receivedMsg.content).toBe('Collaborative study note: review chapters 4 and 5');

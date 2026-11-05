@@ -1,9 +1,74 @@
 import { Router } from 'express';
 import crypto from 'crypto';
+import { Server } from 'socket.io';
 import { db, generateRoomInviteCode } from '../db/index.js';
 import { requireAuth, AuthRequest } from '../middleware/auth.js';
+import {
+  getOrCreateRoomState,
+  broadcastParticipantsSnapshot,
+  removeRoomState,
+  removeParticipantFromRoomState,
+} from '../socket/index.js';
 
 const router = Router();
+
+interface RoomAccessResult {
+  allowed: boolean;
+  status: number;
+  error?: string;
+  room?: any;
+  isHost?: boolean;
+}
+
+function checkRoomAccess(roomId: string, userId: string, providedCode?: string): RoomAccessResult {
+  const room = db.prepare(`
+    SELECT r.*, u.full_name as host_name, u.username as host_username, u.avatar_url as host_avatar,
+           g.name as group_name
+    FROM study_rooms r
+    JOIN users u ON u.id = r.host_id
+    LEFT JOIN study_groups g ON g.id = r.group_id
+    WHERE r.id = ?
+  `).get(roomId) as any;
+
+  if (!room) {
+    return { allowed: false, status: 404, error: 'Study room not found.' };
+  }
+
+  // Check if participant was removed
+  const wasRemoved = db.prepare(`
+    SELECT id FROM room_participants WHERE room_id = ? AND user_id = ? AND is_removed = 1
+  `).get(roomId, userId);
+  if (wasRemoved) {
+    return { allowed: false, status: 403, error: 'You have been removed from this study room and cannot access it.' };
+  }
+
+  const isHost = room.host_id === userId;
+  let isMember = false;
+  if (room.group_id) {
+    const member = db.prepare(`
+      SELECT id FROM group_members WHERE group_id = ? AND user_id = ? AND status = 'active'
+    `).get(room.group_id, userId);
+    isMember = !!member;
+  }
+
+  const isParticipant = db.prepare(`
+    SELECT id FROM room_participants WHERE room_id = ? AND user_id = ? AND left_at IS NULL
+  `).get(roomId, userId);
+
+  const cleanCode = (providedCode || '').trim().toUpperCase();
+  const hasCodeMatch = cleanCode && room.invite_code && cleanCode === room.invite_code.toUpperCase();
+
+  if (!isHost && !isMember && !isParticipant && !hasCodeMatch) {
+    return {
+      allowed: false,
+      status: 403,
+      error: 'This study room is private. An invitation code or group membership is required.',
+      room,
+    };
+  }
+
+  return { allowed: true, status: 200, room, isHost };
+}
 
 // 1. LIST ACTIVE PRIVATE ROOMS (Only rooms user hosts, belongs to via group, or is participating in)
 router.get('/', requireAuth, (req: AuthRequest, res): void => {
@@ -122,6 +187,13 @@ router.post('/join-by-code', requireAuth, (req: AuthRequest, res): void => {
       return;
     }
 
+    // Check if user was removed from room
+    const wasRemoved = db.prepare('SELECT id FROM room_participants WHERE room_id = ? AND user_id = ? AND is_removed = 1').get(room.id, currentUserId);
+    if (wasRemoved) {
+      res.status(403).json({ error: 'You have been removed from this study room and cannot rejoin.' });
+      return;
+    }
+
     // If room is attached to a private group, check group membership
     if (room.group_id) {
       const member = db.prepare(`
@@ -140,10 +212,15 @@ router.post('/join-by-code', requireAuth, (req: AuthRequest, res): void => {
     `).get(room.id, currentUserId);
 
     if (!existing) {
-      db.prepare(`
-        INSERT INTO room_participants (id, room_id, user_id, is_hand_raised, joined_at)
-        VALUES (?, ?, ?, 0, ?)
-      `).run(crypto.randomUUID(), room.id, currentUserId, now);
+      const prevRow = db.prepare(`SELECT id FROM room_participants WHERE room_id = ? AND user_id = ?`).get(room.id, currentUserId) as any;
+      if (prevRow) {
+        db.prepare(`UPDATE room_participants SET left_at = NULL WHERE id = ?`).run(prevRow.id);
+      } else {
+        db.prepare(`
+          INSERT INTO room_participants (id, room_id, user_id, is_hand_raised, is_removed, joined_at)
+          VALUES (?, ?, ?, 0, 0, ?)
+        `).run(crypto.randomUUID(), room.id, currentUserId, now);
+      }
     }
 
     res.json({ message: 'Joined private room.', roomId: room.id, room });
@@ -179,7 +256,7 @@ router.get('/invitations', requireAuth, (req: AuthRequest, res): void => {
 // 3.2 RESPOND TO ROOM INVITATION (Accept / Decline)
 router.post('/invitations/:invitationId/respond', requireAuth, (req: AuthRequest, res): void => {
   try {
-    const { invitationId } = req.params;
+    const invitationId = req.params.invitationId as string;
     const { action } = req.body; // 'accept' or 'decline'
     const currentUserId = req.user!.id;
 
@@ -209,12 +286,17 @@ router.post('/invitations/:invitationId/respond', requireAuth, (req: AuthRequest
       const now = new Date().toISOString();
       db.transaction(() => {
         db.prepare(`UPDATE room_invitations SET status = 'accepted' WHERE id = ?`).run(invitationId);
-        const existing = db.prepare(`SELECT id FROM room_participants WHERE room_id = ? AND user_id = ?`).get(invitation.room_id, currentUserId);
+        const existing = db.prepare(`SELECT id FROM room_participants WHERE room_id = ? AND user_id = ? AND left_at IS NULL`).get(invitation.room_id, currentUserId);
         if (!existing) {
-          db.prepare(`
-            INSERT INTO room_participants (id, room_id, user_id, is_hand_raised, joined_at)
-            VALUES (?, ?, ?, 0, ?)
-          `).run(crypto.randomUUID(), invitation.room_id, currentUserId, now);
+          const prevRow = db.prepare(`SELECT id FROM room_participants WHERE room_id = ? AND user_id = ?`).get(invitation.room_id, currentUserId) as any;
+          if (prevRow) {
+            db.prepare(`UPDATE room_participants SET left_at = NULL WHERE id = ?`).run(prevRow.id);
+          } else {
+            db.prepare(`
+              INSERT INTO room_participants (id, room_id, user_id, is_hand_raised, is_removed, joined_at)
+              VALUES (?, ?, ?, 0, 0, ?)
+            `).run(crypto.randomUUID(), invitation.room_id, currentUserId, now);
+          }
         }
       })();
 
@@ -232,43 +314,14 @@ router.post('/invitations/:invitationId/respond', requireAuth, (req: AuthRequest
 // 4. GET ROOM DETAILS (Strictly private: only host, group members, active participants, or with invite code)
 router.get('/:id', requireAuth, (req: AuthRequest, res): void => {
   try {
-    const { id } = req.params;
+    const id = req.params.id as string;
     const currentUserId = req.user!.id;
     const providedCode = ((req.query.code || '') as string).trim().toUpperCase();
 
-    const room = db.prepare(`
-      SELECT r.*, u.full_name as host_name, u.username as host_username, u.avatar_url as host_avatar,
-             g.name as group_name
-      FROM study_rooms r
-      JOIN users u ON u.id = r.host_id
-      LEFT JOIN study_groups g ON g.id = r.group_id
-      WHERE r.id = ?
-    `).get(id) as any;
-
-    if (!room) {
-      res.status(404).json({ error: 'Study room not found.' });
-      return;
-    }
-
-    const isHost = room.host_id === currentUserId;
-    let isMember = false;
-
-    if (room.group_id) {
-      const member = db.prepare(`
-        SELECT id FROM group_members WHERE group_id = ? AND user_id = ? AND status = 'active'
-      `).get(room.group_id, currentUserId);
-      isMember = !!member;
-    }
-
-    const isParticipant = db.prepare(`
-      SELECT id FROM room_participants WHERE room_id = ? AND user_id = ?
-    `).get(id, currentUserId);
-
-    const hasCodeMatch = providedCode && room.invite_code && providedCode === room.invite_code.toUpperCase();
-
-    if (!isHost && !isMember && !isParticipant && !hasCodeMatch) {
-      res.status(403).json({
-        error: 'This study room is private. An invitation code or group membership is required.',
+    const access = checkRoomAccess(id, currentUserId, providedCode);
+    if (!access.allowed) {
+      res.status(access.status).json({
+        error: access.error,
         is_private: true,
       });
       return;
@@ -285,8 +338,8 @@ router.get('/:id', requireAuth, (req: AuthRequest, res): void => {
     `).all(id);
 
     res.json({
-      room,
-      isHost,
+      room: access.room,
+      isHost: access.isHost,
       participants,
     });
   } catch (err: any) {
@@ -298,13 +351,21 @@ router.get('/:id', requireAuth, (req: AuthRequest, res): void => {
 // 5. JOIN ROOM (Private check)
 router.post('/:id/join', requireAuth, (req: AuthRequest, res): void => {
   try {
-    const { id } = req.params;
+    const id = req.params.id as string;
     const currentUserId = req.user!.id;
     const providedCode = ((req.body?.invite_code || req.query?.code || '') as string).trim().toUpperCase();
 
     const room = db.prepare(`SELECT * FROM study_rooms WHERE id = ? AND is_active = 1`).get(id) as any;
     if (!room) {
       res.status(404).json({ error: 'Study room is not active or does not exist.' });
+      return;
+    }
+
+    const wasRemoved = db.prepare(`
+      SELECT id FROM room_participants WHERE room_id = ? AND user_id = ? AND is_removed = 1
+    `).get(id, currentUserId);
+    if (wasRemoved) {
+      res.status(403).json({ error: 'You have been removed from this study room and cannot rejoin.' });
       return;
     }
 
@@ -319,7 +380,7 @@ router.post('/:id/join', requireAuth, (req: AuthRequest, res): void => {
     }
 
     const isParticipant = db.prepare(`
-      SELECT id FROM room_participants WHERE room_id = ? AND user_id = ?
+      SELECT id FROM room_participants WHERE room_id = ? AND user_id = ? AND left_at IS NULL
     `).get(id, currentUserId);
 
     const hasCodeMatch = providedCode && room.invite_code && providedCode === room.invite_code.toUpperCase();
@@ -333,15 +394,16 @@ router.post('/:id/join', requireAuth, (req: AuthRequest, res): void => {
     }
 
     const now = new Date().toISOString();
-    const existing = db.prepare(`
-      SELECT id FROM room_participants WHERE room_id = ? AND user_id = ? AND left_at IS NULL
-    `).get(id, currentUserId);
-
-    if (!existing) {
-      db.prepare(`
-        INSERT INTO room_participants (id, room_id, user_id, is_hand_raised, joined_at)
-        VALUES (?, ?, ?, 0, ?)
-      `).run(crypto.randomUUID(), id, currentUserId, now);
+    if (!isParticipant) {
+      const prevRow = db.prepare(`SELECT id FROM room_participants WHERE room_id = ? AND user_id = ?`).get(id, currentUserId) as any;
+      if (prevRow) {
+        db.prepare(`UPDATE room_participants SET left_at = NULL WHERE id = ?`).run(prevRow.id);
+      } else {
+        db.prepare(`
+          INSERT INTO room_participants (id, room_id, user_id, is_hand_raised, is_removed, joined_at)
+          VALUES (?, ?, ?, 0, 0, ?)
+        `).run(crypto.randomUUID(), id, currentUserId, now);
+      }
     }
 
     res.json({ message: 'Joined private room successfully.' });
@@ -354,7 +416,7 @@ router.post('/:id/join', requireAuth, (req: AuthRequest, res): void => {
 // 6. LEAVE ROOM
 router.post('/:id/leave', requireAuth, (req: AuthRequest, res): void => {
   try {
-    const { id } = req.params;
+    const id = req.params.id as string;
     const currentUserId = req.user!.id;
     const now = new Date().toISOString();
 
@@ -372,7 +434,7 @@ router.post('/:id/leave', requireAuth, (req: AuthRequest, res): void => {
 // 7. END ROOM (Host only)
 router.post('/:id/end', requireAuth, (req: AuthRequest, res): void => {
   try {
-    const { id } = req.params;
+    const id = req.params.id as string;
     const currentUserId = req.user!.id;
 
     const room = db.prepare(`SELECT * FROM study_rooms WHERE id = ?`).get(id) as any;
@@ -392,6 +454,13 @@ router.post('/:id/end', requireAuth, (req: AuthRequest, res): void => {
       db.prepare(`UPDATE room_participants SET left_at = ? WHERE room_id = ? AND left_at IS NULL`).run(now, id);
     })();
 
+    const io: Server | undefined = req.app.get('io');
+    if (io) {
+      io.to(`room:${id}`).emit('room_ended', { roomId: id });
+      io.in(`room:${id}`).socketsLeave(`room:${id}`);
+    }
+    removeRoomState(id);
+
     res.json({ message: 'Study room session ended.' });
   } catch (err: any) {
     console.error('[END ROOM ERROR]', err);
@@ -399,10 +468,10 @@ router.post('/:id/end', requireAuth, (req: AuthRequest, res): void => {
   }
 });
 
-// 8. TOGGLE HAND RAISE
+// 8. TOGGLE HAND RAISE (Authoritative REST handler with broadcast)
 router.post('/:id/hand', requireAuth, (req: AuthRequest, res): void => {
   try {
-    const { id } = req.params;
+    const id = req.params.id as string;
     const currentUserId = req.user!.id;
 
     const participant = db.prepare(`
@@ -417,6 +486,22 @@ router.post('/:id/hand', requireAuth, (req: AuthRequest, res): void => {
     const newHandState = participant.is_hand_raised === 1 ? 0 : 1;
     db.prepare(`UPDATE room_participants SET is_hand_raised = ? WHERE id = ?`).run(newHandState, participant.id);
 
+    const io: Server | undefined = req.app.get('io');
+    if (io) {
+      const roomState = getOrCreateRoomState(id);
+      const p = roomState.participants.get(currentUserId);
+      if (p) {
+        p.isHandRaised = newHandState === 1;
+      }
+      io.to(`room:${id}`).emit('user_hand_toggled', {
+        userId: currentUserId,
+        username: req.user!.username,
+        fullName: req.user!.full_name,
+        isHandRaised: newHandState === 1,
+      });
+      broadcastParticipantsSnapshot(io, id);
+    }
+
     res.json({ message: 'Hand status toggled.', isHandRaised: newHandState });
   } catch (err: any) {
     console.error('[TOGGLE HAND ERROR]', err);
@@ -424,10 +509,18 @@ router.post('/:id/hand', requireAuth, (req: AuthRequest, res): void => {
   }
 });
 
-// 9. GET WHITEBOARD STATE
+// 9. GET WHITEBOARD STATE (Verified against same access rules as GET /:id)
 router.get('/:id/whiteboard', requireAuth, (req: AuthRequest, res): void => {
   try {
-    const { id } = req.params;
+    const id = req.params.id as string;
+    const currentUserId = req.user!.id;
+    const providedCode = ((req.query.code || '') as string).trim().toUpperCase();
+
+    const access = checkRoomAccess(id, currentUserId, providedCode);
+    if (!access.allowed) {
+      res.status(access.status).json({ error: access.error });
+      return;
+    }
 
     const session = db.prepare(`SELECT canvas_data FROM whiteboard_sessions WHERE room_id = ?`).get(id) as any;
     const actions = db.prepare(`
@@ -463,11 +556,32 @@ router.get('/:id/whiteboard', requireAuth, (req: AuthRequest, res): void => {
   }
 });
 
-// 10. SAVE WHITEBOARD STATE
+// 10. SAVE WHITEBOARD STATE (Verified against access rules & canvasData capped at 2MB)
 router.put('/:id/whiteboard', requireAuth, (req: AuthRequest, res): void => {
   try {
-    const { id } = req.params;
+    const id = req.params.id as string;
+    const currentUserId = req.user!.id;
+    const providedCode = ((req.query.code || req.body?.code || '') as string).trim().toUpperCase();
+
+    const access = checkRoomAccess(id, currentUserId, providedCode);
+    if (!access.allowed) {
+      res.status(access.status).json({ error: access.error });
+      return;
+    }
+
     const { canvasData } = req.body;
+    if (canvasData !== undefined && canvasData !== null) {
+      if (typeof canvasData !== 'string') {
+        res.status(400).json({ error: 'Canvas data must be a string.' });
+        return;
+      }
+      // Cap canvasData at 2MB (2 * 1024 * 1024 characters)
+      if (canvasData.length > 2 * 1024 * 1024) {
+        res.status(400).json({ error: 'Canvas data exceeds maximum allowed size (2MB).' });
+        return;
+      }
+    }
+
     const now = new Date().toISOString();
 
     db.prepare(`
@@ -486,7 +600,7 @@ router.put('/:id/whiteboard', requireAuth, (req: AuthRequest, res): void => {
 // 11. INVITE STUDENT BY STUDENT ID
 router.post('/:id/invite-student', requireAuth, (req: AuthRequest, res): void => {
   try {
-    const { id } = req.params;
+    const id = req.params.id as string;
     const { student_id } = req.body;
     const currentUserId = req.user!.id;
 
@@ -553,7 +667,8 @@ router.post('/:id/invite-student', requireAuth, (req: AuthRequest, res): void =>
 // 12. REMOVE PARTICIPANT (Host only)
 router.delete('/:id/participants/:userId', requireAuth, (req: AuthRequest, res): void => {
   try {
-    const { id, userId } = req.params;
+    const id = req.params.id as string;
+    const userId = req.params.userId as string;
     const currentUserId = req.user!.id;
 
     const room = db.prepare(`SELECT * FROM study_rooms WHERE id = ?`).get(id) as any;
@@ -567,10 +682,35 @@ router.delete('/:id/participants/:userId', requireAuth, (req: AuthRequest, res):
       return;
     }
 
+    if (userId === currentUserId) {
+      res.status(400).json({ error: 'Host cannot remove themselves from the room.' });
+      return;
+    }
+
     const now = new Date().toISOString();
+    // Mark as removed and set left_at so the student cannot rejoin
     db.prepare(`
-      UPDATE room_participants SET left_at = ? WHERE room_id = ? AND user_id = ? AND left_at IS NULL
+      UPDATE room_participants 
+      SET is_removed = 1, left_at = COALESCE(left_at, ?) 
+      WHERE room_id = ? AND user_id = ?
     `).run(now, id, userId);
+
+    const io: Server | undefined = req.app.get('io');
+    if (io) {
+      io.to(`room:${id}`).emit('participant_removed', { roomId: id, userId });
+      // Remove affected user's sockets from room channel
+      const roomSockets = io.sockets.adapter.rooms.get(`room:${id}`);
+      if (roomSockets) {
+        for (const sId of Array.from(roomSockets)) {
+          const targetSock = io.sockets.sockets.get(sId) as any;
+          if (targetSock && targetSock.userId === userId) {
+            targetSock.leave(`room:${id}`);
+          }
+        }
+      }
+      removeParticipantFromRoomState(id, userId);
+      broadcastParticipantsSnapshot(io, id);
+    }
 
     res.json({ message: 'Participant removed from study room.' });
   } catch (err: any) {

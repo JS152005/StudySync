@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { NavLink, Outlet, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { useMeeting } from '../context/MeetingContext';
+import { useMeeting } from '../meeting/MeetingProvider';
 import { THEME } from '../theme';
 import { triggerSparks } from './ui/SparkEffect';
 import { useToast } from './ui/ToastContext';

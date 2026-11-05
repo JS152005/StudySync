@@ -1,7 +1,7 @@
 import React, { useRef, useState, useEffect, useCallback } from 'react';
 import { apiRequest } from '../api/client';
 import { THEME } from '../theme';
-import { useMeeting, WhiteboardStrokeAction } from '../context/MeetingContext';
+import { useMeeting, WhiteboardStrokeAction } from '../meeting/MeetingProvider';
 import {
   Pen,
   Eraser,

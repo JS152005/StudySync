@@ -257,6 +257,7 @@ export function initDatabase() {
       room_id TEXT NOT NULL,
       user_id TEXT NOT NULL,
       is_hand_raised INTEGER DEFAULT 0,
+      is_removed INTEGER DEFAULT 0,
       joined_at TEXT NOT NULL,
       left_at TEXT,
       FOREIGN KEY(room_id) REFERENCES study_rooms(id) ON DELETE CASCADE,
@@ -574,6 +575,17 @@ export function initDatabase() {
     }
   } catch (migErr) {
     console.error('[DB] Migration error checking study_rooms invite_code:', migErr);
+  }
+
+  // Migration: ensure room_participants has is_removed column
+  try {
+    const rpTableInfo = rawDb.prepare('PRAGMA table_info(room_participants)').all() as Array<{ name: string }>;
+    const hasIsRemoved = rpTableInfo.some((col) => col.name === 'is_removed');
+    if (!hasIsRemoved) {
+      rawDb.exec('ALTER TABLE room_participants ADD COLUMN is_removed INTEGER DEFAULT 0;');
+    }
+  } catch (migErr) {
+    console.error('[DB] Migration error checking room_participants is_removed:', migErr);
   }
 
   console.log('[DB] Database schema initialized successfully with node:sqlite.');

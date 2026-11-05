@@ -34,6 +34,7 @@ const io = new Server(server, {
 });
 
 setupSocketHandlers(io);
+app.set('io', io);
 
 // 4. Security & Middleware
 app.use(

@@ -89,7 +89,7 @@ This document details the architectural findings from Google Meet and WhatsApp, 
 | **Media Topology** | Polished Full Mesh WebRTC (2-6 peers) | Lightweight, zero external infrastructure costs, private, peer-to-peer encrypted. |
 | **Signaling** | Socket.IO with JWT Handshake Auth | Low-latency bi-directional event transport, room isolation, automatic reconnection. |
 | **Meeting Persistence** | Application-Level `MeetingContext` | Keeps peer connections, media tracks, and socket rooms alive across SPA page routing. |
-| **Mini-Window / PiP** | Floating React Dock + Document PiP API | Provides continuous audio/video and controls when browsing chats or notes. |
+| **Meeting External PiP** | W3C Document Picture-in-Picture API + Dock Fallback | True floating desktop window for study rooms with active streams and controls. |
 | **Hardware Lifecycle** | Full `track.stop()` & `replaceTrack(null)` | Laptop hardware camera/mic LEDs turn off cleanly when disabled; reload stays OFF. |
 | **Screen Sharing** | `navigator.mediaDevices.getDisplayMedia` + Room Broadcast | Broadcasts presentation state, animates buttons, syncs on peer rejoin. |
 | **Whiteboard Sync** | Delta socket broadcasts + Server Canvas Snapshot | Lightweight real-time vector strokes with catch-up sync for new joiners. |
@@ -99,7 +99,42 @@ This document details the architectural findings from Google Meet and WhatsApp, 
 
 ---
 
-## 5. Migration and Production Infrastructure
+## 5. External StudySync Meeting Picture-in-Picture (PiP) Architecture
+
+### 6.1 W3C Document Picture-in-Picture API
+- **The Standard:** Uses `window.documentPictureInPicture.requestWindow({ width, height })` available in modern Chromium browsers.
+- **Full Interactive Meeting Capability:** Unlike standard `<video>` PiP (which only projects a single mute video element with no buttons), Document PiP opens an external OS-level floating window hosting full React interactive controls:
+  - Room name and invite code.
+  - Live connection status badge.
+  - Participant count counter.
+  - Active video stream (screen share, active speaker, remote peer, or local preview).
+  - Microphone toggle (Mic on / Mic muted).
+  - Camera toggle (Cam on / Cam off).
+  - "Restore Full Meeting" action (focuses main window and returns to `/rooms/:id`).
+  - "Leave Room" action (hangs up, cleans up presence, and closes window).
+
+### 6.2 Session Preservation & WebRTC Continuity
+- **Zero Disconnection Guarantee:** The active meeting is owned by `MeetingContext` at the root application layer.
+- **Zero Reacquisition Overhead:** When Document PiP opens or closes:
+  - Local microphone and camera tracks are NOT stopped or reacquired.
+  - WebRTC peer connections and transceivers remain connected without ICE restarts.
+  - Socket.IO subscriptions and room presence stay active.
+  - The existing `MediaStream` is simply attached to the `<video>` element inside the PiP window.
+
+### 6.3 Lifecycle Transitions & Fallbacks
+- **Browser Capability Matrix:**
+  - *Chromium (Chrome 116+, Edge 116+, Opera):* Full external Document PiP window supported.
+  - *Firefox & Safari:* External Document PiP not yet implemented by browser vendors.
+- **Graceful Fallback:**
+  - Runtime detection via `'documentPictureInPicture' in window`.
+  - On unsupported browsers, clicking "Minimize to PiP" automatically switches the meeting to the in-app floating dock and displays a helpful toast.
+  - Standard HTMLVideoElement PiP remains available as a secondary video-only fallback.
+- **Pagehide / Window Closure:**
+  - When the student clicks the standard OS 'X' on the external PiP window, a `pagehide` listener captures the event and returns the meeting to the in-app floating dock without disconnecting the call.
+
+---
+
+## 6. Migration and Production Infrastructure
 
 1. **STUN/TURN Servers:**
    - Development uses Google's public STUN servers (`stun.l.google.com:19302`).
@@ -109,3 +144,43 @@ This document details the architectural findings from Google Meet and WhatsApp, 
 3. **Database Scalability:**
    - SQLite WAL mode easily handles thousands of daily active student transactions on a single modern VPS with low read/write latency.
    - Database files (`studysync.db*`) and uploads (`/uploads`) are mounted as persistent Docker volumes.
+---
+
+## 7. Persistent Application-Level Floating Meeting Window & Top-Level Stacking Context
+
+### 7.1 Problem Statement
+Browser-level Document Picture-in-Picture creates external OS windows that lose focus and move behind the main browser application when the student clicks elsewhere in StudySync (e.g. interacting with Dashboard, Chats, Profile, or Settings). In addition, within single-page application component trees, nested elements with `position: fixed` and high `z-index` can be trapped within local stacking contexts created by parent CSS `transform`, `filter`, `perspective`, `backdrop-filter`, or `isolation: isolate`.
+
+### 7.2 Architectural Solution
+1. **Dedicated Top-Level Stacking Context (`#studysync-floating-overlay-root`):**
+   - The floating meeting dock is mounted outside the React application root (`#root`) via a dedicated portal into `#studysync-floating-overlay-root`, direct child of `<body>`.
+   - The overlay container is positioned with `position: fixed; inset: 0; pointer-events: none; z-index: 10000; overflow: hidden;`.
+   - The meeting dock itself uses `pointer-events: auto; position: fixed;`.
+   - This ensures all pointer events outside the dock pass through cleanly to page content (cards, forms, chats, buttons), while interactions with the dock (dragging, muting, camera, resizing, expanding, leaving) are captured without obstruction.
+
+2. **Global Application Stacking Context Hierarchy:**
+   - **Base Page & Workspace:** `z-index: 0 – 100` (cards, tables, buttons)
+   - **Sticky Top Bar:** `z-index: 40`
+   - **Profile Dropdown:** `z-index: 100`
+   - **Mobile Sticky Bottom Navigation:** `z-index: 200`
+   - **Desktop Left Floating Navigation Rail:** `z-index: 300`
+   - **Floating Action Buttons:** `z-index: 500`
+   - **Mobile Drawer Backdrop / Panel:** `z-index: 998 / 999`
+   - **Application Modals & Dialogs (`#studysync-modal-root`):** `z-index: 1000`
+   - **Toast Notifications Container:** `z-index: 2000`
+   - **Persistent Floating Meeting Dock Overlay:** `z-index: 10000`
+   - **Spark Visual Micro-Effects:** `z-index: 99999`
+
+3. **Draggable & Responsive Viewport Boundary Clamping:**
+   - Supports mouse and single-touch dragging from the header grip.
+   - Clamped within viewport boundaries (`minX: 16px`, `maxX: winW - width - 16px`, `minY: 16px`, `maxY: winH - height - 16px` on desktop).
+   - On mobile screens ($\le 768\text{px}$), strictly clamps `maxY` to `winH - height - 68px` to guarantee the floating dock never obscures the mobile sticky bottom navigation rail.
+   - Listens to window resize events and automatically reclamps to prevent off-screen stranding.
+
+4. **Dock Modes & Resizing:**
+   - **Normal Preview Mode:** $340\times 245\text{px}$ video preview with presenter badges, participant count, and controls.
+   - **Compact Preview Mode:** $260\times 185\text{px}$.
+   - **Expanded Preview Mode:** $440\times 320\text{px}$.
+   - **Collapsed Pill Bar:** $260\times 48\text{px}$ minimal horizontal status bar with active pulse, room title, participant count, and quick controls.
+   - Closing or collapsing the dock never leaves the meeting; only explicit "Leave Room" calls terminate the WebRTC session.
+

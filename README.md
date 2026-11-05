@@ -19,7 +19,8 @@
 - [Section J — Jenkins CI/CD Pipeline](#section-j--jenkins-cicd-pipeline)
 - [Section K — Security & Authorization Architecture](#section-k--security--authorization-architecture)
 - [Section L — Automated Testing Suite](#section-l--automated-testing-suite)
-- [Section M — Future Roadmap](#section-m--future-roadmap)
+- [Section M — Persistent Floating Meeting Window Architecture](#section-m--persistent-floating-meeting-window-architecture)
+- [Section N — Future Roadmap](#section-n--future-roadmap)
 
 ---
 
@@ -109,6 +110,7 @@ graph TB
         NAV["Compact Floating Rail Navigation"]
         MC["MeetingContext (Global Persistent Session)"]
         MINI["Floating Meeting Dock / Mini-Window"]
+        PIP["Document PiP External Window (W3C)"]
         AUTH_C["AuthContext & ToastProvider"]
     end
 
@@ -132,7 +134,8 @@ graph TB
     API --> MAIL
     API --> FS
     MC -->|Maintains Connection| SOCK
-    MC -.->|Navigates to Mini-Dock| MINI
+    MC -.->|In-App Background| MINI
+    MC -.->|Desktop Popout| PIP
 ```
 
 ### Meeting Persistence & Route Navigation Workflow
@@ -181,6 +184,13 @@ sequenceDiagram
 - **Screen Sharing with Live Indicators:** Any participant can present their screen. All participants see a pulsing visual indicator showing who is presenting.
 - **Live Whiteboard Synchronization:** Real-time synchronized drawing canvas with vector strokes, shape tools, text annotations, and canvas persistence.
 - **Background Meeting Persistence:** Navigating to Dashboard, Chats, or Settings automatically transitions the meeting into a floating mini-dock with live audio/video and mute controls.
+
+### 4. Study Room Document Picture-in-Picture (PiP)
+- **External Floating Desktop Window:** Built upon the W3C Document Picture-in-Picture API (`window.documentPictureInPicture.requestWindow()`), enabling students to pop out active Study Rooms into an always-on-top desktop window while working across external textbooks, IDEs, and browser tabs.
+- **Session & State Preservation:** RTCPeerConnections, audio/video transceivers, ICE candidates, Socket.IO room presence, and whiteboard state remain continuous and active without renegotiation or track rebinding.
+- **Interactive Control Surface:** The PiP desktop window renders full interactive controls: live active video tile/screen share canvas, room identity, participant counters, microphone mute toggle, camera toggle, "Restore to Tab", and "Leave Room".
+- **Dynamic Stylesheet Synchronization:** Clones all parent stylesheets (`style` elements and `link[rel="stylesheet"]`) into the detached PiP DOM to ensure brand-consistent Luminous Light UI rendering.
+- **Capability Detection & Automatic Fallback:** Gracefully falls back to the in-app Floating Meeting Dock and HTMLVideoElement PiP on unsupported platforms (Firefox, Safari, non-Chromium browsers).
 
 ---
 
@@ -380,15 +390,35 @@ npm run typecheck
 - **Authentication & Email OTP:** Registration, verification gate, Student ID login, OTP generation, failed attempts lockout, expired token rejection, password reset authorization token, password update.
 - **Messaging:** Direct message persistence, message reading status, unread count increment, private group membership boundaries.
 - **Study Rooms & WebRTC:** Room creation, invite code generation (`ROOM-XXXXXX`), student invitation, room join authorization, participant leave tracking (`left_at`), whiteboard canvas persistence.
+- **Document Picture-in-Picture & Room Resilience:** Logical participant identity deduplication across multiple tabs, host survival across reconnects, zero video element reattachment disruption, and graceful fallback when Document PiP is unavailable.
 
 ---
 
-## Section M — Future Roadmap
+## Section M — Persistent Floating Meeting Window Architecture
+
+StudySync provides a persistent, application-level floating meeting window (`FloatingMeetingDock`) that stays active inside the application across route changes:
+
+### 1. Architectural Highlights
+- **Stays Above All Content:** Renders into a dedicated top-level overlay portal (`#studysync-floating-overlay-root`) directly beneath `document.body`, outside the React application DOM hierarchy (`#root`).
+- **Stacking Context Isolation:** Immune to CSS `transform`, `filter`, `perspective`, or `overflow: hidden` on page wrappers or card containers.
+- **Strict Stacking Order:** Managed at `z-index: 10000`, strictly above modal dialogs (`z-index: 1000`), toast notifications (`z-index: 2000`), navigation rails (`z-index: 300`), and page contents.
+- **Transparent Pointer-Events:** The overlay wrapper has `pointer-events: none` so students can freely interact with Dashboard cards, Chat inputs, Profile settings, and links. The dock element itself uses `pointer-events: auto` for full interactivity.
+- **Session Continuity:** The underlying WebRTC peer connections, camera/microphone streams, Socket.IO room presence, and whiteboard synchronization are retained seamlessly without renegotiation or track reacquisition.
+- **Draggable & Responsive:** Mouse and touch drag handles with viewport boundary clamping (`minX: 16`, `maxX: winW - width - 16`, `minY: 16`, `maxY: winH - height - 16`). On mobile devices ($\le 768\text{px}$), the dock automatically preserves a 68px bottom clearance to prevent obscuring the mobile navigation bar.
+- **Modes & Resizing:**
+  - Standard sizes: Compact ($260\times 185\text{px}$), Normal ($340\times 245\text{px}$), and Expanded ($440\times 320\text{px}$).
+  - Collapse to compact chip bar ($260\times 48\text{px}$) with live green pulse, room name, participant count, and quick controls.
+  - Return to Full Room (`restoreMeeting()`) navigates back to the active room in full-screen view.
+  - Only explicit "Leave Room" terminates the session.
+
+---
+
+## Section N — Future Roadmap
 
 Features identified for future release stages:
 
 - [ ] **Selective Forwarding Unit (SFU):** Integration of LiveKit or mediasoup for rooms with 10+ simultaneous video publishers.
 - [ ] **Managed TURN Clusters:** Deployment of Coturn infrastructure for campus firewalls requiring symmetric NAT relay.
 - [ ] **End-to-End Encrypted Message Blobs:** Signal Protocol double-ratchet encryption for direct peer-to-peer messaging.
-- [ ] **Document Picture-in-Picture:** Native multi-window Picture-in-Picture on supported desktop browsers.
+- [x] **Persistent In-App Meeting Window:** Application-level floating meeting dock with viewport clamping, dragging, resizing, and top-level stacking context.
 - [ ] **Mobile Native Apps:** React Native / Expo wrapper leveraging the existing backend API and Socket.IO engine.

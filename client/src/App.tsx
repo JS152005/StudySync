@@ -1,7 +1,7 @@
 import React from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider, useAuth } from './context/AuthContext';
-import { MeetingProvider } from './context/MeetingContext';
+import { MeetingProvider } from './meeting/MeetingProvider';
 import { ToastProvider } from './components/ui/ToastContext';
 import { Layout } from './components/Layout';
 import { FloatingMeetingDock } from './components/FloatingMeetingDock';

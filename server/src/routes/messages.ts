@@ -1,9 +1,19 @@
 import { Router } from 'express';
 import crypto from 'crypto';
+import { Server } from 'socket.io';
 import { db } from '../db/index.js';
 import { requireAuth, AuthRequest } from '../middleware/auth.js';
 
 const router = Router();
+
+function isValidAttachmentUrl(urlStr: string): boolean {
+  try {
+    const parsed = new URL(urlStr);
+    return parsed.protocol === 'http:' || parsed.protocol === 'https:';
+  } catch {
+    return false;
+  }
+}
 
 // 1. GET ALL RECENT CONVERSATIONS (Direct & Group)
 router.get('/conversations', requireAuth, (req: AuthRequest, res): void => {
@@ -54,26 +64,41 @@ router.get('/conversations', requireAuth, (req: AuthRequest, res): void => {
 });
 
 // 2. GET DIRECT MESSAGES WITH A FRIEND
+// Return latest N messages (ORDER BY created_at DESC LIMIT N, then reverse) with optional ?before cursor
 router.get('/direct/:friendId', requireAuth, (req: AuthRequest, res): void => {
   try {
     const { friendId } = req.params;
     const currentUserId = req.user!.id;
 
-    // Verify target user exists
-    const friend = db.prepare(`SELECT id, username, full_name, avatar_url, availability FROM users WHERE id = ?`).get(friendId);
-    if (!friend) {
-      res.status(404).json({ error: 'User not found.' });
+    // Verify recipient exists and is active
+    const friend = db.prepare(`SELECT id, username, full_name, avatar_url, availability, is_active FROM users WHERE id = ?`).get(friendId) as any;
+    if (!friend || friend.is_active === 0) {
+      res.status(404).json({ error: 'Recipient does not exist or is inactive.' });
       return;
     }
 
-    const messages = db.prepare(`
+    const limit = Math.min(Math.max(parseInt(req.query.limit as string, 10) || 100, 1), 100);
+    const before = req.query.before as string | undefined;
+
+    let query = `
       SELECT m.*, u.username as sender_username, u.full_name as sender_name, u.avatar_url as sender_avatar
       FROM messages m
       JOIN users u ON u.id = m.sender_id
       WHERE m.conversation_type = 'direct'
         AND ((m.sender_id = ? AND m.recipient_id = ?) OR (m.sender_id = ? AND m.recipient_id = ?))
-      ORDER BY m.created_at ASC LIMIT 100
-    `).all(currentUserId, friendId, friendId, currentUserId);
+    `;
+    const params: any[] = [currentUserId, friendId, friendId, currentUserId];
+
+    if (before) {
+      query += ` AND m.created_at < ?`;
+      params.push(before);
+    }
+
+    query += ` ORDER BY m.created_at DESC LIMIT ?`;
+    params.push(limit);
+
+    const rows = db.prepare(query).all(...params) as any[];
+    const messages = rows.reverse();
 
     // Mark messages as read
     db.prepare(`
@@ -95,9 +120,28 @@ router.post('/direct/:friendId', requireAuth, (req: AuthRequest, res): void => {
     const { content, attachment_url, attachment_name } = req.body;
     const currentUserId = req.user!.id;
 
-    if (!content || content.trim().length === 0) {
+    // Verify recipient exists and is active
+    const recipient = db.prepare(`SELECT id, username, full_name, avatar_url, availability, is_active FROM users WHERE id = ?`).get(friendId) as any;
+    if (!recipient || recipient.is_active === 0) {
+      res.status(404).json({ error: 'Recipient does not exist or is inactive.' });
+      return;
+    }
+
+    if (!content || typeof content !== 'string' || content.trim().length === 0) {
       res.status(400).json({ error: 'Message content cannot be empty.' });
       return;
+    }
+
+    if (content.length > 4000) {
+      res.status(400).json({ error: 'Message content cannot exceed 4000 characters.' });
+      return;
+    }
+
+    if (attachment_url) {
+      if (typeof attachment_url !== 'string' || !isValidAttachmentUrl(attachment_url)) {
+        res.status(400).json({ error: 'Attachment URL must be a valid http or https URL.' });
+        return;
+      }
     }
 
     const messageId = crypto.randomUUID();
@@ -115,6 +159,13 @@ router.post('/direct/:friendId', requireAuth, (req: AuthRequest, res): void => {
       WHERE m.id = ?
     `).get(messageId);
 
+    // Emit direct_message_received to recipient and sender via socket
+    const io: Server | undefined = req.app.get('io');
+    if (io) {
+      io.to(`user:${friendId}`).emit('direct_message_received', saved);
+      io.to(`user:${currentUserId}`).emit('direct_message_received', saved);
+    }
+
     res.status(201).json({ message: saved });
   } catch (err: any) {
     console.error('[SEND DIRECT MESSAGE ERROR]', err);
@@ -123,6 +174,7 @@ router.post('/direct/:friendId', requireAuth, (req: AuthRequest, res): void => {
 });
 
 // 4. GET GROUP MESSAGES
+// Return latest N messages (ORDER BY created_at DESC LIMIT N, then reverse) with optional ?before cursor
 router.get('/group/:groupId', requireAuth, (req: AuthRequest, res): void => {
   try {
     const { groupId } = req.params;
@@ -138,13 +190,27 @@ router.get('/group/:groupId', requireAuth, (req: AuthRequest, res): void => {
       return;
     }
 
-    const messages = db.prepare(`
+    const limit = Math.min(Math.max(parseInt(req.query.limit as string, 10) || 100, 1), 100);
+    const before = req.query.before as string | undefined;
+
+    let query = `
       SELECT m.*, u.username as sender_username, u.full_name as sender_name, u.avatar_url as sender_avatar
       FROM messages m
       JOIN users u ON u.id = m.sender_id
       WHERE m.conversation_type = 'group' AND m.group_id = ?
-      ORDER BY m.created_at ASC LIMIT 100
-    `).all(groupId);
+    `;
+    const params: any[] = [groupId];
+
+    if (before) {
+      query += ` AND m.created_at < ?`;
+      params.push(before);
+    }
+
+    query += ` ORDER BY m.created_at DESC LIMIT ?`;
+    params.push(limit);
+
+    const rows = db.prepare(query).all(...params) as any[];
+    const messages = rows.reverse();
 
     res.json({ messages });
   } catch (err: any) {
@@ -160,11 +226,6 @@ router.post('/group/:groupId', requireAuth, (req: AuthRequest, res): void => {
     const { content, attachment_url, attachment_name } = req.body;
     const currentUserId = req.user!.id;
 
-    if (!content || content.trim().length === 0) {
-      res.status(400).json({ error: 'Message content cannot be empty.' });
-      return;
-    }
-
     // Check membership
     const member = db.prepare(`
       SELECT id FROM group_members WHERE group_id = ? AND user_id = ? AND status = 'active'
@@ -173,6 +234,23 @@ router.post('/group/:groupId', requireAuth, (req: AuthRequest, res): void => {
     if (!member) {
       res.status(403).json({ error: 'You must be a member of this group to post messages.' });
       return;
+    }
+
+    if (!content || typeof content !== 'string' || content.trim().length === 0) {
+      res.status(400).json({ error: 'Message content cannot be empty.' });
+      return;
+    }
+
+    if (content.length > 4000) {
+      res.status(400).json({ error: 'Message content cannot exceed 4000 characters.' });
+      return;
+    }
+
+    if (attachment_url) {
+      if (typeof attachment_url !== 'string' || !isValidAttachmentUrl(attachment_url)) {
+        res.status(400).json({ error: 'Attachment URL must be a valid http or https URL.' });
+        return;
+      }
     }
 
     const messageId = crypto.randomUUID();
@@ -189,6 +267,12 @@ router.post('/group/:groupId', requireAuth, (req: AuthRequest, res): void => {
       JOIN users u ON u.id = m.sender_id
       WHERE m.id = ?
     `).get(messageId);
+
+    // Emit group_message_received to group channel via socket
+    const io: Server | undefined = req.app.get('io');
+    if (io) {
+      io.to(`group:${groupId}`).emit('group_message_received', saved);
+    }
 
     res.status(201).json({ message: saved });
   } catch (err: any) {
